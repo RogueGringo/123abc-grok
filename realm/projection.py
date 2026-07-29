@@ -174,14 +174,27 @@ def build_moduli_landscape(
     Lambda: float | None = None,
     omega_scale: float = 1.0,
     weight_power: float = 1.0,
+    tier_split: float = 0.45,
+    low_boost: float = 1.0,
+    action: SpectralAction | None = None,
+    critical: list | None = None,
 ) -> ModuliLandscape:
+    """Build landscape; pass sealed knobs OR an already-forged action+critical set."""
     field = field or ZetaField.first(12)
     lattice = ZetaLattice.from_field(field, Lambda=Lambda)
-    action = SpectralAction.from_field(
-        field, Lambda=Lambda, omega_scale=omega_scale, weight_power=weight_power
-    )
-    crit = critical_holonomies(action, max_crit=24)
+    if action is None:
+        action = SpectralAction.from_field(
+            field,
+            Lambda=Lambda,
+            omega_scale=omega_scale,
+            weight_power=weight_power,
+            tier_split=tier_split,
+            low_boost=low_boost,
+        )
+    crit = critical if critical is not None else critical_holonomies(action, max_crit=24)
     valleys = [c for c in crit if c["kind"] == "minimum"]
+    if not valleys:
+        valleys = list(crit)
     ridges = [c for c in crit if c["kind"] == "maximum"]
     th = np.linspace(0, 2 * np.pi, 721)
     return ModuliLandscape(
@@ -383,6 +396,10 @@ def run_projection_protocol(
         Lambda=knobs.get("Lambda"),
         omega_scale=float(knobs.get("omega_scale", 1.0)),
         weight_power=float(knobs.get("weight_power", 1.0)),
+        tier_split=float(knobs.get("tier_split", 0.45)),
+        low_boost=float(knobs.get("low_boost", 1.0)),
+        action=der.action,
+        critical=der.critical,
     )
     thetas = np.array([s.twist for s in der.sectors], dtype=float)
     gaps = np.array([s.spectral_gap for s in der.spectra], dtype=float)

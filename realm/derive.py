@@ -358,21 +358,45 @@ class Deriver:
         )
         logger.info("D3: %d critical holonomies (%d minima)", len(crit), sum(1 for c in crit if c["kind"] == "minimum"))
 
-        # D4 — sectors ONLY from Crit(S): minima first, then other critical points.
-        # Do not mix raw gap_phases into the key set — that confuses lock pins.
+        # D4 — diverse Crit(S) keys only (minima first). Never echo-jitter collapse.
         mins = [c for c in crit if c["kind"] == "minimum"]
         rest = [c for c in crit if c["kind"] != "minimum"]
-        pool = list(mins) + list(rest)
+        # Dedup by angular separation ≥ π/(2 n_sectors)
+        min_sep = np.pi / max(2 * self.n_sectors, 2)
+
+        def _take_diverse(cands: list, need: int, taken: list) -> list:
+            out = list(taken)
+            for c in sorted(cands, key=lambda x: x["S"]):  # deeper wells first among mins
+                if len(out) >= need:
+                    break
+                th = float(c["theta"])
+                if any(
+                    min(abs(th - float(t["theta"])) % (2 * np.pi), 2 * np.pi - abs(th - float(t["theta"])) % (2 * np.pi))
+                    < min_sep
+                    for t in out
+                ):
+                    continue
+                out.append(c)
+            return out
+
+        pool = _take_diverse(mins, self.n_sectors, [])
         if len(pool) < self.n_sectors:
-            # replicate minima with small phase jitter only as last resort
-            base = list(pool) if pool else [{"theta": 0.0, "S": 0.0, "S_second": 1.0, "kind": "fallback"}]
-            i = 0
-            while len(pool) < self.n_sectors:
-                c = dict(base[i % len(base)])
-                c["theta"] = float(c["theta"] + 0.01 * (i + 1)) % (2 * np.pi)
-                c["kind"] = "minima_echo"
-                pool.append(c)
-                i += 1
+            pool = _take_diverse(rest, self.n_sectors, pool)
+        if len(pool) < self.n_sectors:
+            # Fill from uniform samples that are *local* minima of S on a fine grid
+            grid = np.linspace(0, 2 * np.pi, 2000, endpoint=False)
+            Sv = np.asarray(action.S(grid), dtype=float)
+            for i in range(1, len(grid) - 1):
+                if len(pool) >= self.n_sectors:
+                    break
+                if Sv[i] <= Sv[i - 1] and Sv[i] <= Sv[i + 1]:
+                    c = {
+                        "theta": float(grid[i]),
+                        "S": float(Sv[i]),
+                        "S_second": float(action.d2S(grid[i])),
+                        "kind": "grid_minimum",
+                    }
+                    pool = _take_diverse([c], self.n_sectors, pool)
         pool = pool[: self.n_sectors]
 
         sectors: list[InducedSector] = []

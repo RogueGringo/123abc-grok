@@ -1,0 +1,77 @@
+{
+  "generation": "2026-07-29T21:34:35.345190+00:00",
+  "meet": {
+    "verdict": "LOCKED \u2014 key opens the master lock",
+    "locked": true,
+    "R": 0.055676616980178784,
+    "threshold": 0.12,
+    "breakdown": {
+      "stationarity": 1.850138037136815e-14,
+      "corr_penalty": 4.93992013228528e-06,
+      "crit_coverage": 0.0,
+      "return_map_err": 0.2783769100007008,
+      "total": 0.055676616980178784,
+      "weights": {
+        "shape": 0.3,
+        "corr": 0.25,
+        "coverage": 0.25,
+        "return": 0.2
+      },
+      "diagnostics": {
+        "pin_align": 0.08185598054707012,
+        "theta_ladder_l1": 0.0,
+        "density_return_l1": 0.982538071127491,
+        "corr_S_lambda": 0.9999950600798677
+      }
+    },
+    "knobs": {
+      "Lambda": 61.21614445465333,
+      "omega_scale": 0.5208682572082007,
+      "weight_power": 1.5879865044090928,
+      "tier_split": 0.2574479499113608,
+      "low_boost": 3.2740336459803414
+    },
+    "iterations": 918,
+    "search_method": "DE+basin_hopping+LBFGS",
+    "n_sectors": 3,
+    "thetas": [
+      3.263590928395214,
+      2.999590685828104,
+      4.542539568662491
+    ],
+    "spectral_gaps": [
+      0.07488294992237056,
+      0.07390022818884172,
+      0.024987855899889968
+    ]
+  },
+  "meet_knobs": {
+    "Lambda": 61.21614445465333,
+    "omega_scale": 0.5208682572082007,
+    "weight_power": 1.5879865044090928,
+    "tier_split": 0.2574479499113608,
+    "low_boost": 3.2740336459803414
+  },
+  "projection_summary": {
+    "verdict": "PARTIAL MOLD \u2014 occupancy 67%, mean dist 0.5143. Projection signature present (a=0.7715). Refine knobs / basin.",
+    "occupancy_fraction": 0.6666666666666666,
+    "mean_distance_to_valley": 0.514316294278129,
+    "n_valleys": 1,
+    "n_probes": 3,
+    "affine_a": 0.7714744414171923,
+    "affine_b": 2.058958178127552,
+    "affine_corr": 0.9348519351859736,
+    "ontology": "projection_not_eigenvalue_identity",
+    "lock_key_sealed": true,
+    "meet_R": 0.055676616980178784,
+    "meet_aligned_occupancy": 0.6666666666666666,
+    "winner_criterion": "keys sit in Crit valleys of the sealed projected landscape; affine is projection signature; not \u03bb=\u03b3"
+  },
+  "valley_verdict": "PARTIAL MOLD \u2014 occupancy 67%, mean dist 0.5143. Projection signature present (a=0.7715). Refine knobs / basin.",
+  "evolved": {
+    "locked": true,
+    "R": 0.055676616980178784,
+    "occupancy": 0.6666666666666666,
+    "status": "EVOLVED_SEAL"
+  }
+}

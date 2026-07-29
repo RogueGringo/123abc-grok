@@ -147,38 +147,43 @@ def return_map_phases_density(
     key: KeyState,
     lock: LockState,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Density-scaled return map (Riemann–von Mangoldt local density).
+    """Evolved return map: density-unfold λ-gaps, compare to density-unfold seed gaps.
 
-    Map ordered spectral gaps through local mean density of the lock's γ
-    scaffold, then to phases — not a flat linear mean scale.
-
-    For gap mid-heights T_i (interpolated from lock gammas by rank):
-        δt_i = Δλ_i / ρ(T_i)   with ρ(T) = (1/2π) log(T/2π)
-        phases ∝ δt / mean(δt) * (π/2)
+    Also returns ordered key thetas vs ordered lock minima as a secondary
+    geometric return (pin ladder) — blended in residual().
     """
     g = np.sort(key.spectral_gaps)
     if g.size < 2 or lock.gammas.size < 2:
-        return np.zeros(0), lock.gap_phases
+        return np.zeros(0), np.zeros(0)
 
     dlam = np.diff(g)
-    # Rank-map gap midpoints onto the lock's γ ladder
     ranks = np.linspace(0, 1, len(dlam) + 2)[1:-1]
     T = np.interp(ranks, np.linspace(0, 1, lock.gammas.size), lock.gammas)
     rho = np.array([mean_spacing_density(float(t)) for t in T], dtype=float)
+    # Soften density contrast so map is stable at low T
+    rho = np.clip(rho, 0.05 * np.mean(rho), None)
     dt = dlam / (rho + 1e-15)
-    phases = (dt / (np.mean(dt) + 1e-15)) * (np.pi / 2.0)
+    phases = _norm_gaps(dt)
 
-    # Lock reference: successive seed gaps density-scaled the same way
     sg = lock.seed_gaps
     if sg.size == 0:
-        ref = lock.gap_phases
+        ref = np.zeros(0)
     else:
-        T2 = 0.5 * (lock.gammas[:-1] + lock.gammas[1:]) if lock.gammas.size > 1 else lock.gammas
-        T2 = T2[: sg.size]
-        rho2 = np.array([mean_spacing_density(float(t)) for t in T2], dtype=float)
-        dt2 = sg[: len(rho2)] / (rho2 + 1e-15)
-        ref = (dt2 / (np.mean(dt2) + 1e-15)) * (np.pi / 2.0)
+        T2 = 0.5 * (lock.gammas[:-1] + lock.gammas[1:])
+        m = min(sg.size, T2.size)
+        rho2 = np.array([mean_spacing_density(float(t)) for t in T2[:m]], dtype=float)
+        rho2 = np.clip(rho2, 0.05 * np.mean(rho2), None)
+        ref = _norm_gaps(sg[:m] / (rho2 + 1e-15))
     return phases, ref
+
+
+def theta_ladder_l1(key: KeyState, lock: LockState) -> float:
+    """Shape L1 between sorted key θ spacings and sorted lock-minima spacings."""
+    kt = np.sort(key.thetas)
+    lt = np.sort(lock.minima_theta)
+    if kt.size < 2 or lt.size < 2:
+        return 0.0 if kt.size and lt.size else 1.0
+    return _shape_l1(np.diff(kt), np.diff(lt))
 
 
 def residual(
@@ -222,9 +227,10 @@ def residual(
         pin = float((np.mean(d1) + np.mean(d2)) / 2.0 / np.pi)
 
     ret_phases, ret_ref = return_map_phases_density(key, lock)
-    dens_ret = _shape_l1(ret_phases, ret_ref) if ret_phases.size else pin
-    # Blend pin geometry with density-scaled return (error vector for return_map)
-    return_err = 0.5 * pin + 0.5 * dens_ret
+    dens_ret = _shape_l1(ret_phases, ret_ref) if ret_phases.size and ret_ref.size else 0.0
+    ladder = theta_ladder_l1(key, lock)
+    # Return error: pin seating + θ-ladder vs valley ladder + density map
+    return_err = 0.4 * pin + 0.35 * ladder + 0.25 * dens_ret
 
     total = (
         w["shape"] * stationarity
@@ -241,6 +247,7 @@ def residual(
         weights=w,
         diagnostics={
             "pin_align": pin,
+            "theta_ladder_l1": ladder,
             "density_return_l1": dens_ret,
             "corr_S_lambda": 1.0 - corr_pen,
         },

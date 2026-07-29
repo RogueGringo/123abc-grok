@@ -1,85 +1,37 @@
 {
   "ontology": "holographic_projection_zeta_scaffolding",
-  "arithmetic_topology": "primes\u2194knots; cyclic peptides as geometric loops in the shadow",
-  "quasicrystal": "3D folds as intersections with higher-D zeta lattice",
   "sealed_knobs": {
-    "Lambda": 111.15746118921348,
-    "omega_scale": 1.7508174223381447,
-    "weight_power": 1.0610563422731047
+    "Lambda": 61.21614445465333,
+    "omega_scale": 0.5208682572082007,
+    "weight_power": 1.5879865044090928,
+    "tier_split": 0.2574479499113608,
+    "low_boost": 3.2740336459803414
   },
   "lock_key_sealed": true,
-  "lock_key_R": 0.11418648942178887,
+  "lock_key_R": 0.055676616980178784,
   "moduli_landscape": {
     "role": "projected_moduli_landscape_3d_shadow",
-    "n_valleys": 5,
-    "n_ridges": 6,
+    "n_valleys": 1,
+    "n_ridges": 2,
     "valleys": [
       {
-        "theta": 1.105687614824109,
-        "S": 0.9285222635243507,
-        "S_second": 9.034827612822035,
-        "kind": "minimum"
-      },
-      {
-        "theta": 1.9886412153545336,
-        "S": 0.9176227494637469,
-        "S_second": 4.974077955743116,
-        "kind": "minimum"
-      },
-      {
-        "theta": 2.8755736788089945,
-        "S": 0.9110451513543815,
-        "S_second": 3.3706566622975296,
-        "kind": "minimum"
-      },
-      {
-        "theta": 3.77541960982215,
-        "S": 0.907949068665349,
-        "S_second": 2.3812274533822784,
-        "kind": "minimum"
-      },
-      {
-        "theta": 4.756033557041347,
-        "S": 0.9052803202400928,
-        "S_second": 1.4302575012463214,
+        "theta": 3.263590928395214,
+        "S": 1.3503440547453307,
+        "S_second": 0.062373048297640496,
         "kind": "minimum"
       }
     ],
     "ridges": [
       {
-        "theta": 0.6079032276226937,
-        "S": 1.548646343742286,
-        "S_second": -16.312103934164536,
+        "theta": 2.999590685828104,
+        "S": 1.3511436001026114,
+        "S_second": -0.0748255044315111,
         "kind": "maximum"
       },
       {
-        "theta": 1.5169480443228125,
-        "S": 1.1793248789065676,
-        "S_second": -6.446330609334412,
-        "kind": "maximum"
-      },
-      {
-        "theta": 2.410937821256716,
-        "S": 1.0757495931792616,
-        "S_second": -4.045789560201103,
-        "kind": "maximum"
-      },
-      {
-        "theta": 3.306909264677904,
-        "S": 1.025940769668866,
-        "S_second": -2.84985133375186,
-        "kind": "maximum"
-      },
-      {
-        "theta": 4.23020586272775,
-        "S": 0.9964642838111298,
-        "S_second": -1.8958049294963124,
-        "kind": "maximum"
-      },
-      {
-        "theta": 5.655993236778856,
-        "S": 1.3136815212370587,
-        "S_second": -4.862022900812014,
+        "theta": 4.542539568662491,
+        "S": 1.3999125001639994,
+        "S_second": -0.23904439055718352,
         "kind": "maximum"
       }
     ],
@@ -115,18 +67,18 @@
         3.9934450179419003
       ],
       "weights": [
-        0.10234280124857403,
-        0.09619409672277157,
-        0.0928034298675118,
-        0.08839167134541456,
-        0.08641795793650521,
-        0.08287661257440085,
-        0.08042881800628306,
-        0.07870497707331783,
-        0.07546139884642579,
-        0.07427019706785723,
-        0.07216486909357765,
-        0.06994317021736014
+        0.1198207723216805,
+        0.10707065280999913,
+        0.10031641578524556,
+        0.09182534269049797,
+        0.08813617296383347,
+        0.08168778209651945,
+        0.07735966523093799,
+        0.07437528591444272,
+        0.06890334261285776,
+        0.06694104365044184,
+        0.0635353121817345,
+        0.06002821174180924
       ],
       "unfolded": [
         0.0,
@@ -148,210 +100,59 @@
   },
   "derived_sector_valley_test": {
     "ontology": "projection_not_eigenvalue_identity",
-    "verdict": "MOLDED \u2014 83% of conformations sit in projected zeta valleys (mean dist 0.0830 \u2264 basin 0.4467). Affine projection signature a=0.8468, b=-0.4455 is expected, not a cheat.",
-    "basin_radius": 0.4466945986169041,
-    "occupancy_fraction": 0.8333333333333334,
-    "mean_distance_to_valley": 0.08296406453356923,
-    "n_probes": 6,
-    "n_in_valley": 5,
-    "probes": [
-      {
-        "label": "sector_1",
-        "theta": 1.105687614824109,
-        "valley_theta": 1.105687614824109,
-        "distance_to_valley": 0.0,
-        "V_at": 0.9285222635243507,
-        "in_valley": true
-      },
-      {
-        "label": "sector_2",
-        "theta": 1.9886412153545336,
-        "valley_theta": 1.9886412153545336,
-        "distance_to_valley": 0.0,
-        "V_at": 0.9176227494637469,
-        "in_valley": true
-      },
-      {
-        "label": "sector_3",
-        "theta": 2.8755736788089945,
-        "valley_theta": 2.8755736788089945,
-        "distance_to_valley": 0.0,
-        "V_at": 0.9110451513543815,
-        "in_valley": true
-      },
-      {
-        "label": "sector_4",
-        "theta": 3.77541960982215,
-        "valley_theta": 3.77541960982215,
-        "distance_to_valley": 0.0,
-        "V_at": 0.907949068665349,
-        "in_valley": true
-      },
-      {
-        "label": "sector_5",
-        "theta": 4.756033557041347,
-        "valley_theta": 4.756033557041347,
-        "distance_to_valley": 0.0,
-        "V_at": 0.9052803202400928,
-        "in_valley": true
-      },
-      {
-        "label": "sector_6",
-        "theta": 0.6079032276226937,
-        "valley_theta": 1.105687614824109,
-        "distance_to_valley": 0.4977843872014154,
-        "V_at": 1.548646343742286,
-        "in_valley": false
-      }
-    ],
-    "affine_projection_signature": {
-      "a": 0.8467651455869097,
-      "b": -0.4454681923085483,
-      "residual_rms": 0.12475136547692738,
-      "corr": 0.9962997407318831,
-      "interpretation": "affine ax+b is the mathematical signature of projection (scale + shift of the shadow), not a failed 1:1 match to actual \u03b3_n"
-    },
-    "affine_V_vs_spectral_gap": {
-      "a": -0.05366781025868285,
-      "b": 0.08551378954057388,
-      "residual_rms": 0.01909128329344832,
-      "corr": -0.5538173550895523,
-      "interpretation": "affine ax+b is the mathematical signature of projection (scale + shift of the shadow), not a failed 1:1 match to actual \u03b3_n"
-    },
-    "landscape": {
-      "n_valleys": 5,
-      "valleys": [
-        {
-          "theta": 1.105687614824109,
-          "S": 0.9285222635243507,
-          "S_second": 9.034827612822035,
-          "kind": "minimum"
-        },
-        {
-          "theta": 1.9886412153545336,
-          "S": 0.9176227494637469,
-          "S_second": 4.974077955743116,
-          "kind": "minimum"
-        },
-        {
-          "theta": 2.8755736788089945,
-          "S": 0.9110451513543815,
-          "S_second": 3.3706566622975296,
-          "kind": "minimum"
-        },
-        {
-          "theta": 3.77541960982215,
-          "S": 0.907949068665349,
-          "S_second": 2.3812274533822784,
-          "kind": "minimum"
-        },
-        {
-          "theta": 4.756033557041347,
-          "S": 0.9052803202400928,
-          "S_second": 1.4302575012463214,
-          "kind": "minimum"
-        }
-      ]
-    },
-    "reading": "High occupancy + finite affine projection signature supports holographic/quasicrystal templating. It does NOT claim \u03bb=\u03b3."
-  },
-  "coutsias_valley_test": {
-    "ontology": "projection_not_eigenvalue_identity",
-    "verdict": "PARTIAL MOLD \u2014 occupancy 33%, mean dist 0.7492. Projection signature present (a=0.6661). Refine knobs / basin.",
-    "basin_radius": 0.4466945986169041,
-    "occupancy_fraction": 0.3333333333333333,
-    "mean_distance_to_valley": 0.7491897265154996,
-    "n_probes": 6,
+    "verdict": "PARTIAL MOLD \u2014 occupancy 67%, mean dist 0.5143. Projection signature present (a=0.7715). Refine knobs / basin.",
+    "basin_radius": 0.39269908169872414,
+    "occupancy_fraction": 0.6666666666666666,
+    "mean_distance_to_valley": 0.514316294278129,
+    "n_probes": 3,
     "n_in_valley": 2,
     "probes": [
       {
-        "label": "coutsias_1",
-        "theta": 0.0,
-        "valley_theta": 1.105687614824109,
-        "distance_to_valley": 1.105687614824109,
-        "V_at": 0.0,
-        "in_valley": false
-      },
-      {
-        "label": "coutsias_2",
-        "theta": 2.902095563531932,
-        "valley_theta": 2.8755736788089945,
-        "distance_to_valley": 0.026521884722937372,
-        "V_at": 0.9122147406385552,
+        "label": "key_1",
+        "theta": 3.263590928395214,
+        "valley_theta": 3.263590928395214,
+        "distance_to_valley": 0.0,
+        "V_at": 1.3503440547453307,
         "in_valley": true
       },
       {
-        "label": "coutsias_3",
-        "theta": 0.0,
-        "valley_theta": 1.105687614824109,
-        "distance_to_valley": 1.105687614824109,
-        "V_at": 0.0,
-        "in_valley": false
-      },
-      {
-        "label": "coutsias_4",
-        "theta": 0.0,
-        "valley_theta": 1.105687614824109,
-        "distance_to_valley": 1.105687614824109,
-        "V_at": 0.0,
-        "in_valley": false
-      },
-      {
-        "label": "coutsias_5",
-        "theta": 2.9214396938826193,
-        "valley_theta": 2.8755736788089945,
-        "distance_to_valley": 0.045866015073624755,
-        "V_at": 0.914496205051803,
+        "label": "key_2",
+        "theta": 2.999590685828104,
+        "valley_theta": 3.263590928395214,
+        "distance_to_valley": 0.26400024256710974,
+        "V_at": 1.3511436001026114,
         "in_valley": true
       },
       {
-        "label": "coutsias_6",
-        "theta": 0.0,
-        "valley_theta": 1.105687614824109,
-        "distance_to_valley": 1.105687614824109,
-        "V_at": 0.0,
+        "label": "key_3",
+        "theta": 4.542539568662491,
+        "valley_theta": 3.263590928395214,
+        "distance_to_valley": 1.2789486402672772,
+        "V_at": 1.3999125001639994,
         "in_valley": false
       }
     ],
     "affine_projection_signature": {
-      "a": 0.6660995760002538,
-      "b": -1.360759306431797,
-      "residual_rms": 0.7681315829539339,
-      "corr": 0.8287594735129155,
+      "a": 0.7714744414171923,
+      "b": 2.058958178127552,
+      "residual_rms": 0.23922563152273643,
+      "corr": 0.9348519351859736,
       "interpretation": "affine ax+b is the mathematical signature of projection (scale + shift of the shadow), not a failed 1:1 match to actual \u03b3_n"
     },
-    "affine_V_vs_spectral_gap": null,
+    "affine_V_vs_spectral_gap": {
+      "a": -1.0048251734761389,
+      "b": 1.4316537187553462,
+      "residual_rms": 7.321370184263547e-05,
+      "corr": -0.9999950600798677,
+      "interpretation": "affine ax+b is the mathematical signature of projection (scale + shift of the shadow), not a failed 1:1 match to actual \u03b3_n"
+    },
     "landscape": {
-      "n_valleys": 5,
+      "n_valleys": 1,
       "valleys": [
         {
-          "theta": 1.105687614824109,
-          "S": 0.9285222635243507,
-          "S_second": 9.034827612822035,
-          "kind": "minimum"
-        },
-        {
-          "theta": 1.9886412153545336,
-          "S": 0.9176227494637469,
-          "S_second": 4.974077955743116,
-          "kind": "minimum"
-        },
-        {
-          "theta": 2.8755736788089945,
-          "S": 0.9110451513543815,
-          "S_second": 3.3706566622975296,
-          "kind": "minimum"
-        },
-        {
-          "theta": 3.77541960982215,
-          "S": 0.907949068665349,
-          "S_second": 2.3812274533822784,
-          "kind": "minimum"
-        },
-        {
-          "theta": 4.756033557041347,
-          "S": 0.9052803202400928,
-          "S_second": 1.4302575012463214,
+          "theta": 3.263590928395214,
+          "S": 1.3503440547453307,
+          "S_second": 0.062373048297640496,
           "kind": "minimum"
         }
       ]
@@ -359,17 +160,79 @@
     "reading": "High occupancy + finite affine projection signature supports holographic/quasicrystal templating. It does NOT claim \u03bb=\u03b3."
   },
   "summary": {
-    "verdict": "MOLDED \u2014 83% of conformations sit in projected zeta valleys (mean dist 0.0830 \u2264 basin 0.4467). Affine projection signature a=0.8468, b=-0.4455 is expected, not a cheat.",
-    "occupancy_fraction": 0.8333333333333334,
-    "mean_distance_to_valley": 0.08296406453356923,
-    "n_valleys": 5,
-    "n_probes": 6,
-    "affine_a": 0.8467651455869097,
-    "affine_b": -0.4454681923085483,
-    "affine_corr": 0.9962997407318831,
+    "verdict": "PARTIAL MOLD \u2014 occupancy 67%, mean dist 0.5143. Projection signature present (a=0.7715). Refine knobs / basin.",
+    "occupancy_fraction": 0.6666666666666666,
+    "mean_distance_to_valley": 0.514316294278129,
+    "n_valleys": 1,
+    "n_probes": 3,
+    "affine_a": 0.7714744414171923,
+    "affine_b": 2.058958178127552,
+    "affine_corr": 0.9348519351859736,
     "ontology": "projection_not_eigenvalue_identity",
     "lock_key_sealed": true,
-    "coutsias_occupancy": 0.3333333333333333,
-    "winner_criterion": "conformations in projected valleys + affine projection signature; NOT eigenvalue identity with actual \u03b3_n"
+    "meet_R": 0.055676616980178784,
+    "meet_aligned_occupancy": 0.6666666666666666,
+    "winner_criterion": "keys sit in Crit valleys of the sealed projected landscape; affine is projection signature; not \u03bb=\u03b3"
+  },
+  "meet_aligned_valley_test": {
+    "ontology": "projection_not_eigenvalue_identity",
+    "verdict": "PARTIAL MOLD \u2014 occupancy 67%, mean dist 0.5143. Projection signature present (a=0.7715). Refine knobs / basin.",
+    "basin_radius": 0.39269908169872414,
+    "occupancy_fraction": 0.6666666666666666,
+    "mean_distance_to_valley": 0.514316294278129,
+    "n_probes": 3,
+    "n_in_valley": 2,
+    "probes": [
+      {
+        "label": "key_1",
+        "theta": 3.263590928395214,
+        "valley_theta": 3.263590928395214,
+        "distance_to_valley": 0.0,
+        "V_at": 1.3503440547453307,
+        "in_valley": true
+      },
+      {
+        "label": "key_2",
+        "theta": 2.999590685828104,
+        "valley_theta": 3.263590928395214,
+        "distance_to_valley": 0.26400024256710974,
+        "V_at": 1.3511436001026114,
+        "in_valley": true
+      },
+      {
+        "label": "key_3",
+        "theta": 4.542539568662491,
+        "valley_theta": 3.263590928395214,
+        "distance_to_valley": 1.2789486402672772,
+        "V_at": 1.3999125001639994,
+        "in_valley": false
+      }
+    ],
+    "affine_projection_signature": {
+      "a": 0.7714744414171923,
+      "b": 2.058958178127552,
+      "residual_rms": 0.23922563152273643,
+      "corr": 0.9348519351859736,
+      "interpretation": "affine ax+b is the mathematical signature of projection (scale + shift of the shadow), not a failed 1:1 match to actual \u03b3_n"
+    },
+    "affine_V_vs_spectral_gap": {
+      "a": -1.0048251734761389,
+      "b": 1.4316537187553462,
+      "residual_rms": 7.321370184263547e-05,
+      "corr": -0.9999950600798677,
+      "interpretation": "affine ax+b is the mathematical signature of projection (scale + shift of the shadow), not a failed 1:1 match to actual \u03b3_n"
+    },
+    "landscape": {
+      "n_valleys": 1,
+      "valleys": [
+        {
+          "theta": 3.263590928395214,
+          "S": 1.3503440547453307,
+          "S_second": 0.062373048297640496,
+          "kind": "minimum"
+        }
+      ]
+    },
+    "reading": "High occupancy + finite affine projection signature supports holographic/quasicrystal templating. It does NOT claim \u03bb=\u03b3."
   }
 }
