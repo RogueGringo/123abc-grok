@@ -80,11 +80,18 @@ class SpectralAction:
     cutoff_Lambda: float
 
     @classmethod
-    def from_field(cls, field: ZetaField, Lambda: float | None = None) -> "SpectralAction":
+    def from_field(
+        cls,
+        field: ZetaField,
+        Lambda: float | None = None,
+        omega_scale: float = 1.0,
+        weight_power: float = 1.0,
+    ) -> "SpectralAction":
+        """Build action; omega_scale / weight_power are Keymaker tuning knobs."""
         g = field.gammas
         Lambda = float(Lambda if Lambda is not None else 2.0 * g[-1])
-        omega = g / (g[0] + 1e-15)
-        weights = np.exp(-g / Lambda)
+        omega = (g / (g[0] + 1e-15)) * float(omega_scale)
+        weights = np.exp(-g / Lambda) ** float(weight_power)
         weights = weights / (np.sum(weights) + 1e-15)
         return cls(omega=omega, weights=weights, cutoff_Lambda=Lambda)
 
@@ -263,6 +270,8 @@ class Deriver:
     prefer_maxop: bool = True
     Lambda: float | None = None
     multimode: bool = True
+    omega_scale: float = 1.0
+    weight_power: float = 1.0
 
     def run(self) -> DerivationResult:
         steps: list[DerivationStep] = []
@@ -297,7 +306,12 @@ class Deriver:
         )
 
         # D2
-        action = SpectralAction.from_field(field, Lambda=self.Lambda)
+        action = SpectralAction.from_field(
+            field,
+            Lambda=self.Lambda,
+            omega_scale=self.omega_scale,
+            weight_power=self.weight_power,
+        )
         th_grid = np.linspace(0, 2 * np.pi, 361)
         steps.append(
             DerivationStep(
@@ -324,16 +338,21 @@ class Deriver:
         )
         logger.info("D3: %d critical holonomies (%d minima)", len(crit), sum(1 for c in crit if c["kind"] == "minimum"))
 
-        # D4 — sectors from critical θ* (minima first)
+        # D4 — sectors ONLY from Crit(S): minima first, then other critical points.
+        # Do not mix raw gap_phases into the key set — that confuses lock pins.
         mins = [c for c in crit if c["kind"] == "minimum"]
-        pool = mins if mins else crit
+        rest = [c for c in crit if c["kind"] != "minimum"]
+        pool = list(mins) + list(rest)
         if len(pool) < self.n_sectors:
-            # supplement with gap phases so we always fill
-            extra = field.gap_phases()
-            for th in extra:
-                if len(pool) >= self.n_sectors:
-                    break
-                pool.append({"theta": float(th), "S": float(action.S(th)), "S_second": 0.0, "kind": "gap_phase"})
+            # replicate minima with small phase jitter only as last resort
+            base = list(pool) if pool else [{"theta": 0.0, "S": 0.0, "S_second": 1.0, "kind": "fallback"}]
+            i = 0
+            while len(pool) < self.n_sectors:
+                c = dict(base[i % len(base)])
+                c["theta"] = float(c["theta"] + 0.01 * (i + 1)) % (2 * np.pi)
+                c["kind"] = "minima_echo"
+                pool.append(c)
+                i += 1
         pool = pool[: self.n_sectors]
 
         sectors: list[InducedSector] = []
