@@ -1,17 +1,31 @@
-"""Zeta–Kinematic Realm: cohesive monodromy spectra → honest number-theoretic probes."""
+"""Zeta–Kinematic Realm — correct abstraction.
 
-from realm.cohesive import CohesiveHomotopyFunctor
-from realm.pipeline import RealmPipeline
-from realm.coutsias import CoutsiasKinematics, cyclosporin_roots
-from realm.scan import MultiNScan
-from realm.waypoints import signature_for_cloud, signatures_for_geometries
+Geometry is built **off the zeta field** (γ_n as generative seed).
+Sheaf spectra are properties of that induced geometry.
+They are **not** the actual Riemann zeros.
+
+    from realm import analyze_cycle, KinematicSpectralRealm, ZetaField
+
+    result = analyze_cycle(N=11)
+    print(result.summary()["ontology"])
+    # → geometry_off_zeta_field_not_actual_zeros
+"""
+
+from realm.engine import KinematicSpectralRealm, analyze_cycle
+from realm.types import AnalysisResult, ProbeReport, Sector, Spectrum, Waypoint
+from realm.zeta_field import ZetaField, ZETA_ZEROS_IMAG
+from realm.zeta_geometry import ZetaInducedGeometry, InducedSector
 
 __all__ = [
-    "CohesiveHomotopyFunctor",
-    "RealmPipeline",
-    "CoutsiasKinematics",
-    "cyclosporin_roots",
-    "MultiNScan",
-    "signature_for_cloud",
-    "signatures_for_geometries",
+    "KinematicSpectralRealm",
+    "analyze_cycle",
+    "ZetaField",
+    "ZETA_ZEROS_IMAG",
+    "ZetaInducedGeometry",
+    "InducedSector",
+    "AnalysisResult",
+    "Sector",
+    "Spectrum",
+    "Waypoint",
+    "ProbeReport",
 ]

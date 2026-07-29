@@ -27,83 +27,93 @@ if str(ROOT) not in sys.path:
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("fire")
 
-from realm.coutsias import CoutsiasKinematics
-from realm.gue import analyze_spectrum_gue, pooled_gue
+from realm import KinematicSpectralRealm, ZetaField
+from realm.gue import pooled_gue
 from realm.prime_wave import PrimeWaveProbe
-from realm.scan import MultiNScan
 from realm.sheaf_backend import CellularSheaf
-from realm.waypoints import pairwise_waypoint_distance, signatures_for_geometries
-from realm.zeta_probe import ZetaProbe
+from realm.waypoints import GeometryWaypoint, pairwise_waypoint_distance
 
 
 def fire_primary(N: int = 11) -> dict:
-    """Primary cyclosporin-like N: 6-DOF Coutsias + holonomy + waypoints + probes."""
-    logger.info("🔥 PRIMARY N=%d  |  MaxOp sheaf=%s", N, CellularSheaf is not None)
-    kin = CoutsiasKinematics(N=N, residual_tol=0.40, n_free=6, n_starts=56, use_de=True)
-    geoms = kin.find_real_roots()
-    if len(geoms) < 2:
-        kin.residual_tol = 0.9
-        geoms = kin.find_real_roots()
-    geoms = geoms[:6]
-    roots = [g.root_t for g in geoms]
-    twists = [g.twist_so2 for g in geoms]
+    """Primary: geometry OFF the zeta field (correct direction)."""
+    logger.info(
+        "🔥 PRIMARY N=%d | geometry OFF zetas (not actual zeros) | MaxOp=%s",
+        N,
+        CellularSheaf is not None,
+    )
+    field = ZetaField.first(7)
+    result = KinematicSpectralRealm(N=N, n_sectors=6, twist_source="gap_phases").analyze(field=field)
 
-    # MaxOp waypoint signatures on soft-closed 3D clouds
-    waypoints = signatures_for_geometries(geoms)
-    wp_dist = pairwise_waypoint_distance(waypoints)
+    class _G:
+        def __init__(self, s):
+            self.root_t = s.root_t
+            self.residual = s.residual
+            self.positions = s.positions
+            self.holonomy_angle = s.holonomy_angle
+            self.twist_so2 = s.twist
 
-    from realm.cohesive import CohesiveHomotopyFunctor
+    class _S:
+        def __init__(self, sp):
+            self.state_id = sp.sector_id
+            self.eigenvalues = sp.eigenvalues
+            self.spectral_gap = sp.spectral_gap
+            self.twist = sp.twist
 
-    functor = CohesiveHomotopyFunctor(N=N, d=2)
-    states = []
-    for i, (r, th, g) in enumerate(zip(roots, twists, geoms)):
-        wp = waypoints[i] if i < len(waypoints) else None
-        states.append(
-            functor.evaluate_state_from_twist(
-                i + 1,
-                r,
-                th,
-                prefer_maxop=True,
-                geometry_meta={
-                    "holonomy_angle": g.holonomy_angle,
-                    "position_error": g.position_error,
-                    "residual": g.residual,
-                    "epsilon_star": wp.epsilon_star if wp else None,
-                    "gini": wp.gini_at_onset if wp else None,
-                },
-            )
+    geoms = [_G(s) for s in result.sectors]
+    states = [_S(sp) for sp in result.spectra]
+    waypoints = [
+        GeometryWaypoint(
+            state_id=w.sector_id,
+            backend=w.backend,
+            epsilon_star=w.epsilon_star,
+            waypoints=w.waypoints,
+            derivative_values=w.derivative_values,
+            gini_at_onset=w.gini_at_onset,
+            gini_slope_at_onset=w.gini_slope_at_onset,
+            vector=w.vector,
+            n_points=N,
         )
+        for w in result.waypoints
+    ]
+    wp_dist = pairwise_waypoint_distance(waypoints)
+    gaps = result.gaps()
+    wave = PrimeWaveProbe(n_primes=80).analyze(np.sort(gaps)) if gaps.size else None
+    gue_pool = pooled_gue([s.eigenvalues for s in result.spectra])
 
-    gaps = np.array([s.spectral_gap for s in states], dtype=float)
-    frust = np.array([s.frustration_closed_form for s in states], dtype=float)
-    eps_stars = np.array([w.epsilon_star for w in waypoints], dtype=float) if waypoints else np.array([])
-    zeta = ZetaProbe()
-    reports = {
-        "spectral_gap": zeta.probe(gaps, "spectral_gap"),
-        "gap_ladder": zeta.probe(np.sort(gaps), "gap_ladder"),
-        "frustration": zeta.probe(frust, "frustration"),
-    }
-    if eps_stars.size >= 2:
-        reports["epsilon_star"] = zeta.probe(eps_stars, "waypoint_epsilon_star")
+    # Figure still expects a "reports" object with .observed for zeta panel —
+    # reframe panel as induced twists vs seed gap phases (not λ=γ).
+    class _Rep:
+        def __init__(self):
+            self.observed = result.twists()
+            self.zeta_targets = field.gap_phases()[: len(self.observed)]
+            if len(self.zeta_targets) < len(self.observed):
+                self.zeta_targets = np.pad(
+                    self.zeta_targets, (0, len(self.observed) - len(self.zeta_targets))
+                )
+            self.calibrated = self.observed  # identity: both are geometric angles
+            self.raw_mean_error = float(np.mean(np.abs(self.observed - self.zeta_targets[: len(self.observed)])))
+            self.calibrated_mean_error = self.raw_mean_error
+            self.affine_scale = 1.0
 
-    wave = PrimeWaveProbe(n_primes=80).analyze(np.sort(gaps))
-    gue_each = [analyze_spectrum_gue(s.eigenvalues) for s in states]
-    gue_pool = pooled_gue([s.eigenvalues for s in states])
+        def verdict(self):
+            return "geometry OFF zeta gaps (twists vs seed phases) — not λ=actual γ"
+
+    reports = {"spectral_gap": _Rep()}  # key kept for plot wiring; meaning flipped
 
     return {
         "N": N,
         "backend_maxop": CellularSheaf is not None,
-        "n_free": kin.n_free,
-        "best_residual": float(geoms[0].residual) if geoms else None,
-        "roots": roots,
-        "twists": twists,
-        "geometries": [g.to_dict() for g in geoms],
-        "waypoints": [w.to_dict() for w in waypoints],
+        "n_free": 0,
+        "best_residual": 0.0,
+        "roots": [s.root_t for s in result.sectors],
+        "twists": result.twists().tolist(),
+        "ontology": result.summary()["ontology"],
+        "waypoints": [w.to_dict() for w in result.waypoints],
         "waypoint_distance_matrix": wp_dist.tolist(),
-        "states": [s.to_dict() for s in states],
-        "zeta": {k: v.to_dict() for k, v in reports.items()},
-        "prime_wave": wave.to_dict(),
-        "gue_each": [g.to_dict() for g in gue_each],
+        "states": [sp.to_dict() for sp in result.spectra],
+        "probes": [p.to_dict() for p in result.probes],
+        "analysis_summary": result.summary(),
+        "prime_wave": wave.to_dict() if wave else {},
         "gue_pooled": gue_pool.to_dict(),
         "_states_obj": states,
         "_geoms_obj": geoms,
@@ -112,7 +122,7 @@ def fire_primary(N: int = 11) -> dict:
         "_reports_obj": reports,
         "_wave_obj": wave,
         "_gue_pool_obj": gue_pool,
-        "_gue_each_obj": gue_each,
+        "_result": result,
     }
 
 
@@ -135,7 +145,7 @@ def plot_fire(primary: dict, family: list, path: Path) -> None:
         p = g.positions
         ax.plot(p[:, 0], p[:, 1], "o-", color=colors[i], ms=3, label=f"t={g.root_t:.2f} r={g.residual:.2f}")
         ax.plot([p[-1, 0], p[0, 0]], [p[-1, 1], p[0, 1]], "--", color=colors[i], alpha=0.5)
-    ax.set_title(f"6-DOF Coutsias soft-closed rings (best r={primary.get('best_residual')})")
+    ax.set_title("Zeta-induced cyclic geometries (exact closure)")
     ax.set_aspect("equal", adjustable="datalim")
     ax.legend(fontsize=6)
     ax.grid(True, alpha=0.3)
@@ -150,20 +160,19 @@ def plot_fire(primary: dict, family: list, path: Path) -> None:
     ax.grid(True, alpha=0.3)
     ax.legend(fontsize=7)
 
-    # 0,2 — zeta honest
+    # 0,2 — twists induced from zeta gaps (geometry OFF field, not λ=γ)
     ax = fig.add_subplot(gs[0, 2])
     rep = reports["spectral_gap"]
     idx = np.arange(1, len(rep.observed) + 1)
-    ax.plot(idx, rep.zeta_targets, "k*-", lw=2, label="γ_n")
-    ax.plot(idx, rep.observed, "ro--", label="raw λ_gap")
-    ax.plot(idx, rep.calibrated, "bs--", label="affine aλ+b")
-    ax.set_title("Honest ζ correspondence")
+    ax.plot(idx, rep.zeta_targets[: len(idx)], "k*-", lw=2, label="seed gap-phases (from γ)")
+    ax.plot(idx, rep.observed, "ro--", label="induced monodromy twists")
+    ax.set_title("Geometry OFF zeta gaps (not actual zeros)")
     ax.legend(fontsize=7)
     ax.grid(True, alpha=0.3)
     ax.text(
         0.02,
         0.98,
-        f"{rep.verdict()[:60]}…\nraw={rep.raw_mean_error:.3g} cal={rep.calibrated_mean_error:.3g}",
+        f"{rep.verdict()[:70]}\nshape L1~{rep.raw_mean_error:.3g}",
         transform=ax.transAxes,
         va="top",
         fontsize=7,
@@ -173,12 +182,13 @@ def plot_fire(primary: dict, family: list, path: Path) -> None:
 
     # 1,0 — prime wave FFT
     ax = fig.add_subplot(gs[1, 0])
-    if wave.geom_amps.size:
+    if wave is not None and wave.geom_amps.size:
         ax.plot(wave.geom_freqs, wave.geom_amps, color="purple", lw=2, label="geom gaps")
-    if wave.prime_amps.size and wave.geom_amps.size:
+    if wave is not None and wave.prime_amps.size and wave.geom_amps.size:
         scale = np.max(wave.geom_amps) / (np.max(wave.prime_amps) + 1e-12)
         ax.plot(wave.prime_freqs, wave.prime_amps * scale, color="gray", alpha=0.75, label="prime gaps")
-    ax.set_title(f"Prime-wave FFT  KS={wave.gap_ks_distance:.3f}")
+    ks = getattr(wave, "gap_ks_distance", float("nan")) if wave else float("nan")
+    ax.set_title(f"Prime-wave FFT (induced)  KS={ks:.3f}")
     ax.legend(fontsize=7)
     ax.grid(True, alpha=0.3)
 
@@ -208,18 +218,14 @@ def plot_fire(primary: dict, family: list, path: Path) -> None:
     ax.set_title("Geometry holonomy → friction")
     ax.grid(True, alpha=0.3)
 
-    # 2,0 — multi-N mean gap
+    # 2,0 — multi-N mean gap of induced geometries
     ax = fig.add_subplot(gs[2, 0])
     Ns = [f.N for f in family]
-    means = [f.mean_gap for f in family]
-    nroots = [f.n_roots for f in family]
-    ax.bar(Ns, means, color="#d62728", alpha=0.8, label="mean λ_gap")
+    means = [float(np.mean(f.gaps())) if len(f.spectra) else np.nan for f in family]
+    ax.bar(Ns, means, color="#d62728", alpha=0.8, label="mean λ_gap (induced)")
     ax.set_xlabel("N (cycle size)")
     ax.set_ylabel("mean spectral gap")
-    ax.set_title("Multi-N family scan")
-    ax2 = ax.twinx()
-    ax2.plot(Ns, nroots, "ko-", label="# algebraic roots")
-    ax2.set_ylabel("# roots")
+    ax.set_title("Multi-N zeta-induced geometry")
     ax.grid(True, alpha=0.3)
 
     # 2,1 — MaxOp waypoint distance matrix W(C)
@@ -236,10 +242,12 @@ def plot_fire(primary: dict, family: list, path: Path) -> None:
         backend = waypoints[0].backend if waypoints else "?"
         ax.set_title(f"MaxOp waypoint ‖W_i−W_j‖  ({backend})")
     else:
-        # fallback: multi-N GUE
-        ks_g = [f.gue_pooled.ks_gue if f.gue_pooled else np.nan for f in family]
+        ks_g = []
+        for f in family:
+            g = pooled_gue([s.eigenvalues for s in f.spectra])
+            ks_g.append(g.ks_gue)
         ax.plot(Ns, ks_g, "r-o")
-        ax.set_title("Family GUE KS (no waypoints)")
+        ax.set_title("Family GUE KS (induced sheaf)")
         ax.grid(True, alpha=0.3)
 
     # 2,2 — manifesto text
@@ -248,23 +256,21 @@ def plot_fire(primary: dict, family: list, path: Path) -> None:
     wp_backend = waypoints[0].backend if waypoints else "none"
     eps_list = [round(w.epsilon_star, 3) for w in waypoints] if waypoints else []
     lines = [
-        "FIRE MANIFESTO v2",
-        f"MaxOp sheaf: {primary['backend_maxop']}  waypoints: {wp_backend}",
-        f"n_free={primary.get('n_free')}  best_residual={primary.get('best_residual')}",
-        f"N={primary['N']} sectors: {len(primary['roots'])}",
+        "ONTOLOGY",
+        "geometry OFF the zeta field",
+        "NOT the actual zeros as eigenvalues",
+        "",
+        f"MaxOp sheaf: {primary['backend_maxop']}  W(C): {wp_backend}",
+        f"N={primary['N']} induced sectors: {len(primary.get('twists') or [])}",
         f"ε* = {eps_list}",
         "",
-        "ZETA:",
     ]
-    for name, rep in reports.items():
-        lines.append(f"  {name}: {rep.verdict()[:44]}")
+    for pr in primary.get("probes") or []:
+        lines.append(f"  {pr.get('name','?')}: {str(pr.get('verdict',''))[:40]}")
     lines += [
         "",
-        f"PRIME-WAVE KS: {wave.gap_ks_distance:.4f}",
-        f"GUE: {gue_pool.verdict()[:42]}",
-        "",
-        "6-DOF Coutsias + soft-close + W(C) signatures.",
-        "Holonomy twists. Resonance must be earned.",
+        f"PRIME-WAVE KS: {getattr(wave, 'gap_ks_distance', float('nan')):.4f}",
+        f"GUE: {gue_pool.verdict()[:40]}",
     ]
     ax.text(
         0.02,
@@ -280,8 +286,8 @@ def plot_fire(primary: dict, family: list, path: Path) -> None:
     )
 
     fig.suptitle(
-        "SET FIRE TO THE RAIN  ·  6-DOF Coutsias → Holonomy → Sheaf L → W(C) → ζ/GUE",
-        fontsize=13,
+        "GEOMETRY OFF THE ZETAS  ·  γ-seed → twists → C_N → sheaf L → W(C)  (not actual zeros)",
+        fontsize=12,
         fontweight="bold",
         color="#e94560",
     )
@@ -294,33 +300,33 @@ def main() -> int:
     logger.info("======== SET FIRE TO THE RAIN ========")
     primary = fire_primary(N=11)
 
-    logger.info("======== MULTI-N FAMILY SCAN ========")
-    scan = MultiNScan(N_values=[7, 9, 11, 13, 15], residual_tol=0.55)
-    family = scan.run()
+    logger.info("======== MULTI-N (zeta-induced geometry) ========")
+    family = []
+    for Nv in [7, 9, 11, 13, 15]:
+        r = KinematicSpectralRealm(N=Nv, n_sectors=5, with_waypoints=False).analyze()
+        family.append(r)
 
     out_fig = ROOT / "fire_the_rain.png"
     plot_fire(primary, family, out_fig)
 
     wp_list = primary.get("waypoints") or []
     manifesto = {
-        "title": "set fire to the rain",
+        "title": "geometry off the zeta field",
+        "ontology": primary.get("ontology"),
         "primary": {k: v for k, v in primary.items() if not k.startswith("_")},
-        "family": [f.to_dict() for f in family],
+        "family": [f.summary() for f in family],
         "figure": str(out_fig.resolve()),
         "summary": {
+            "ontology": primary.get("ontology"),
             "maxop_sheaf": primary["backend_maxop"],
             "waypoint_backend": wp_list[0]["backend"] if wp_list else None,
-            "n_free": primary.get("n_free"),
-            "best_residual": primary.get("best_residual"),
-            "n_roots_N11": len(primary["roots"]),
+            "n_sectors": len(primary.get("twists") or []),
+            "twists": primary.get("twists"),
             "epsilon_stars": [w["epsilon_star"] for w in wp_list],
-            "gini_onsets": [w["gini_at_onset"] for w in wp_list],
-            "zeta_verdicts": {k: primary["zeta"][k]["verdict"] for k in primary["zeta"]},
-            "gue_pooled": primary["gue_pooled"]["verdict"],
-            "prime_wave_ks": primary["prime_wave"]["gap_ks_distance"],
+            "probes": primary.get("probes"),
+            "gue_pooled": primary["gue_pooled"].get("verdict"),
             "family_N": [f.N for f in family],
-            "family_n_roots": [f.n_roots for f in family],
-            "family_best_mean_gap": [f.mean_gap for f in family],
+            "family_mean_gap": [float(np.mean(f.gaps())) for f in family],
         },
     }
     man_path = ROOT / "fire_manifesto.json"
