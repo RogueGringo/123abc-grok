@@ -16,7 +16,6 @@ from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
-from scipy.linalg import eigh
 
 logger = logging.getLogger(__name__)
 
@@ -128,39 +127,23 @@ class CohesiveHomotopyFunctor:
             A[-1, -1] = np.cos(twist)
         return A
 
-    def sharp_modality(self, monodromy: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        """Concrete connection Laplacian L on the cycle with closing monodromy A.
+    def sharp_modality(
+        self,
+        monodromy: np.ndarray,
+        prefer_maxop: bool = True,
+    ) -> tuple[np.ndarray, np.ndarray, dict]:
+        """Concrete connection Laplacian via MaxOp CellularSheaf or numpy.
 
         For ordinary edges: off-diagonal −I_d.
-        For the cut edge (N-1 → 0): off-diagonal −A / −Aᵀ.
-        Diagonal blocks accumulate degree contributions (standard graph Laplacian
-        structure lifted to R^d stalks).
+        For the cut edge (N-1 → 0): monodromy A encodes holonomy.
         """
+        from realm.sheaf_backend import sharp_laplacian
+
         A = np.asarray(monodromy, dtype=float)
         if A.shape != (self.d, self.d):
             raise ValueError(f"monodromy shape {A.shape} != ({self.d}, {self.d})")
-
-        dim = self.N * self.d
-        L = np.zeros((dim, dim), dtype=float)
-        I = np.eye(self.d, dtype=float)
-
-        for i in range(self.N):
-            j = (i + 1) % self.N
-            bi, bj = i * self.d, j * self.d
-            L[bi : bi + self.d, bi : bi + self.d] += I
-            L[bj : bj + self.d, bj : bj + self.d] += I
-            if i == self.N - 1:
-                L[bi : bi + self.d, bj : bj + self.d] -= A
-                L[bj : bj + self.d, bi : bi + self.d] -= A.T
-            else:
-                L[bi : bi + self.d, bj : bj + self.d] -= I
-                L[bj : bj + self.d, bi : bi + self.d] -= I
-
-        # Numerical symmetrization (float drift on non-orthogonal A)
-        L = 0.5 * (L + L.T)
-        eigenvalues = eigh(L, eigvals_only=True)
-        eigenvalues = np.sort(np.real(eigenvalues))
-        return L, eigenvalues
+        L, eigenvalues, meta = sharp_laplacian(self.N, self.d, A, prefer_maxop=prefer_maxop)
+        return L, eigenvalues, meta
 
     def partition_function(self, eigenvalues: np.ndarray, temperature: float | None = None) -> float:
         """Z = Tr exp(-L / T) = sum_k exp(-λ_k / T)."""
@@ -201,19 +184,30 @@ class CohesiveHomotopyFunctor:
             return r
         raise ValueError(f"unknown root_to_twist mode: {mode}")
 
-    def evaluate_state(
+    def evaluate_state_from_twist(
         self,
         state_id: int,
         root: float,
-        twist_mode: str = "pi_scale",
+        twist: float,
+        prefer_maxop: bool = True,
+        geometry_meta: dict | None = None,
     ) -> StateSpectrum:
-        twist = self.root_to_twist(root, mode=twist_mode)
-        shape = self.shape_modality()  # noqa: F841 — declarative side-effect log
+        """Evaluate one sector from an explicit holonomy twist (preferred path)."""
+        self.shape_modality()
         flat = self.flat_modality(twist)
         A = self.rotation_monodromy(twist)
-        L, eigs = self.sharp_modality(A)
+        L, eigs, meta = self.sharp_modality(A, prefer_maxop=prefer_maxop)
         gap = self.spectral_gap(eigs)
         Z = self.partition_function(eigs)
+        note = str(flat["cohomology_note"])
+        if geometry_meta:
+            note += (
+                f" | holonomy={geometry_meta.get('holonomy_angle', float('nan')):.4f}"
+                f" pos_err={geometry_meta.get('position_error', float('nan')):.4f}"
+                f" backend={meta.get('backend')}"
+            )
+        else:
+            note += f" | backend={meta.get('backend')}"
         return StateSpectrum(
             state_id=state_id,
             root=float(root),
@@ -226,21 +220,47 @@ class CohesiveHomotopyFunctor:
             frustration_closed_form=float(flat["frustration_closed_form"]),
             is_flat=bool(flat["is_flat"]),
             partition_function=Z,
-            cohomology_note=str(flat["cohomology_note"]),
+            cohomology_note=note,
         )
 
-    def run(self, roots: list[float] | np.ndarray, twist_mode: str = "pi_scale") -> list[StateSpectrum]:
-        """Evaluate the functor on a list of algebraic roots (e.g. Coutsias)."""
+    def evaluate_state(
+        self,
+        state_id: int,
+        root: float,
+        twist_mode: str = "pi_scale",
+        prefer_maxop: bool = True,
+    ) -> StateSpectrum:
+        twist = self.root_to_twist(root, mode=twist_mode)
+        return self.evaluate_state_from_twist(
+            state_id, root, twist, prefer_maxop=prefer_maxop
+        )
+
+    def run(
+        self,
+        roots: list[float] | np.ndarray,
+        twist_mode: str = "pi_scale",
+        prefer_maxop: bool = True,
+        twists: list[float] | None = None,
+    ) -> list[StateSpectrum]:
+        """Evaluate the functor on algebraic roots, optionally with geometric twists."""
         logger.info(
-            "Cohesive functor pipeline: N=%d d=%d n_roots=%d twist_mode=%s",
+            "Cohesive functor pipeline: N=%d d=%d n_roots=%d twist_mode=%s maxop=%s",
             self.N,
             self.d,
             len(roots),
-            twist_mode,
+            twist_mode if twists is None else "geometry_holonomy",
+            prefer_maxop,
         )
         results: list[StateSpectrum] = []
         for idx, root in enumerate(roots):
-            state = self.evaluate_state(idx + 1, float(root), twist_mode=twist_mode)
+            if twists is not None:
+                state = self.evaluate_state_from_twist(
+                    idx + 1, float(root), float(twists[idx]), prefer_maxop=prefer_maxop
+                )
+            else:
+                state = self.evaluate_state(
+                    idx + 1, float(root), twist_mode=twist_mode, prefer_maxop=prefer_maxop
+                )
             results.append(state)
             logger.info(
                 "State %d | root=%.4f | θ/π=%.3f | λ_gap=%.6f | λ_min=%.6e | Z=%.6f | flat=%s",

@@ -125,8 +125,31 @@ class ZetaProbe:
     ) -> CorrespondenceReport:
         obs = np.asarray(observed, dtype=float).ravel()
         k = len(obs) if n_zeros is None else min(n_zeros, len(obs), len(self.zeta_zeros))
+        k = min(k, len(self.zeta_zeros))
         obs = obs[:k]
         targets = self.zeta_zeros[:k]
+
+        if k == 0:
+            empty = np.zeros(0)
+            return CorrespondenceReport(
+                observable_name=observable_name,
+                observed=empty,
+                zeta_targets=empty,
+                raw_errors=empty,
+                raw_mean_error=float("inf"),
+                affine_scale=1.0,
+                affine_offset=0.0,
+                calibrated=empty,
+                calibrated_errors=empty,
+                calibrated_mean_error=float("inf"),
+                null_mean_errors=empty,
+                null_mean=float("inf"),
+                null_std=0.0,
+                beats_null=False,
+                raw_resonance=False,
+                calibrated_resonance=False,
+                threshold=self.threshold,
+            )
 
         raw_err = np.abs(obs - targets)
         raw_mean = float(np.mean(raw_err))
