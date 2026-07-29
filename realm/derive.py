@@ -86,12 +86,28 @@ class SpectralAction:
         Lambda: float | None = None,
         omega_scale: float = 1.0,
         weight_power: float = 1.0,
+        tier_split: float = 0.45,
+        low_boost: float = 1.0,
     ) -> "SpectralAction":
-        """Build action; omega_scale / weight_power are Keymaker tuning knobs."""
+        """Build action; knobs tune cutoff, frequencies, and multi-scale weights.
+
+        Multi-scale (tiered) weighting
+        ------------------------------
+        Lower-order zeros (first tier_split fraction by index) receive an extra
+        factor ``low_boost``, so the spectral action can emphasize the IR
+        scaffolding that dominates projected 3D geometry while still keeping
+        UV zeros in the sum. Then apply heat kernel and power reshape.
+        """
         g = field.gammas
         Lambda = float(Lambda if Lambda is not None else 2.0 * g[-1])
         omega = (g / (g[0] + 1e-15)) * float(omega_scale)
         weights = np.exp(-g / Lambda) ** float(weight_power)
+        # Tiered IR boost on the first floor(tier_split * K) zeros
+        k = g.size
+        n_low = max(1, int(np.floor(float(np.clip(tier_split, 0.05, 0.95)) * k)))
+        tier = np.ones(k, dtype=float)
+        tier[:n_low] *= float(max(low_boost, 1e-6))
+        weights = weights * tier
         weights = weights / (np.sum(weights) + 1e-15)
         return cls(omega=omega, weights=weights, cutoff_Lambda=Lambda)
 
@@ -272,6 +288,8 @@ class Deriver:
     multimode: bool = True
     omega_scale: float = 1.0
     weight_power: float = 1.0
+    tier_split: float = 0.45
+    low_boost: float = 1.0
 
     def run(self) -> DerivationResult:
         steps: list[DerivationStep] = []
@@ -311,6 +329,8 @@ class Deriver:
             Lambda=self.Lambda,
             omega_scale=self.omega_scale,
             weight_power=self.weight_power,
+            tier_split=self.tier_split,
+            low_boost=self.low_boost,
         )
         th_grid = np.linspace(0, 2 * np.pi, 361)
         steps.append(

@@ -69,13 +69,18 @@ def plot_meet(result, path: Path) -> None:
     ax.set_xlabel("S_Λ(θ) on key")
     ax.set_ylabel("λ_gap of key geometry")
     status = "LOCKED" if result.locked else "UNSEALED"
-    ax.set_title(f"{status} · knobs {result.best_knobs}")
+    kn = result.best_knobs
+    ax.set_title(
+        f"{status} · Λ={kn.get('Lambda', 0):.1f} ωs={kn.get('omega_scale', 0):.2f} "
+        f"boost={kn.get('low_boost', 1):.2f}"
+    )
     ax.grid(True, alpha=0.3)
 
     color = "#00ff88" if result.locked else "#e94560"
+    method = getattr(result, "search_method", "search")
     fig.suptitle(
-        f"MASTER LOCK MEETS KEYMAKER  ·  {status}  ·  R={result.residual.total:.4f}",
-        fontsize=13,
+        f"MASTER LOCK MEETS KEYMAKER  ·  {status}  ·  R={result.residual.total:.4f}  ·  {method}",
+        fontsize=12,
         fontweight="bold",
         color=color,
     )
@@ -89,8 +94,8 @@ def main(argv=None) -> int:
     p.add_argument("-N", type=int, default=11)
     p.add_argument("-k", type=int, default=12)
     p.add_argument("--sectors", type=int, default=6)
-    p.add_argument("--threshold", type=float, default=0.18)
-    p.add_argument("--max-iter", type=int, default=28)
+    p.add_argument("--threshold", type=float, default=0.12)
+    p.add_argument("--max-iter", type=int, default=48)
     p.add_argument("--json", type=Path, default=Path("lock_meet.json"))
     p.add_argument("--plot", type=Path, default=Path("lock_meet.png"))
     p.add_argument("-v", action="store_true")
