@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.superpowers/
+.pytest_cache/
+*.png
+!realm_spectrum.png
+!zeta_resonance_spikes.png
