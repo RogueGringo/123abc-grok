@@ -361,8 +361,8 @@ class Deriver:
         # D4 — diverse Crit(S) keys only (minima first). Never echo-jitter collapse.
         mins = [c for c in crit if c["kind"] == "minimum"]
         rest = [c for c in crit if c["kind"] != "minimum"]
-        # Dedup by angular separation ≥ π/(2 n_sectors)
-        min_sep = np.pi / max(2 * self.n_sectors, 2)
+        # Dedup by angular separation (tighter pack so we can seat n_sectors keys)
+        min_sep = np.pi / max(3 * self.n_sectors, 3)
 
         def _take_diverse(cands: list, need: int, taken: list) -> list:
             out = list(taken)
