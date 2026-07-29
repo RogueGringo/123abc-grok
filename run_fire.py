@@ -28,31 +28,36 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger("fire")
 
 from realm.coutsias import CoutsiasKinematics
-from realm.gue import analyze_spectrum_gue, gue_wigner_surmise_cdf, pooled_gue
-from realm.pipeline import RealmPipeline
+from realm.gue import analyze_spectrum_gue, pooled_gue
 from realm.prime_wave import PrimeWaveProbe
 from realm.scan import MultiNScan
 from realm.sheaf_backend import CellularSheaf
+from realm.waypoints import pairwise_waypoint_distance, signatures_for_geometries
 from realm.zeta_probe import ZetaProbe
 
 
 def fire_primary(N: int = 11) -> dict:
-    """Primary cyclosporin-like N: algebraic roots + geometric holonomy → full probes."""
-    logger.info("🔥 PRIMARY N=%d  |  MaxOp=%s", N, CellularSheaf is not None)
-    kin = CoutsiasKinematics(N=N, residual_tol=0.55)
+    """Primary cyclosporin-like N: 6-DOF Coutsias + holonomy + waypoints + probes."""
+    logger.info("🔥 PRIMARY N=%d  |  MaxOp sheaf=%s", N, CellularSheaf is not None)
+    kin = CoutsiasKinematics(N=N, residual_tol=0.40, n_free=6, n_starts=56, use_de=True)
     geoms = kin.find_real_roots()
     if len(geoms) < 2:
-        kin.residual_tol = 1.0
+        kin.residual_tol = 0.9
         geoms = kin.find_real_roots()
     geoms = geoms[:6]
     roots = [g.root_t for g in geoms]
     twists = [g.twist_so2 for g in geoms]
+
+    # MaxOp waypoint signatures on soft-closed 3D clouds
+    waypoints = signatures_for_geometries(geoms)
+    wp_dist = pairwise_waypoint_distance(waypoints)
 
     from realm.cohesive import CohesiveHomotopyFunctor
 
     functor = CohesiveHomotopyFunctor(N=N, d=2)
     states = []
     for i, (r, th, g) in enumerate(zip(roots, twists, geoms)):
+        wp = waypoints[i] if i < len(waypoints) else None
         states.append(
             functor.evaluate_state_from_twist(
                 i + 1,
@@ -63,18 +68,24 @@ def fire_primary(N: int = 11) -> dict:
                     "holonomy_angle": g.holonomy_angle,
                     "position_error": g.position_error,
                     "residual": g.residual,
+                    "epsilon_star": wp.epsilon_star if wp else None,
+                    "gini": wp.gini_at_onset if wp else None,
                 },
             )
         )
 
     gaps = np.array([s.spectral_gap for s in states], dtype=float)
     frust = np.array([s.frustration_closed_form for s in states], dtype=float)
+    eps_stars = np.array([w.epsilon_star for w in waypoints], dtype=float) if waypoints else np.array([])
     zeta = ZetaProbe()
     reports = {
         "spectral_gap": zeta.probe(gaps, "spectral_gap"),
         "gap_ladder": zeta.probe(np.sort(gaps), "gap_ladder"),
         "frustration": zeta.probe(frust, "frustration"),
     }
+    if eps_stars.size >= 2:
+        reports["epsilon_star"] = zeta.probe(eps_stars, "waypoint_epsilon_star")
+
     wave = PrimeWaveProbe(n_primes=80).analyze(np.sort(gaps))
     gue_each = [analyze_spectrum_gue(s.eigenvalues) for s in states]
     gue_pool = pooled_gue([s.eigenvalues for s in states])
@@ -82,9 +93,13 @@ def fire_primary(N: int = 11) -> dict:
     return {
         "N": N,
         "backend_maxop": CellularSheaf is not None,
+        "n_free": kin.n_free,
+        "best_residual": float(geoms[0].residual) if geoms else None,
         "roots": roots,
         "twists": twists,
         "geometries": [g.to_dict() for g in geoms],
+        "waypoints": [w.to_dict() for w in waypoints],
+        "waypoint_distance_matrix": wp_dist.tolist(),
         "states": [s.to_dict() for s in states],
         "zeta": {k: v.to_dict() for k, v in reports.items()},
         "prime_wave": wave.to_dict(),
@@ -92,6 +107,8 @@ def fire_primary(N: int = 11) -> dict:
         "gue_pooled": gue_pool.to_dict(),
         "_states_obj": states,
         "_geoms_obj": geoms,
+        "_waypoints_obj": waypoints,
+        "_wp_dist": wp_dist,
         "_reports_obj": reports,
         "_wave_obj": wave,
         "_gue_pool_obj": gue_pool,
@@ -105,6 +122,8 @@ def plot_fire(primary: dict, family: list, path: Path) -> None:
     reports = primary["_reports_obj"]
     wave = primary["_wave_obj"]
     gue_pool = primary["_gue_pool_obj"]
+    waypoints = primary.get("_waypoints_obj") or []
+    wp_dist = primary.get("_wp_dist")
 
     fig = plt.figure(figsize=(16, 12))
     gs = fig.add_gridspec(3, 3, hspace=0.38, wspace=0.32)
@@ -114,11 +133,11 @@ def plot_fire(primary: dict, family: list, path: Path) -> None:
     colors = plt.cm.plasma(np.linspace(0.15, 0.85, max(len(geoms), 1)))
     for i, g in enumerate(geoms):
         p = g.positions
-        ax.plot(p[:, 0], p[:, 1], "o-", color=colors[i], ms=3, label=f"t={g.root_t:.3f}")
+        ax.plot(p[:, 0], p[:, 1], "o-", color=colors[i], ms=3, label=f"t={g.root_t:.2f} r={g.residual:.2f}")
         ax.plot([p[-1, 0], p[0, 0]], [p[-1, 1], p[0, 1]], "--", color=colors[i], alpha=0.5)
-    ax.set_title("Coutsias 3D closures (xy projection)")
+    ax.set_title(f"6-DOF Coutsias soft-closed rings (best r={primary.get('best_residual')})")
     ax.set_aspect("equal", adjustable="datalim")
-    ax.legend(fontsize=7)
+    ax.legend(fontsize=6)
     ax.grid(True, alpha=0.3)
 
     # 0,1 — spectra
@@ -203,45 +222,49 @@ def plot_fire(primary: dict, family: list, path: Path) -> None:
     ax2.set_ylabel("# roots")
     ax.grid(True, alpha=0.3)
 
-    # 2,1 — multi-N GUE KS
+    # 2,1 — MaxOp waypoint distance matrix W(C)
     ax = fig.add_subplot(gs[2, 1])
-    ks_g, ks_p = [], []
-    for f in family:
-        if f.gue_pooled:
-            ks_g.append(f.gue_pooled.ks_gue)
-            ks_p.append(f.gue_pooled.ks_poisson)
-        else:
-            ks_g.append(np.nan)
-            ks_p.append(np.nan)
-    ax.plot(Ns, ks_g, "r-o", label="KS → GUE")
-    ax.plot(Ns, ks_p, "k--s", label="KS → Poisson")
-    ax.set_xlabel("N")
-    ax.set_ylabel("KS distance")
-    ax.set_title("Family RMT: GUE vs Poisson")
-    ax.legend(fontsize=7)
-    ax.grid(True, alpha=0.3)
+    if wp_dist is not None and getattr(wp_dist, "size", 0) and wp_dist.size:
+        im = ax.imshow(wp_dist, cmap="magma")
+        fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+        labels = [f"S{w.state_id}" for w in waypoints] if waypoints else None
+        if labels:
+            ax.set_xticks(range(len(labels)))
+            ax.set_yticks(range(len(labels)))
+            ax.set_xticklabels(labels, fontsize=7)
+            ax.set_yticklabels(labels, fontsize=7)
+        backend = waypoints[0].backend if waypoints else "?"
+        ax.set_title(f"MaxOp waypoint ‖W_i−W_j‖  ({backend})")
+    else:
+        # fallback: multi-N GUE
+        ks_g = [f.gue_pooled.ks_gue if f.gue_pooled else np.nan for f in family]
+        ax.plot(Ns, ks_g, "r-o")
+        ax.set_title("Family GUE KS (no waypoints)")
+        ax.grid(True, alpha=0.3)
 
     # 2,2 — manifesto text
     ax = fig.add_subplot(gs[2, 2])
     ax.axis("off")
+    wp_backend = waypoints[0].backend if waypoints else "none"
+    eps_list = [round(w.epsilon_star, 3) for w in waypoints] if waypoints else []
     lines = [
-        "FIRE MANIFESTO",
-        f"MaxOp sheaf backend: {primary['backend_maxop']}",
-        f"N={primary['N']} algebraic roots: {len(primary['roots'])}",
-        f"roots t = {[round(r,4) for r in primary['roots']]}",
+        "FIRE MANIFESTO v2",
+        f"MaxOp sheaf: {primary['backend_maxop']}  waypoints: {wp_backend}",
+        f"n_free={primary.get('n_free')}  best_residual={primary.get('best_residual')}",
+        f"N={primary['N']} sectors: {len(primary['roots'])}",
+        f"ε* = {eps_list}",
         "",
         "ZETA:",
     ]
     for name, rep in reports.items():
-        lines.append(f"  {name}: {rep.verdict()[:48]}")
+        lines.append(f"  {name}: {rep.verdict()[:44]}")
     lines += [
         "",
         f"PRIME-WAVE KS: {wave.gap_ks_distance:.4f}",
-        f"GUE POOLED: {gue_pool.verdict()}",
-        f"  KS_GUE={gue_pool.ks_gue:.4f}  KS_Pois={gue_pool.ks_poisson:.4f}",
+        f"GUE: {gue_pool.verdict()[:42]}",
         "",
-        "Twists from 3D holonomy — not r·π fantasy.",
-        "No hardcoded λ≈γ. Resonance must be earned.",
+        "6-DOF Coutsias + soft-close + W(C) signatures.",
+        "Holonomy twists. Resonance must be earned.",
     ]
     ax.text(
         0.02,
@@ -250,15 +273,15 @@ def plot_fire(primary: dict, family: list, path: Path) -> None:
         transform=ax.transAxes,
         va="top",
         ha="left",
-        fontsize=8,
+        fontsize=7.5,
         family="monospace",
         bbox=dict(boxstyle="round", facecolor="#1a1a2e", edgecolor="#e94560", alpha=0.92),
         color="#eee",
     )
 
     fig.suptitle(
-        "SET FIRE TO THE RAIN  ·  Coutsias → Holonomy → Sheaf L → ζ / primes / GUE",
-        fontsize=14,
+        "SET FIRE TO THE RAIN  ·  6-DOF Coutsias → Holonomy → Sheaf L → W(C) → ζ/GUE",
+        fontsize=13,
         fontweight="bold",
         color="#e94560",
     )
@@ -272,26 +295,32 @@ def main() -> int:
     primary = fire_primary(N=11)
 
     logger.info("======== MULTI-N FAMILY SCAN ========")
-    scan = MultiNScan(N_values=[7, 9, 11, 13, 15], residual_tol=0.6)
+    scan = MultiNScan(N_values=[7, 9, 11, 13, 15], residual_tol=0.55)
     family = scan.run()
 
     out_fig = ROOT / "fire_the_rain.png"
     plot_fire(primary, family, out_fig)
 
-    # JSON without private object keys
+    wp_list = primary.get("waypoints") or []
     manifesto = {
         "title": "set fire to the rain",
         "primary": {k: v for k, v in primary.items() if not k.startswith("_")},
         "family": [f.to_dict() for f in family],
         "figure": str(out_fig.resolve()),
         "summary": {
-            "maxop": primary["backend_maxop"],
+            "maxop_sheaf": primary["backend_maxop"],
+            "waypoint_backend": wp_list[0]["backend"] if wp_list else None,
+            "n_free": primary.get("n_free"),
+            "best_residual": primary.get("best_residual"),
             "n_roots_N11": len(primary["roots"]),
+            "epsilon_stars": [w["epsilon_star"] for w in wp_list],
+            "gini_onsets": [w["gini_at_onset"] for w in wp_list],
             "zeta_verdicts": {k: primary["zeta"][k]["verdict"] for k in primary["zeta"]},
             "gue_pooled": primary["gue_pooled"]["verdict"],
             "prime_wave_ks": primary["prime_wave"]["gap_ks_distance"],
             "family_N": [f.N for f in family],
             "family_n_roots": [f.n_roots for f in family],
+            "family_best_mean_gap": [f.mean_gap for f in family],
         },
     }
     man_path = ROOT / "fire_manifesto.json"

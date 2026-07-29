@@ -58,7 +58,9 @@ class MultiNScan:
 
     def scan_one(self, N: int) -> NFamilyResult:
         logger.info("==== multi-N scan: N=%d ====", N)
-        kin = CoutsiasKinematics(N=N, residual_tol=self.residual_tol)
+        kin = CoutsiasKinematics(
+            N=N, residual_tol=self.residual_tol, n_free=6, n_starts=40, use_de=(N <= 11)
+        )
         geoms = kin.find_real_roots()
         if len(geoms) < 2:
             kin.residual_tol = min(1.2, self.residual_tol + 0.4)

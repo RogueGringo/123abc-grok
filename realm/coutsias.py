@@ -83,16 +83,23 @@ class ClosedGeometry:
 
 
 class CoutsiasKinematics:
-    """N-residue backbone with 3 free torsions; multi-start closure search."""
+    """N-residue backbone with 6 free torsions (Coutsias 6-DOF loop motif).
+
+    Multi-start L-BFGS-B + optional differential-evolution polish finds discrete
+    near-closure sectors. Geometries are soft-closed for topology (waypoints)
+    while residual reports the true open-chain closure energy.
+    """
 
     def __init__(
         self,
         N: int = 11,
         bond_length: float = 1.53,
         base_bond_angle: float = np.deg2rad(111.0),
-        residual_tol: float = 0.45,
-        n_starts: int = 48,
+        residual_tol: float = 0.35,
+        n_starts: int = 64,
+        n_free: int = 6,
         rng_seed: int = 11,
+        use_de: bool = True,
     ):
         if N < 6:
             raise ValueError("N >= 6 required")
@@ -100,6 +107,8 @@ class CoutsiasKinematics:
         self.bond_length = bond_length
         self.residual_tol = residual_tol
         self.n_starts = n_starts
+        self.n_free = int(np.clip(n_free, 3, min(6, N - 2)))
+        self.use_de = use_de
         self.rng = np.random.default_rng(rng_seed)
 
         self.bond_angles = np.full(N, base_bond_angle, dtype=float)
@@ -115,8 +124,18 @@ class CoutsiasKinematics:
         self.torsion_base[1] = np.deg2rad(-45.0)
         self.torsion_base[N // 3] = np.deg2rad(70.0)
 
-        # Free torsion indices (Coutsias free DOF motif — three hinges)
-        self.free_idx = [2, 4, N - 2]
+        # Free torsion indices spaced around the cycle (6-DOF Coutsias motif)
+        # Classic loop closure uses 6 torsional DOF for SE(3) end-effector.
+        spaced = np.linspace(1, N - 2, self.n_free, dtype=int)
+        self.free_idx = sorted(set(int(i) for i in spaced))
+        while len(self.free_idx) < self.n_free:
+            for j in range(1, N - 1):
+                if j not in self.free_idx:
+                    self.free_idx.append(j)
+                if len(self.free_idx) >= self.n_free:
+                    break
+        self.free_idx = self.free_idx[: self.n_free]
+        self.n_free = len(self.free_idx)
 
     def torsions_from_free(self, free: np.ndarray) -> np.ndarray:
         tau = self.torsion_base.copy()
@@ -153,6 +172,19 @@ class CoutsiasKinematics:
         orient_err = np.linalg.norm(H - np.eye(3), ord="fro")
         return float(pos_err + 0.5 * orient_err)
 
+    @staticmethod
+    def soft_close_positions(pts: np.ndarray) -> np.ndarray:
+        """Distribute end-to-start gap along the chain (topology-friendly close)."""
+        P = np.asarray(pts, dtype=float).copy()
+        if P.shape[0] < 2:
+            return P
+        gap = P[-1] - P[0]
+        n = P.shape[0]
+        for i in range(n):
+            P[i] = P[i] - gap * (i / max(n - 1, 1))
+        P = P - P.mean(axis=0)
+        return P
+
     def holonomy_and_geometry(self, free: np.ndarray) -> ClosedGeometry:
         pts, (x0, y0, z0), (xf, yf, zf) = self.build_open_chain(free)
         pos_err = float(np.linalg.norm(pts[-1]))
@@ -177,23 +209,15 @@ class CoutsiasKinematics:
             axis /= n
             sign = 1.0 if float(axis[2]) >= 0 else -1.0
         twist = float(sign * hol_ang)
-        # If orientation nearly closed, use torsion writhe as monodromy seed
         if abs(twist) < 1e-6:
             tau = self.torsions_from_free(free)
             twist = float(np.sum(tau) % (2 * np.pi) - np.pi)
 
-        # Atom positions: first N Cα-like points, centered
-        atom_pts = pts[: self.N].copy()
-        # Soft-close visualization: blend last gap
-        if np.linalg.norm(pts[-1]) > 1e-9:
-            # leave as open-chain snapshot of near-closure
-            pass
-        atom_pts = atom_pts - atom_pts.mean(axis=0)
+        # Soft-closed N-atom ring for waypoint / VR topology
+        atom_pts = self.soft_close_positions(pts[: self.N])
 
-        # Cayley label; clamp away from ±π poles so t stays finite
         half = 0.5 * float(np.clip(free[0], -np.pi + 0.05, np.pi - 0.05))
-        root_t = float(np.tan(half))
-        root_t = float(np.clip(root_t, -50.0, 50.0))
+        root_t = float(np.clip(np.tan(half), -50.0, 50.0))
         return ClosedGeometry(
             root_t=root_t,
             residual=float(residual),
@@ -207,88 +231,107 @@ class CoutsiasKinematics:
         )
 
     def find_real_roots(self) -> list[ClosedGeometry]:
-        """Multi-start L-BFGS-B over 3 free torsions ∈ (-π, π)."""
-        bounds = [(-np.pi, np.pi)] * 3
-        seeds = []
-        # Structured seeds
+        """Multi-start over n_free torsions; optional DE global seeds."""
+        nf = self.n_free
+        bounds = [(-np.pi, np.pi)] * nf
+        seeds: list[np.ndarray] = []
+
+        # Latin-ish random starts
+        for _ in range(self.n_starts):
+            seeds.append(self.rng.uniform(-np.pi, np.pi, size=nf))
+        # Axis-aligned structured seeds on first 3 coords
         for a in np.linspace(-np.pi, np.pi, 4, endpoint=False):
             for b in np.linspace(-np.pi, np.pi, 3, endpoint=False):
-                for c in np.linspace(-np.pi, np.pi, 3, endpoint=False):
-                    seeds.append(np.array([a, b, c]))
-        # Random seeds
-        while len(seeds) < self.n_starts:
-            seeds.append(self.rng.uniform(-np.pi, np.pi, size=3))
+                v = np.zeros(nf)
+                v[0], v[1] = a, b
+                if nf > 2:
+                    v[2] = -0.5 * a
+                seeds.append(v)
+
+        # Differential evolution global polish (few iterations) for tighter basins
+        if self.use_de and nf <= 6:
+            try:
+                from scipy.optimize import differential_evolution
+
+                de = differential_evolution(
+                    self.closure_energy,
+                    bounds=bounds,
+                    maxiter=18,
+                    popsize=8,
+                    seed=int(self.rng.integers(0, 1_000_000)),
+                    polish=True,
+                    atol=1e-6,
+                )
+                seeds.insert(0, np.asarray(de.x, dtype=float))
+                logger.info("DE seed residual=%.4f", float(de.fun))
+            except Exception as exc:  # noqa: BLE001
+                logger.info("DE skipped (%s)", exc)
 
         results: list[ClosedGeometry] = []
-        for seed in seeds[: self.n_starts]:
+        for seed in seeds:
             res = minimize(
                 self.closure_energy,
                 seed,
                 method="L-BFGS-B",
                 bounds=bounds,
-                options={"maxiter": 120, "ftol": 1e-10},
+                options={"maxiter": 200, "ftol": 1e-12},
             )
-            if not res.success and res.fun > self.residual_tol:
-                continue
             free = np.asarray(res.x, dtype=float)
             geo = self.holonomy_and_geometry(free)
-            if geo.residual <= self.residual_tol * 1.5:
-                results.append(geo)
+            results.append(geo)
 
         results = self._cluster(results)
         results.sort(key=lambda g: g.residual)
-
-        # Always keep best 6 even if above tol (near-closures still usable)
-        if len(results) < 4:
-            # Accept looser basin bottoms
-            loose: list[ClosedGeometry] = []
-            for seed in seeds[: self.n_starts]:
-                res = minimize(
-                    self.closure_energy,
-                    seed,
-                    method="L-BFGS-B",
-                    bounds=bounds,
-                    options={"maxiter": 80},
-                )
-                free = np.asarray(res.x, dtype=float)
-                loose.append(self.holonomy_and_geometry(free))
-            loose = self._cluster(loose)
-            loose.sort(key=lambda g: g.residual)
-            results = loose[:6]
+        # Prefer true closures; pad with best near-closures
+        tight = [g for g in results if g.residual <= self.residual_tol]
+        if len(tight) >= 4:
+            results = tight[:8]
         else:
             results = results[:8]
 
         logger.info(
-            "Coutsias N=%d: %d sectors (best residual=%.4f, tol=%.3f)",
+            "Coutsias N=%d n_free=%d: %d sectors (best residual=%.4f, tol=%.3f)",
             self.N,
+            nf,
             len(results),
             results[0].residual if results else float("nan"),
             self.residual_tol,
         )
         for i, g in enumerate(results):
             logger.info(
-                "  sector[%d] t=%+.4f r=%.4f hol=%.4f twist=%+.4f pos_err=%.3f",
+                "  sector[%d] t=%+.4f r=%.4f hol=%.4f twist=%+.4f pos_err=%.3f |free|=%d",
                 i + 1,
                 g.root_t,
                 g.residual,
                 g.holonomy_angle,
                 g.twist_so2,
                 g.position_error,
+                len(g.free_torsions),
             )
         return results
 
     @staticmethod
-    def _cluster(geoms: list[ClosedGeometry], t_eps: float = 0.08, tw_eps: float = 0.12) -> list[ClosedGeometry]:
+    def _cluster(
+        geoms: list[ClosedGeometry],
+        tw_eps: float = 0.15,
+        free_eps: float = 0.45,
+    ) -> list[ClosedGeometry]:
         geoms = sorted(geoms, key=lambda g: g.residual)
         kept: list[ClosedGeometry] = []
         for g in geoms:
             dup = False
+            gv = np.array(g.free_torsions)
             for h in kept:
-                if abs(g.root_t - h.root_t) < t_eps and abs(g.twist_so2 - h.twist_so2) < tw_eps:
+                hv = np.array(h.free_torsions)
+                # pad to compare
+                m = max(gv.size, hv.size)
+                gvv, hvv = np.zeros(m), np.zeros(m)
+                gvv[: gv.size] = gv
+                hvv[: hv.size] = hv
+                if np.linalg.norm(gvv - hvv) < free_eps:
                     dup = True
                     break
-                # also cluster by free torsion vector
-                if np.linalg.norm(np.array(g.free_torsions) - np.array(h.free_torsions)) < 0.35:
+                if abs(g.twist_so2 - h.twist_so2) < tw_eps and abs(g.residual - h.residual) < 0.05:
                     dup = True
                     break
             if not dup:
