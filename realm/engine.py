@@ -72,18 +72,42 @@ class KinematicSpectralRealm:
         self._prime = PrimeWaveProbe(n_primes=80)
 
     def analyze(self, field: ZetaField | None = None) -> AnalysisResult:
-        field = field or ZetaField.first(self.n_sectors + 1)
-        logger.info(
-            "CORRECT pipeline: geometry OFF zeta field | N=%d sectors=%d maxop=%s source=%s",
-            self.N,
-            self.n_sectors,
-            self.prefer_maxop and CellularSheaf is not None,
-            self.twist_source,
-        )
-        logger.info("ZetaField seed (labels only): %s", np.array2string(field.gammas, precision=4))
+        """Default: full spectral-action derivation (geometry off Crit(S)).
 
-        induced = self._geom.induce_sectors(field)
-        spectra = self._geom.spectra_of(induced)
+        Falls back to gap-phase induction if derivation yields no sectors.
+        """
+        # Prefer continued derivation ladder
+        try:
+            from realm.derive import Deriver
+
+            der = Deriver(
+                N=self.N,
+                d=self.d,
+                n_zeros=max(self.n_sectors + 4, 10),
+                n_sectors=self.n_sectors,
+                prefer_maxop=self.prefer_maxop,
+            ).run()
+            induced = der.sectors
+            spectra = der.spectra
+            field = der.field
+            logger.info(
+                "CORRECT pipeline via DERIVATION ladder D0–D6 | N=%d sectors=%d",
+                self.N,
+                len(induced),
+            )
+            self._last_derivation = der
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Derivation ladder failed (%s); gap-phase induction", exc)
+            field = field or ZetaField.first(self.n_sectors + 1)
+            logger.info(
+                "CORRECT pipeline: geometry OFF zeta field | N=%d sectors=%d maxop=%s source=%s",
+                self.N,
+                self.n_sectors,
+                self.prefer_maxop and CellularSheaf is not None,
+                self.twist_source,
+            )
+            induced = self._geom.induce_sectors(field)
+            spectra = self._geom.spectra_of(induced)
         waypoints: list[Waypoint] = []
         if self.with_waypoints:
             waypoints = self._geom.waypoints_of(induced)

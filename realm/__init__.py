@@ -12,6 +12,7 @@ They are **not** the actual Riemann zeros.
 """
 
 from realm.engine import KinematicSpectralRealm, analyze_cycle
+from realm.derive import Deriver, DerivationResult, derive
 from realm.types import AnalysisResult, ProbeReport, Sector, Spectrum, Waypoint
 from realm.zeta_field import ZetaField, ZETA_ZEROS_IMAG
 from realm.zeta_geometry import ZetaInducedGeometry, InducedSector
@@ -19,6 +20,9 @@ from realm.zeta_geometry import ZetaInducedGeometry, InducedSector
 __all__ = [
     "KinematicSpectralRealm",
     "analyze_cycle",
+    "derive",
+    "Deriver",
+    "DerivationResult",
     "ZetaField",
     "ZETA_ZEROS_IMAG",
     "ZetaInducedGeometry",
