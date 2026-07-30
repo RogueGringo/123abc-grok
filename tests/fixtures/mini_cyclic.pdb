@@ -1,0 +1,7 @@
+HEADER    MINI CYCLIC FIXTURE
+ATOM      1  CA  ALA A   1       1.000   0.000   0.000  1.00 20.00           C
+ATOM      2  CA  ALA A   2       0.000   1.000   0.000  1.00 20.00           C
+ATOM      3  CA  ALA A   3      -1.000   0.000   0.000  1.00 20.00           C
+ATOM      4  CA  ALA A   4       0.000  -1.000   0.000  1.00 20.00           C
+ATOM      5  CA  ALA A   5       0.700   0.700   0.200  1.00 20.00           C
+END

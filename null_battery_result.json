@@ -1,0 +1,483 @@
+{
+  "passed": true,
+  "gate": {
+    "rule": "F_zeta < 0.8 * min(F_nulls)",
+    "margin": 0.8
+  },
+  "means": {
+    "zeta": {
+      "F": 0.0045321647898132885,
+      "R": 0.0045321647898132885,
+      "dens_return": 0.09019418654640099,
+      "occupancy": 1.0,
+      "n": 2
+    },
+    "scramble": {
+      "F": 0.1462205661954555,
+      "R": 0.1462205661954555,
+      "dens_return": 0.17100316223320156,
+      "occupancy": 1.0,
+      "n": 2
+    },
+    "goe": {
+      "F": 0.16607740354824696,
+      "R": 0.15357740354824695,
+      "dens_return": 0.20760626994573148,
+      "occupancy": 1.0,
+      "n": 2
+    },
+    "poisson": {
+      "F": 0.1611366220969628,
+      "R": 0.1611366220969628,
+      "dens_return": 0.1357768602201079,
+      "occupancy": 1.0,
+      "n": 2
+    }
+  },
+  "f_zeta": 0.0045321647898132885,
+  "min_null_F": 0.1462205661954555,
+  "config": {
+    "N": 13,
+    "n_zeros": 14,
+    "n_sectors": 6,
+    "reps": 2,
+    "workers": 1
+  },
+  "knobs": {
+    "Lambda": 168.78695073249213,
+    "omega_scale": 1.6269932038392327,
+    "weight_power": 2.0112793282732184,
+    "tier_split": 0.5874425095110438,
+    "low_boost": 0.6438012014911153,
+    "w1_mult": 0.9399563144790238,
+    "w2_mult": 1.0548999514537594,
+    "w3_mult": 0.881677493967387
+  },
+  "runs": [
+    {
+      "kind": "zeta",
+      "rng_seed": 0,
+      "F": 0.0045321647898132885,
+      "R": 0.0045321647898132885,
+      "occupancy": 1.0,
+      "n_keys": 6,
+      "n_valleys": 6,
+      "mean_dist": 0.0,
+      "breakdown": {
+        "stationarity": 1.7040783360156375e-13,
+        "corr_penalty": 8.982184976846774e-05,
+        "crit_coverage": 0.0,
+        "return_map_err": 0.022548546636600247,
+        "total": 0.0045321647898132885,
+        "weights": {
+          "shape": 0.3,
+          "corr": 0.25,
+          "coverage": 0.25,
+          "return": 0.2
+        },
+        "diagnostics": {
+          "pin_align": 0.0,
+          "theta_ladder_l1": 0.0,
+          "density_return_l1": 0.09019418654640099,
+          "corr_S_lambda": 0.9999101781502315
+        }
+      },
+      "diagnostics": {
+        "pin_align": 0.0,
+        "theta_ladder_l1": 0.0,
+        "density_return_l1": 0.09019418654640099,
+        "corr_S_lambda": 0.9999101781502315
+      },
+      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4466). Affine projection signature a=0.8677, b=0.2059 is expected, not a cheat.",
+      "thetas": [
+        5.428204437766438,
+        1.05188828901337,
+        4.53503806615296,
+        1.968654786998486,
+        3.6304187378441326,
+        2.8423392304588657
+      ],
+      "spectral_gaps": [
+        0.004323839283974422,
+        0.00654358236150513,
+        0.018055718331377372,
+        0.02288876257919367,
+        0.0414957711359102,
+        0.04761396368090285
+      ],
+      "ontology": "projection_mold_plus_crit_seal_not_lambda_eq_gamma"
+    },
+    {
+      "kind": "zeta",
+      "rng_seed": 1,
+      "F": 0.0045321647898132885,
+      "R": 0.0045321647898132885,
+      "occupancy": 1.0,
+      "n_keys": 6,
+      "n_valleys": 6,
+      "mean_dist": 0.0,
+      "breakdown": {
+        "stationarity": 1.7040783360156375e-13,
+        "corr_penalty": 8.982184976846774e-05,
+        "crit_coverage": 0.0,
+        "return_map_err": 0.022548546636600247,
+        "total": 0.0045321647898132885,
+        "weights": {
+          "shape": 0.3,
+          "corr": 0.25,
+          "coverage": 0.25,
+          "return": 0.2
+        },
+        "diagnostics": {
+          "pin_align": 0.0,
+          "theta_ladder_l1": 0.0,
+          "density_return_l1": 0.09019418654640099,
+          "corr_S_lambda": 0.9999101781502315
+        }
+      },
+      "diagnostics": {
+        "pin_align": 0.0,
+        "theta_ladder_l1": 0.0,
+        "density_return_l1": 0.09019418654640099,
+        "corr_S_lambda": 0.9999101781502315
+      },
+      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4466). Affine projection signature a=0.8677, b=0.2059 is expected, not a cheat.",
+      "thetas": [
+        5.428204437766438,
+        1.05188828901337,
+        4.53503806615296,
+        1.968654786998486,
+        3.6304187378441326,
+        2.8423392304588657
+      ],
+      "spectral_gaps": [
+        0.004323839283974422,
+        0.00654358236150513,
+        0.018055718331377372,
+        0.02288876257919367,
+        0.0414957711359102,
+        0.04761396368090285
+      ],
+      "ontology": "projection_mold_plus_crit_seal_not_lambda_eq_gamma"
+    },
+    {
+      "kind": "scramble",
+      "rng_seed": 200,
+      "F": 0.07653377927951467,
+      "R": 0.07653377927951467,
+      "occupancy": 1.0,
+      "n_keys": 6,
+      "n_valleys": 6,
+      "mean_dist": 0.0,
+      "breakdown": {
+        "stationarity": 5.1361581821654416e-14,
+        "corr_penalty": 0.26475024499407296,
+        "crit_coverage": 0.0,
+        "return_map_err": 0.05173109015490514,
+        "total": 0.07653377927951467,
+        "weights": {
+          "shape": 0.3,
+          "corr": 0.25,
+          "coverage": 0.25,
+          "return": 0.2
+        },
+        "diagnostics": {
+          "pin_align": 0.0,
+          "theta_ladder_l1": 0.0,
+          "density_return_l1": 0.20692436061962055,
+          "corr_S_lambda": 0.735249755005927
+        }
+      },
+      "diagnostics": {
+        "pin_align": 0.0,
+        "theta_ladder_l1": 0.0,
+        "density_return_l1": 0.20692436061962055,
+        "corr_S_lambda": 0.735249755005927
+      },
+      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4768). Affine projection signature a=0.9404, b=0.06864 is expected, not a cheat.",
+      "thetas": [
+        2.8407534692711485,
+        3.847425486905576,
+        1.9755295417683558,
+        5.760797187941016,
+        1.0220119737513071,
+        4.71284191490615
+      ],
+      "spectral_gaps": [
+        0.04756106168600528,
+        0.03500348751932905,
+        0.02304859346619123,
+        0.0016145125969406057,
+        0.006177340934182571,
+        0.014573853743778158
+      ],
+      "ontology": "projection_mold_plus_crit_seal_not_lambda_eq_gamma"
+    },
+    {
+      "kind": "scramble",
+      "rng_seed": 201,
+      "F": 0.21590735311139636,
+      "R": 0.21590735311139636,
+      "occupancy": 1.0,
+      "n_keys": 6,
+      "n_valleys": 7,
+      "mean_dist": 0.0,
+      "breakdown": {
+        "stationarity": 1.9228336168844495e-13,
+        "corr_penalty": 0.7389002071974171,
+        "crit_coverage": 0.02969926919459002,
+        "return_map_err": 0.11878742006668452,
+        "total": 0.21590735311139636,
+        "weights": {
+          "shape": 0.3,
+          "corr": 0.25,
+          "coverage": 0.25,
+          "return": 0.2
+        },
+        "diagnostics": {
+          "pin_align": 0.01484963459729501,
+          "theta_ladder_l1": 0.22593450076020255,
+          "density_return_l1": 0.1350819638467826,
+          "corr_S_lambda": 0.2610997928025829
+        }
+      },
+      "diagnostics": {
+        "pin_align": 0.01484963459729501,
+        "theta_ladder_l1": 0.22593450076020255,
+        "density_return_l1": 0.1350819638467826,
+        "corr_S_lambda": 0.2610997928025829
+      },
+      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4735). Affine projection signature a=0.9904, b=-0.07898 is expected, not a cheat.",
+      "thetas": [
+        3.6931755291000923,
+        2.0347397109681498,
+        4.61993226289466,
+        1.067589198973936,
+        2.6653596047457926,
+        6.2436960213857375
+      ],
+      "spectral_gaps": [
+        0.03956207687297703,
+        0.024448049908956517,
+        0.0163469767178049,
+        0.006740273953180098,
+        0.0418892938204221,
+        9.227233688896864e-06
+      ],
+      "ontology": "projection_mold_plus_crit_seal_not_lambda_eq_gamma"
+    },
+    {
+      "kind": "goe",
+      "rng_seed": 300,
+      "F": 0.10061218807650975,
+      "R": 0.10061218807650975,
+      "occupancy": 1.0,
+      "n_keys": 6,
+      "n_valleys": 6,
+      "mean_dist": 0.0,
+      "breakdown": {
+        "stationarity": 4.805613199107522e-14,
+        "corr_penalty": 0.37722325423090064,
+        "crit_coverage": 0.0,
+        "return_map_err": 0.03153187259385083,
+        "total": 0.10061218807650975,
+        "weights": {
+          "shape": 0.3,
+          "corr": 0.25,
+          "coverage": 0.25,
+          "return": 0.2
+        },
+        "diagnostics": {
+          "pin_align": 0.0,
+          "theta_ladder_l1": 0.0,
+          "density_return_l1": 0.12612749037540333,
+          "corr_S_lambda": 0.6227767457690994
+        }
+      },
+      "diagnostics": {
+        "pin_align": 0.0,
+        "theta_ladder_l1": 0.0,
+        "density_return_l1": 0.12612749037540333,
+        "corr_S_lambda": 0.6227767457690994
+      },
+      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4747). Affine projection signature a=0.898, b=0.1877 is expected, not a cheat.",
+      "thetas": [
+        2.951944363444019,
+        2.0025886764364067,
+        1.0416512537631442,
+        3.7834890570707294,
+        5.600893333854719,
+        4.6031532332760605
+      ],
+      "spectral_gaps": [
+        0.05134081260012124,
+        0.02368306038245348,
+        0.006416904929239006,
+        0.0368594841778499,
+        0.002753937793991644,
+        0.01667799808549918
+      ],
+      "ontology": "projection_mold_plus_crit_seal_not_lambda_eq_gamma"
+    },
+    {
+      "kind": "goe",
+      "rng_seed": 301,
+      "F": 0.23154261901998416,
+      "R": 0.20654261901998416,
+      "occupancy": 1.0,
+      "n_keys": 6,
+      "n_valleys": 5,
+      "mean_dist": 0.03793863414541206,
+      "breakdown": {
+        "stationarity": 2.423952903926249e-13,
+        "corr_penalty": 0.6752678423322247,
+        "crit_coverage": 0.0,
+        "return_map_err": 0.18862829218427635,
+        "total": 0.20654261901998416,
+        "weights": {
+          "shape": 0.3,
+          "corr": 0.25,
+          "coverage": 0.25,
+          "return": 0.2
+        },
+        "diagnostics": {
+          "pin_align": 0.006038121158397294,
+          "theta_ladder_l1": 0.32554794669115006,
+          "density_return_l1": 0.2890850495160596,
+          "corr_S_lambda": 0.3247321576677753
+        }
+      },
+      "diagnostics": {
+        "pin_align": 0.006038121158397294,
+        "theta_ladder_l1": 0.32554794669115006,
+        "density_return_l1": 0.2890850495160596,
+        "corr_S_lambda": 0.3247321576677753
+      },
+      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0379 \u2264 basin 0.5207). Affine projection signature a=0.8033, b=0.4699 is expected, not a cheat.",
+      "thetas": [
+        3.111192352891333,
+        2.0849675511282544,
+        5.296142604297389,
+        1.0885870515251708,
+        4.167864757654255,
+        3.9402329527817823
+      ],
+      "spectral_gaps": [
+        0.05700240374714052,
+        0.025667334524715438,
+        0.00576204352041049,
+        0.007007866783995657,
+        0.026418443886309508,
+        0.0323939818966155
+      ],
+      "ontology": "projection_mold_plus_crit_seal_not_lambda_eq_gamma"
+    },
+    {
+      "kind": "poisson",
+      "rng_seed": 400,
+      "F": 0.10850657591981058,
+      "R": 0.10850657591981058,
+      "occupancy": 1.0,
+      "n_keys": 6,
+      "n_valleys": 7,
+      "mean_dist": 0.0,
+      "breakdown": {
+        "stationarity": 1.9729359717640996e-13,
+        "corr_penalty": 0.2918197540815459,
+        "crit_coverage": 0.03721336385114571,
+        "return_map_err": 0.1312414821828924,
+        "total": 0.10850657591981058,
+        "weights": {
+          "shape": 0.3,
+          "corr": 0.25,
+          "coverage": 0.25,
+          "return": 0.2
+        },
+        "diagnostics": {
+          "pin_align": 0.018606681925572854,
+          "theta_ladder_l1": 0.2665409933748404,
+          "density_return_l1": 0.12203784692587645,
+          "corr_S_lambda": 0.7081802459184541
+        }
+      },
+      "diagnostics": {
+        "pin_align": 0.018606681925572854,
+        "theta_ladder_l1": 0.2665409933748404,
+        "density_return_l1": 0.12203784692587645,
+        "corr_S_lambda": 0.7081802459184541
+      },
+      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4167). Affine projection signature a=1.016, b=-0.2015 is expected, not a cheat.",
+      "thetas": [
+        2.837633189837917,
+        4.614183486647421,
+        3.5844008994871084,
+        6.280925448430332,
+        1.8097998991980662,
+        1.0006310691441163
+      ],
+      "spectral_gaps": [
+        0.047457052016148055,
+        0.016460018060791615,
+        0.04294270302485492,
+        3.02187070898329e-08,
+        0.0193496396941043,
+        0.005921705867542545
+      ],
+      "ontology": "projection_mold_plus_crit_seal_not_lambda_eq_gamma"
+    },
+    {
+      "kind": "poisson",
+      "rng_seed": 401,
+      "F": 0.21376666827411503,
+      "R": 0.21376666827411503,
+      "occupancy": 1.0,
+      "n_keys": 6,
+      "n_valleys": 6,
+      "mean_dist": 0.0,
+      "breakdown": {
+        "stationarity": 5.578563962963176e-13,
+        "corr_penalty": 0.8251634983929228,
+        "crit_coverage": 0.0,
+        "return_map_err": 0.03737896837858484,
+        "total": 0.21376666827411503,
+        "weights": {
+          "shape": 0.3,
+          "corr": 0.25,
+          "coverage": 0.25,
+          "return": 0.2
+        },
+        "diagnostics": {
+          "pin_align": 0.0,
+          "theta_ladder_l1": 0.0,
+          "density_return_l1": 0.14951587351433937,
+          "corr_S_lambda": 0.1748365016070772
+        }
+      },
+      "diagnostics": {
+        "pin_align": 0.0,
+        "theta_ladder_l1": 0.0,
+        "density_return_l1": 0.14951587351433937,
+        "corr_S_lambda": 0.1748365016070772
+      },
+      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4595). Affine projection signature a=0.8725, b=0.1821 is expected, not a cheat.",
+      "thetas": [
+        5.453643600080222,
+        3.592672758169007,
+        2.6736327596184073,
+        2.1050752275625806,
+        1.012931056675812,
+        4.576524725049019
+      ],
+      "spectral_gaps": [
+        0.004070449565359089,
+        0.04268080386052018,
+        0.04214882365925309,
+        0.02616371205823104,
+        0.006068108461183302,
+        0.017210114964868205
+      ],
+      "ontology": "projection_mold_plus_crit_seal_not_lambda_eq_gamma"
+    }
+  ],
+  "ontology": "null_battery_not_lambda_eq_gamma"
+}

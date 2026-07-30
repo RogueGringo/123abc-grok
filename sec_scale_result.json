@@ -1,0 +1,99 @@
+{
+  "rows": [
+    {
+      "n_sectors": 6,
+      "status": "OK",
+      "R": 0.0045321647898132885,
+      "F": 0.0045321647898132885,
+      "occupancy": 1.0,
+      "n_keys": 6,
+      "n_valleys": 6,
+      "dens_return": 0.09019418654640099,
+      "diagnostics": {
+        "pin_align": 0.0,
+        "theta_ladder_l1": 0.0,
+        "density_return_l1": 0.09019418654640099,
+        "corr_S_lambda": 0.9999101781502315
+      }
+    },
+    {
+      "n_sectors": 8,
+      "status": "OK",
+      "R": 0.12006981975740821,
+      "F": 0.15756981975740822,
+      "occupancy": 1.0,
+      "n_keys": 8,
+      "n_valleys": 6,
+      "dens_return": 0.11642818751650694,
+      "diagnostics": {
+        "pin_align": 0.01640845124430578,
+        "theta_ladder_l1": 0.3612010664282165,
+        "density_return_l1": 0.11642818751650694,
+        "corr_S_lambda": 0.6493933614719015
+      }
+    },
+    {
+      "n_sectors": 10,
+      "status": "OK",
+      "R": 0.19029922892991621,
+      "F": 0.2502992289299162,
+      "occupancy": 1.0,
+      "n_keys": 10,
+      "n_valleys": 6,
+      "dens_return": 0.2021882669558342,
+      "diagnostics": {
+        "pin_align": 0.02713400559465913,
+        "theta_ladder_l1": 0.27582426463475473,
+        "density_return_l1": 0.2021882669558342,
+        "corr_S_lambda": 0.3651544135597429
+      }
+    },
+    {
+      "n_sectors": 12,
+      "status": "OK",
+      "R": 0.22888405220620073,
+      "F": 0.34138405220620077,
+      "occupancy": 0.9166666666666666,
+      "n_keys": 12,
+      "n_valleys": 6,
+      "dens_return": 0.23433356294356134,
+      "diagnostics": {
+        "pin_align": 0.03594530666440978,
+        "theta_ladder_l1": 0.08270996382535656,
+        "density_return_l1": 0.23433356294356134,
+        "corr_S_lambda": 0.16599179176788303
+      }
+    }
+  ],
+  "best_sealed": {
+    "n_sectors": 6,
+    "status": "OK",
+    "R": 0.0045321647898132885,
+    "F": 0.0045321647898132885,
+    "occupancy": 1.0,
+    "n_keys": 6,
+    "n_valleys": 6,
+    "dens_return": 0.09019418654640099,
+    "diagnostics": {
+      "pin_align": 0.0,
+      "theta_ladder_l1": 0.0,
+      "density_return_l1": 0.09019418654640099,
+      "corr_S_lambda": 0.9999101781502315
+    }
+  },
+  "knobs": {
+    "Lambda": 168.78695073249213,
+    "omega_scale": 1.6269932038392327,
+    "weight_power": 2.0112793282732184,
+    "tier_split": 0.5874425095110438,
+    "low_boost": 0.6438012014911153,
+    "w1_mult": 0.9399563144790238,
+    "w2_mult": 1.0548999514537594,
+    "w3_mult": 0.881677493967387
+  },
+  "config": {
+    "N": 13,
+    "n_zeros": 14
+  },
+  "ontology": "strategy_B_sec_approx_k"
+}
