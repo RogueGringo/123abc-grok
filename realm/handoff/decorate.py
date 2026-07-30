@@ -71,7 +71,12 @@ class PolyAlaStubAdapter:
             )
             serial += 1
         out_lines.append("END")
-        out_dir = bb.parent.parent / "decorated"
+        # Write beside path_bb when no molds/ parent; sibling decorated/ when under molds/
+        out_dir = (
+            bb.parent / "decorated"
+            if bb.parent.name != "molds"
+            else bb.parent.parent / "decorated"
+        )
         out_dir.mkdir(parents=True, exist_ok=True)
         out_path = out_dir / (bb.stem.replace("_bb", "") + "_polyala.pdb")
         out_path.write_text("\n".join(out_lines) + "\n", encoding="utf-8")
