@@ -429,3 +429,142 @@ def verify_attestation(archive_dir: Path | str) -> dict[str, Any]:
         "ontology": "handoff_attestation_verify_not_lambda_eq_gamma",
         "note": "Checksum seal only; not a cryptographic signature.",
     }
+
+
+def accept_partner_drop(
+    root: Path | str,
+    *,
+    require_acceptance: bool = True,
+    require_attestation: bool = False,
+    require_sha256: bool = False,
+    check_biopython: bool = False,
+) -> dict[str, Any]:
+    """Partner single-command acceptance of a package dir or archive drop.
+
+    Success: dual-gate pin + openable PDBs (via ACCEPTANCE / remarks) + integrity.
+    Does not re-rank or chase enrichment. Never lambda=gamma.
+    """
+    root = Path(root)
+    pin = verify_dual_gate_pin()
+    reasons: list[str] = []
+    if pin.get("ok") is not True:
+        reasons.append("dual_gate_pin_failed")
+
+    is_archive = (root / "ARCHIVE.json").is_file()
+    tree = None
+    archive = None
+    attestation = None
+    mode = "archive" if is_archive else "package"
+
+    if is_archive:
+        archive = verify_archive_dir(root)
+        if archive.get("ok") is not True:
+            reasons.append("archive_verify_failed")
+            if archive.get("bad"):
+                reasons.extend(f"archive:{b}" for b in archive["bad"][:5])
+        attestation = archive.get("attestation") if archive else None
+        if require_attestation:
+            if attestation is None or attestation.get("ok") is not True:
+                # try direct
+                attestation = verify_attestation(root)
+                if attestation.get("ok") is not True:
+                    reasons.append("attestation_required_failed")
+    else:
+        if not root.is_dir():
+            return {
+                "ok": False,
+                "accepted": False,
+                "mode": mode,
+                "reasons": ["not_a_directory"],
+                "pin": pin,
+                "ontology": "handoff_accept_not_lambda_eq_gamma",
+            }
+        tree = verify_handoff_tree(
+            root,
+            require_sha256=require_sha256,
+            check_biopython=check_biopython,
+        )
+        if tree.get("ok") is not True:
+            reasons.append("package_verify_failed")
+        if require_attestation and (root / "ATTESTATION.json").is_file():
+            attestation = verify_attestation(root)
+            if attestation.get("ok") is not True:
+                reasons.append("attestation_required_failed")
+        elif require_attestation:
+            reasons.append("attestation_missing")
+
+    acceptance = None
+    acc_path = root / "ACCEPTANCE.json"
+    n_pdb = None
+    if acc_path.is_file():
+        try:
+            acceptance = json.loads(acc_path.read_text(encoding="utf-8"))
+        except Exception as exc:  # noqa: BLE001
+            reasons.append(f"acceptance_json_invalid:{exc}")
+            acceptance = None
+        if acceptance is not None:
+            if acceptance.get("accepted") is not True:
+                reasons.append("acceptance_record_not_accepted")
+            n_pdb = (
+                (acceptance.get("criteria") or {})
+                .get("openable_pdbs", {})
+                .get("n_pdb")
+            )
+            if n_pdb is not None and int(n_pdb) < 1:
+                reasons.append("openable_pdbs_zero")
+    elif require_acceptance:
+        reasons.append("acceptance_json_missing")
+    elif tree is not None:
+        # fall back to ontology remarks count
+        n_pdb = (tree.get("ontology_remarks") or {}).get("n_pdb")
+        if n_pdb is not None and int(n_pdb) < 1:
+            reasons.append("openable_pdbs_zero")
+
+    ok = len(reasons) == 0
+    return {
+        "ok": ok,
+        "accepted": ok,
+        "mode": mode,
+        "root": str(root.resolve()) if root.exists() else str(root),
+        "pin": pin,
+        "n_pdb": n_pdb,
+        "reasons": reasons,
+        "acceptance": (
+            {
+                "accepted": (acceptance or {}).get("accepted"),
+                "label": (acceptance or {}).get("label"),
+                "n_pdb": n_pdb,
+            }
+            if acceptance
+            else None
+        ),
+        "archive": (
+            {
+                "ok": (archive or {}).get("ok"),
+                "n_checked": (archive or {}).get("n_checked"),
+                "label": (archive or {}).get("label"),
+            }
+            if archive
+            else None
+        ),
+        "package": (
+            {
+                "ok": (tree or {}).get("ok"),
+                "remarks_ok": ((tree or {}).get("ontology_remarks") or {}).get("ok"),
+                "sha256_ok": ((tree or {}).get("sha256") or {}).get("ok"),
+            }
+            if tree
+            else None
+        ),
+        "attestation": (
+            {
+                "ok": (attestation or {}).get("ok"),
+                "n_digests": (attestation or {}).get("n_digests"),
+                "payload_sha256": (attestation or {}).get("payload_sha256"),
+            }
+            if attestation and attestation.get("ok") is not None
+            else attestation
+        ),
+        "ontology": "handoff_accept_not_lambda_eq_gamma",
+        "note": "Partner accept on pin + openable PDBs + integrity; not enrichment.",
+    }

@@ -437,6 +437,31 @@ def write_latest_pointer(
     """Write LATEST.json (+ LATEST_<label>.json) under archive_root for ops."""
     root = Path(archive_root)
     root.mkdir(parents=True, exist_ok=True)
+    # pull acceptance summary from drop if present
+    accepted = None
+    n_pdb = None
+    payload_sha = None
+    adir = archive_meta.get("archive_dir")
+    if adir:
+        acc_p = Path(adir) / "ACCEPTANCE.json"
+        if acc_p.is_file():
+            try:
+                acc = json.loads(acc_p.read_text(encoding="utf-8"))
+                accepted = acc.get("accepted")
+                n_pdb = (acc.get("criteria") or {}).get("openable_pdbs", {}).get("n_pdb")
+            except Exception:  # noqa: BLE001
+                pass
+        att_p = Path(adir) / "ATTESTATION.json"
+        if att_p.is_file():
+            try:
+                att = json.loads(att_p.read_text(encoding="utf-8"))
+                payload_sha = att.get("payload_sha256")
+                if accepted is None:
+                    accepted = (att.get("acceptance") or {}).get("accepted")
+                if n_pdb is None:
+                    n_pdb = (att.get("acceptance") or {}).get("n_pdb")
+            except Exception:  # noqa: BLE001
+                pass
     pointer = {
         "archive_dir": archive_meta.get("archive_dir"),
         "label": archive_meta.get("label"),
@@ -445,8 +470,12 @@ def write_latest_pointer(
         "quality_gate_ok": archive_meta.get("quality_gate_ok"),
         "ids": archive_meta.get("ids"),
         "n_files": archive_meta.get("n_files"),
+        "accepted": accepted,
+        "n_pdb": n_pdb,
+        "payload_sha256": payload_sha,
         "ontology": "handoff_latest_pointer_not_lambda_eq_gamma",
         "verify_cli": "python handoff_verify.py --archive <archive_dir>",
+        "accept_cli": "python handoff_accept.py --latest",
     }
     dest = root / "LATEST.json"
     dest.write_text(json.dumps(pointer, indent=2) + "\n", encoding="utf-8")

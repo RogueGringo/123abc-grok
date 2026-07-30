@@ -13,6 +13,7 @@ on:
       - "handoff_release.py"
       - "handoff_matrix.py"
       - "handoff_status.py"
+      - "handoff_accept.py"
       - "tests/test_handoff*.py"
       - "tests/test_pdb_write.py"
       - ".github/workflows/handoff.yml"
@@ -27,6 +28,7 @@ on:
       - "handoff_release.py"
       - "handoff_matrix.py"
       - "handoff_status.py"
+      - "handoff_accept.py"
       - "tests/test_handoff*.py"
       - "tests/test_pdb_write.py"
       - ".github/workflows/handoff.yml"
@@ -52,6 +54,7 @@ jobs:
           pytest tests/test_pdb_write.py tests/test_handoff.py tests/test_handoff_pipeline.py \
             tests/test_handoff_structure.py tests/test_handoff_package.py tests/test_handoff_verify.py \
             tests/test_handoff_release.py tests/test_handoff_matrix.py tests/test_handoff_status.py \
+            tests/test_handoff_accept.py \
             -q --tb=line
       - name: Dual-gate policy pin + verify CLI
         env:
@@ -101,6 +104,10 @@ jobs:
           rec = json.loads(acc.read_text())
           print("ACCEPTANCE", rec.get("accepted"), rec.get("criteria", {}).get("openable_pdbs"))
           assert rec.get("accepted") is True
+          from handoff_accept import main as accept_main
+          arc = accept_main(["--latest", "--releases", "/tmp/handoff_releases"])
+          if arc != 0:
+              raise SystemExit(arc)
           # stage artifact dir for upload
           art = Path("/tmp/handoff_ci_artifact")
           art.mkdir(parents=True, exist_ok=True)
@@ -110,7 +117,10 @@ jobs:
           zp = Path(ptr.get("archive_dir") or "")
           for z in zp.glob("*.zip") if zp.is_dir() else []:
               shutil.copy2(z, art / z.name)
-          shutil.copy2(Path(ptr["archive_dir"]) / "ARCHIVE.json", art / "ARCHIVE.json")
+          for name in ("ARCHIVE.json", "ATTESTATION.json", "ACCEPT_REPORT.json"):
+              src = Path(ptr["archive_dir"]) / name
+              if src.is_file():
+                  shutil.copy2(src, art / name)
           raise SystemExit(0 if av.get("ok") else 3)
           PY
       - name: Upload handoff CI package artifact
