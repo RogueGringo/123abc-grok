@@ -120,6 +120,29 @@ def rank_one(
             multimodes=(False, True),
             omega_scales=(0.9, 1.0, 1.15),
         )
+    elif mm_mode in ("self_fit_dense", "dense"):
+        # denser omega bank (full-batch tuned)
+        use_mm, pack, fit_diag = select_mold_by_fit(
+            xyz,
+            knobs,
+            N=N,
+            n_zeros=n_zeros,
+            n_sectors=n_sec,
+            soft_T=soft_T,
+            multimodes=(False, True),
+            omega_scales=(0.85, 0.95, 1.0, 1.1, 1.2),
+        )
+    elif mm_mode in ("self_fit_wide", "wide"):
+        use_mm, pack, fit_diag = select_mold_by_fit(
+            xyz,
+            knobs,
+            N=N,
+            n_zeros=n_zeros,
+            n_sectors=n_sec,
+            soft_T=soft_T,
+            multimodes=(False, True),
+            omega_scales=(0.8, 0.9, 1.0, 1.15, 1.3),
+        )
     else:
         use_mm = multimode_for_ca_length(n_ca, mode=mm_mode)
         pack = forge_crit_geometry(
@@ -243,10 +266,18 @@ def main(argv=None) -> int:
     p.add_argument(
         "--multimode-mode",
         type=str,
-        default="self_fit_omega",
-        choices=("self_fit_omega", "self_fit", "adaptive_short", "on", "off"),
-        help="self_fit_omega: bank multimode×omega_scale by native Crit distance; "
-        "self_fit: planar/multimode only; adaptive_short: multimode CA≤8; on/off",
+        default="self_fit_dense",
+        choices=(
+            "self_fit_dense",
+            "self_fit_wide",
+            "self_fit_omega",
+            "self_fit",
+            "adaptive_short",
+            "on",
+            "off",
+        ),
+        help="self_fit_dense: denser multimode×omega bank by native Crit dist; "
+        "self_fit_omega/self_fit: smaller banks; adaptive_short/on/off length rules",
     )
     p.add_argument(
         "--multimode",

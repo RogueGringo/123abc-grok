@@ -59,16 +59,16 @@
     "R_note": "legacy R is Crit seating self-consistency; not \u03b6 evidence (RETRACTED 2026-07-29)",
     "null_battery_zeta_preference": "RETRACTED",
     "residual_fitness": "informative_density_return",
-    "probe_enrichment": 0.8395833333333332,
-    "holdout_enrichment": 0.8260416666666666,
-    "batch_mean_enrichment": 0.8305555555555556,
-    "batch_mean_enrichment_std": 0.048468844159047224,
-    "batch_top20": 7,
+    "probe_enrichment": 0.8604166666666667,
+    "holdout_enrichment": 0.8250000000000001,
+    "batch_mean_enrichment": 0.8368055555555554,
+    "batch_mean_enrichment_std": 0.0546109736421389,
+    "batch_top20": 8,
     "batch_n_ok": 12,
     "batch_n_seeds": 3,
     "batch_n_decoys": 40,
     "path": "geometry_off_zeta_external_cyclic_ranking",
-    "method": "CRIT_KABSCH_SOFTMIN T=0.04 + adaptive sectors + self_fit_omega mold bank + multi-seed",
+    "method": "CRIT_KABSCH_SOFTMIN T=0.04 + adaptive sectors + self_fit_dense mold bank + multi-seed",
     "dual": "realm/validate/dual.py + dual_probe.py (substrate\u2192L vs projection)",
     "axiomz": "01-DEVELOPMENT-AXiomZ + realm/axiomz.py CTS + stage_ledger.py",
     "commit_policy": {
@@ -83,14 +83,14 @@
       "confirmed_full_batch": true,
       "sectors_mode": "adaptive",
       "sectors_rule": "n<=8->4 else 6",
-      "multimode_mode": "self_fit_omega",
-      "multimode_rule": "bank multimode x omega_scale in {0.9,1.0,1.15} by native Crit dist",
-      "note": "40x3: mean 83.1% probe 84.0% hold 82.6% top20=7; altloc-correct 4M6E"
+      "multimode_mode": "self_fit_dense",
+      "multimode_rule": "bank multimode x omega in {0.85,0.95,1.0,1.1,1.2} by native Crit dist",
+      "note": "40x3: mean 83.7% probe 86.0% hold 82.5% top20=8; 4M6E 73% 3WNE 98%"
     },
     "rank_polish": "softmin_min T=0.04 probe-win rejected by full-batch continuity (76.7->74.1)",
     "sectors_mode": "adaptive_cap6",
     "batch_n_ids": 12,
-    "multimode_mode": "self_fit_omega",
+    "multimode_mode": "self_fit_dense",
     "note_4M6E": "altloc fix: 10 CA not 11 (was double-counting LEU A/B)"
   },
   "ranking_hparams": {
@@ -100,8 +100,8 @@
     "confirmed_full_batch": true,
     "sectors_mode": "adaptive",
     "sectors_rule": "n<=8->4 else 6",
-    "multimode_mode": "self_fit_omega",
-    "multimode_rule": "bank multimode x omega_scale in {0.9,1.0,1.15} by native Crit dist",
-    "note": "40x3: mean 83.1% probe 84.0% hold 82.6% top20=7; altloc-correct 4M6E"
+    "multimode_mode": "self_fit_dense",
+    "multimode_rule": "bank multimode x omega in {0.85,0.95,1.0,1.1,1.2} by native Crit dist",
+    "note": "40x3: mean 83.7% probe 86.0% hold 82.5% top20=8; 4M6E 73% 3WNE 98%"
   }
 }
