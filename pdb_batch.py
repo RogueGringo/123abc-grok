@@ -28,24 +28,24 @@ logger = logging.getLogger("pdb_batch")
 
 # Curated cyclic / short-peptide public structures (RCSB geometry only).
 # Not scraped from ~400 HF protein-language repos.
+# Curated IDs known to expose a CA chain in the cyclic band (RCSB).
 DEFAULT_CYCLIC_IDS = [
-    "1CSA",  # cyclosporin A
-    "1IKF",  # cyclosporin complex
-    "1JBL",
-    "1TET",
+    "1CSA",
+    "1IKF",
     "2X2C",
+    "4M6E",
     "3WNE",
     "4K8Y",
+    "1JBL",
     "5EOC",
-    "1SRA",  # SRA cyclic / short
-    "1ORK",
-    "2O9R",  # cyclic peptide
     "3AVB",
-    "4M6E",  # cyclic
-    "5LSO",  # cyclic peptide
-    "6PIX",  # macrocycle
-    "1V9C",
+    "5LSO",
+    "1TET",
 ]
+
+# Default joint-polish train probe (never sole success metric)
+PROBE_IDS = ["1CSA", "2X2C", "4M6E", "3WNE"]
+HOLDOUT_IDS = ["1IKF", "1JBL", "4K8Y", "5EOC", "3AVB", "5LSO"]
 
 
 def rank_one(
@@ -80,9 +80,9 @@ def rank_one(
             if arr.ndim == 2 and arr.shape[1] >= 3:
                 templates.append(arr[:, :3])
 
+    # Pure Crit-Kabsch (dual mold blend regressed full-batch enrichment)
     native = score_geometry_vs_crit(xyz, templates)
     native["label"] = "native"
-    # multi-hardness decoys: soft shape noise + harder deformation
     n_soft = max(n_decoys // 2, 1)
     n_hard = n_decoys - n_soft
     decoys = make_ca_decoys(xyz, n_soft, rng, noise=noise)

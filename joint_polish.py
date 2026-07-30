@@ -22,18 +22,21 @@ if str(ROOT) not in sys.path:
 
 from realm.validate.harness import score_configuration
 from realm.validate.report import load_knobs, write_json
-from pdb_batch import rank_one
+from pdb_batch import HOLDOUT_IDS, PROBE_IDS, rank_one
 
 logger = logging.getLogger("joint_polish")
-
-# Fast probe — structures that already parse in band
-PROBE_IDS = ["1CSA", "1IKF", "2X2C", "4M6E", "3WNE", "4K8Y"]
 
 
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(description="Joint IR polish for R + enrichment")
     p.add_argument("--knobs", type=Path, default=Path("evolve_result.json"))
     p.add_argument("--probe", type=str, default=",".join(PROBE_IDS))
+    p.add_argument(
+        "--holdout",
+        type=str,
+        default=",".join(HOLDOUT_IDS),
+        help="Never used in objective — reported after polish",
+    )
     p.add_argument("--n-decoys", type=int, default=16)
     p.add_argument("-k", type=int, default=14)
     p.add_argument("--sectors", type=int, default=6)
@@ -52,6 +55,9 @@ def main(argv=None) -> int:
 
     base = load_knobs(args.knobs)
     probe = [x.strip().upper() for x in args.probe.split(",") if x.strip()]
+    holdout = [x.strip().upper() for x in args.holdout.split(",") if x.strip()]
+    # prevent leakage: holdout must not appear in probe
+    holdout = [h for h in holdout if h not in set(probe)]
     rng = np.random.default_rng(21)
 
     # vector: w1, w2, w3, low_boost_scale, tier
@@ -161,19 +167,44 @@ def main(argv=None) -> int:
     minimize(objective, x0, method="L-BFGS-B", bounds=bounds, options={"maxiter": 15})
 
     assert best is not None
+    # Held-out evaluation (never in objective)
+    hold_rows: list = []
+    hold_enr = 0.0
+    if holdout:
+        for pid in holdout:
+            try:
+                row = rank_one(
+                    pid,
+                    best["knobs"],
+                    args.n_decoys,
+                    args.k,
+                    args.sectors,
+                    0.45,
+                    rng,
+                )
+            except Exception as exc:  # noqa: BLE001
+                row = {"pdb": pid, "status": "ERROR", "error": str(exc)}
+            hold_rows.append(row)
+        ok_h = [r for r in hold_rows if r.get("status") == "OK"]
+        hold_enr = float(np.mean([r["enrichment"] for r in ok_h])) if ok_h else 0.0
+
     print("\n=== JOINT POLISH ===")
     print(
         f"  F={best['F']:.4f}  R={best['R']:.4f}  occ={best['occupancy']:.0%}  "
-        f"mean_enrich={best['mean_enrichment']:.1%}  n_ok={best['n_ok']}"
+        f"probe_enrich={best['mean_enrichment']:.1%}  holdout_enrich={hold_enr:.1%}  "
+        f"n_ok_probe={best['n_ok']}"
     )
     print(f"  knobs={json.dumps(best['knobs'], indent=2)}")
 
     payload = {
         "best": {k: v for k, v in best.items() if k != "probe_rows"},
         "probe_rows": best.get("probe_rows"),
+        "holdout_rows": hold_rows,
+        "holdout_mean_enrichment": hold_enr,
         "history_tail": history[-20:],
         "ontology": "joint_R_plus_cyclic_enrichment_not_lambda_eq_gamma",
         "probe_ids": probe,
+        "holdout_ids": holdout,
     }
     write_json(args.json, payload)
 
@@ -205,6 +236,14 @@ def main(argv=None) -> int:
             evolve_payload["n_keys"] = seal.get("n_keys")
             evolve_payload["n_valleys"] = seal.get("n_valleys")
             evolve_payload["verdict"] = seal.get("verdict")
+            evolve_payload["mean_enrichment_holdout"] = hold_enr
+            evolve_payload["stage"] = {
+                "internal_seal": evolve_payload["status"],
+                "null_battery": "recheck_after_polish",
+                "probe_enrichment": best["mean_enrichment"],
+                "holdout_enrichment": hold_enr,
+                "path": "geometry_off_zeta_external_cyclic_ranking",
+            }
             write_json(Path("evolve_result.json"), evolve_payload)
             write_json(
                 Path("lock_meet.json"),
@@ -213,8 +252,9 @@ def main(argv=None) -> int:
                     "R": best["R"],
                     "knobs": best["knobs"],
                     "breakdown": seal.get("breakdown"),
-                    "search_method": "joint_polish_IR_enrichment",
+                    "search_method": "joint_polish_IR_enrichment_holdout",
                     "mean_enrichment_probe": best["mean_enrichment"],
+                    "mean_enrichment_holdout": hold_enr,
                     "baseline_enrichment_probe": base_enr,
                 },
             )
