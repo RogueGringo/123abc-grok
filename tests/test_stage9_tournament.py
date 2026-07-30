@@ -57,3 +57,32 @@ def test_tournament_small_m_smoke():
     assert "arith" in out["deterministic"]
     assert out["summary"]["dual_gate_soft_T_12"] == 0.036
     assert out["ontology"].endswith("not_lambda_eq_gamma")
+
+
+def test_component_tournament_tiny_smoke():
+    from pathlib import Path
+
+    import pytest
+
+    from realm.validate.stage9_tournament import run_component_tournament
+    from realm.validate.window_filtration import load_champion_knobs
+
+    if not Path("evolve_result.json").is_file():
+        pytest.skip("need evolve_result.json")
+    kn = load_champion_knobs()
+    out = run_component_tournament(
+        kn,
+        M=2,
+        n_windows=2,
+        n_zeros=14,
+        N=13,
+        n_sectors=6,
+        carriers=("stationarity", "density_return_l1"),
+        stochastic_arms=("gue",),
+        base_seed=0,
+    )
+    assert out["stage"] == "9-component"
+    assert "stationarity" in out["by_carrier"]
+    assert out["by_carrier"]["stationarity"]["stochastic"]["gue"]["monte_carlo"]["M"] == 2
+    assert out["summary"]["dual_gate_soft_T_12"] == 0.036
+    assert out["ontology"].endswith("not_lambda_eq_gamma")

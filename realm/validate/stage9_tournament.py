@@ -214,3 +214,157 @@ def save_tournament(result: dict[str, Any], path: Path | str) -> Path:
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     return p
+
+
+def run_component_tournament(
+    knobs: dict[str, Any],
+    *,
+    M: int = 59,
+    n_windows: int = 7,
+    n_zeros: int = 14,
+    N: int = 13,
+    n_sectors: int = 6,
+    carriers: tuple[str, ...] = ("stationarity", "density_return_l1", "corr_penalty"),
+    stochastic_arms: tuple[str, ...] = ("gue", "poisson"),
+    base_seed: int = 0,
+    progress: Callable[[str], None] | None = None,
+) -> dict[str, Any]:
+    """Stage 9 residual-component track under G5 independent baseline.
+
+    For each carrier: ζ mean across W windows vs M null spectra (one-sided MC p).
+    Also Stage 8 windowwise persistence fraction of ζ advantage per null instance.
+
+    Expensive relative to rigidity track (Keymaker forges per window).
+    """
+    from realm.validate.cross_window import score_arm_component_series
+    from realm.validate.window_filtration import load_champion_knobs
+
+    M = int(M)
+    W = int(n_windows)
+    log = progress or (lambda _m: None)
+    kn = dict(knobs) if knobs else load_champion_knobs()
+    t0 = time.perf_counter()
+
+    log(f"zeta components W={W} carriers={carriers}")
+    zeta = score_arm_component_series(
+        kn,
+        "zeta",
+        n_windows=W,
+        n_zeros=n_zeros,
+        N=N,
+        n_sectors=n_sectors,
+        component_keys=carriers,
+        use_g5_span=True,
+        rng_seed=base_seed,
+        skip_rigidity=True,
+    )
+
+    results: dict[str, Any] = {
+        "stage": "9-component",
+        "stage_name": "powered_component_tournament_g5",
+        "M": M,
+        "W": W,
+        "n_zeros": int(n_zeros),
+        "N": int(N),
+        "n_sectors": int(n_sectors),
+        "carriers": list(carriers),
+        "lower_is_better": True,
+        "use_g5_span": True,
+        "omega_span": zeta.get("omega_span"),
+        "zeta": {
+            "means": zeta["means"],
+            "series": zeta["series"],
+            "guard_clear": zeta["guard_clear"],
+        },
+        "by_carrier": {},
+        "bonferroni_n_tests": len(stochastic_arms) * len(carriers),
+        "ontology": "stage9_component_tournament_g5_not_lambda_eq_gamma",
+    }
+
+    _ARM_OFF = {"gue": 100_000, "poisson": 200_000, "scramble": 300_000}
+    n_tests = len(stochastic_arms) * len(carriers)
+
+    for carrier in carriers:
+        results["by_carrier"][carrier] = {
+            "zeta_mean": float(zeta["means"][carrier]),
+            "stochastic": {},
+        }
+
+    # One Keymaker pass per (arm, instance); all carriers filled together
+    for arm in stochastic_arms:
+        log(f"arm={arm} M={M} (all carriers)")
+        off = int(_ARM_OFF.get(arm, 400_000))
+        scores: dict[str, list[float]] = {c: [] for c in carriers}
+        s8_count: dict[str, int] = {c: 0 for c in carriers}
+        lives: dict[str, list[int]] = {c: [] for c in carriers}
+        or_passes = 0
+        for i in range(M):
+            inst = score_arm_component_series(
+                kn,
+                arm,
+                n_windows=W,
+                n_zeros=n_zeros,
+                N=N,
+                n_sectors=n_sectors,
+                component_keys=carriers,
+                use_g5_span=True,
+                omega_span=zeta.get("omega_span"),
+                rng_seed=base_seed + off + i,
+                skip_rigidity=True,
+            )
+            masks = {}
+            for carrier in carriers:
+                scores[carrier].append(float(inst["means"][carrier]))
+                wins = advantage_series(
+                    zeta["series"][carrier],
+                    inst["series"][carrier],
+                    lower_is_better=True,
+                )
+                bc = persistence_barcode(wins)
+                lives[carrier].append(int(bc["max_lifespan"]))
+                if bc["stage8_pass"]:
+                    s8_count[carrier] += 1
+                masks[carrier] = wins
+            if multi_carrier_persistence(masks)["stage8_pass_or"]:
+                or_passes += 1
+
+        for carrier in carriers:
+            mc = monte_carlo_spectrum_p(
+                float(zeta["means"][carrier]),
+                scores[carrier],
+                lower_is_better=True,
+            )
+            p_adj = bonferroni(mc["p"], n_tests)
+            results["by_carrier"][carrier]["stochastic"][arm] = {
+                "monte_carlo": mc,
+                "p_bonferroni": p_adj,
+                "significant_bonferroni_0.05": bool(p_adj <= 0.05),
+                "stage8_pass_count": int(s8_count[carrier]),
+                "stage8_pass_fraction": float(s8_count[carrier]) / float(M),
+                "mean_max_lifespan": float(np.mean(lives[carrier])),
+                "null_scores_head": scores[carrier][:5],
+            }
+            log(
+                f"  {carrier}/{arm}: p={mc['p']:.4f} p_adj={p_adj:.4f} "
+                f"s8={s8_count[carrier] / M:.3f} null_mean={mc['null_mean']:.5g}"
+            )
+        results[f"multi_carrier_or_vs_{arm}"] = {
+            "stage8_or_pass_fraction": float(or_passes) / float(M),
+            "M": M,
+        }
+
+    results["summary"] = {
+        "elapsed_s": float(time.perf_counter() - t0),
+        "dual_gate_soft_T_12": float(policy_for(12, base_beta=0.20).soft_T),
+        "n_bonferroni_tests": n_tests,
+        "any_significant": any(
+            results["by_carrier"][c]["stochastic"][a].get("significant_bonferroni_0.05")
+            for c in carriers
+            for a in stochastic_arms
+        ),
+    }
+    results["note"] = (
+        "Stage 9 component track under G5 independent baseline. "
+        "Bonferroni over |arms|×|carriers|. Dual-gate LengthPolicy untouched. Never λ=γ."
+    )
+    return results

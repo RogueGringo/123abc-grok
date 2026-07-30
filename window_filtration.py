@@ -17,7 +17,11 @@ from realm.validate.cross_window import (
     existence_arm_scan,
     score_rigidity_filtration,
 )
-from realm.validate.stage9_tournament import run_rigidity_tournament, save_tournament
+from realm.validate.stage9_tournament import (
+    run_component_tournament,
+    run_rigidity_tournament,
+    save_tournament,
+)
 from realm.validate.window_filtration import load_champion_knobs, score_window_filtration
 
 logger = logging.getLogger("window_filtration")
@@ -29,9 +33,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     p.add_argument(
         "--stage",
-        choices=("6", "7", "8", "7+8", "9lite", "9"),
+        choices=("6", "7", "8", "7+8", "9lite", "9", "9comp"),
         default="6",
-        help="6=filtration, 7=rigidity, 8/7+8=persistence, 9lite=existence, 9=powered rigidity",
+        help="6..9lite, 9=rigidity MC, 9comp=G5 residual component MC",
     )
     p.add_argument(
         "-M",
@@ -74,6 +78,7 @@ def main(argv: list[str] | None = None) -> int:
             "7+8": "out/window_filtration_stage7_8.json",
             "9lite": "out/window_filtration_stage9lite.json",
             "9": "out/window_filtration_stage9.json",
+            "9comp": "out/window_filtration_stage9comp.json",
         }[stage]
     )
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -184,6 +189,32 @@ def main(argv: list[str] | None = None) -> int:
             s.get("gue_stage8_fraction") or 0.0,
             s.get("poisson_stage8_fraction") or 0.0,
             s.get("elapsed_s") or 0.0,
+            dest,
+        )
+        return 0
+
+    if stage == "9comp":
+        kn = load_champion_knobs(args.knobs)
+        out = run_component_tournament(
+            kn,
+            M=int(args.n_instances),
+            n_windows=int(args.n_windows),
+            n_zeros=int(args.n_zeros),
+            N=int(args.N),
+            n_sectors=int(args.sectors),
+            carriers=("stationarity", "density_return_l1", "corr_penalty"),
+            stochastic_arms=("gue", "poisson"),
+            base_seed=int(args.seed),
+            progress=lambda m: logger.info("%s", m),
+        )
+        save_tournament(out, dest)
+        logger.info(
+            "Stage9comp M=%s any_sig=%s multi_or_gue=%s multi_or_poisson=%s elapsed=%.1fs → %s",
+            out["M"],
+            out["summary"].get("any_significant"),
+            (out.get("multi_carrier_or_vs_gue") or {}).get("stage8_or_pass_fraction"),
+            (out.get("multi_carrier_or_vs_poisson") or {}).get("stage8_or_pass_fraction"),
+            out["summary"].get("elapsed_s") or 0.0,
             dest,
         )
         return 0

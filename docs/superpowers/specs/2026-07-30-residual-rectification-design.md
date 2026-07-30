@@ -28,6 +28,22 @@ vs arith (existence).
 
 Matches design O4 / Montgomery–Odlyzko: **Δ₃ cannot separate ζ from GUE** (GUE is
 slightly *more* rigid here); **does** separate ζ from Poisson at the MC floor.
+
+**Stage 9 component tournament** (`--stage 9comp -M 59`, G5 independent baseline,
+Bonferroni ×6 = 2 arms × 3 carriers):
+
+| carrier | vs | p | p_Bonf | s8 frac | note |
+|---------|----|---|--------|---------|------|
+| stationarity | gue | 0.067 | 0.40 | 0.58 | n.s. Bonf |
+| stationarity | poisson | **0.0167** | 0.10 | **0.93** | floor; not ≤0.05 after ×6 |
+| dens_return | gue | 0.97 | 1.0 | 0.00 | ζ worse mean dens |
+| dens_return | poisson | 0.75 | 1.0 | 0.03 | n.s. |
+| corr_penalty | gue/poisson | ≥0.6 | 1.0 | ~0 | n.s. |
+| multi-OR Stage8 | gue | — | — | **0.88** | liberal fusion |
+
+**Verdict (Sub-spec II):** Rigidity Δ₃ separates ζ from **Poisson** at powered MC;
+**not** from GUE. Residual dens does not prefer ζ. Multi-carrier OR persistence vs
+GUE is frequent (88%) but no single residual carrier is Bonf-significant at M=59.
 **Gate condition met:** the equal-budget table is public (PR #2, `fair_fight_result.json`),
 which was the precondition for re-opening residual design.
 **Supersedes for selection purposes:** `2026-07-30-validation-ladder-design.md` (retracted)

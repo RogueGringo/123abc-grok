@@ -464,6 +464,7 @@ def score_arm_component_series(
     use_g5_span: bool = True,
     omega_span: float | None = None,
     rng_seed: int = 0,
+    skip_rigidity: bool = False,
 ) -> dict[str, Any]:
     """Independent-baseline component series for one arm under shared knobs + G5."""
     from realm.validate.baseline import score_with_independent_baseline
@@ -530,19 +531,27 @@ def score_arm_component_series(
     means = {
         ck: float(np.nanmean(np.asarray(series[ck], dtype=float))) for ck in component_keys
     }
-    rig = score_rigidity_filtration(
-        n_windows=W, n_zeros=k, n_zeros_table=table_n, arm=arm if arm != "arith" else "arith",
-        rng_seed=int(rng_seed),
-    )
-    # arith arm for rigidity: use make_seed path via score_rigidity - need arith support
+    if skip_rigidity:
+        rig_mean = float("nan")
+        rig_series: list[float] = []
+    else:
+        rig = score_rigidity_filtration(
+            n_windows=W,
+            n_zeros=k,
+            n_zeros_table=table_n,
+            arm=arm if arm != "arith" else "arith",
+            rng_seed=int(rng_seed),
+        )
+        rig_mean = rig["carrier_mean"]
+        rig_series = list(rig["carrier_series"])
     return {
         "arm": arm,
         "W": W,
         "series": series,
         "means": means,
         "guard_clear": int(guard_clear),
-        "rigidity_carrier_mean": rig["carrier_mean"],
-        "rigidity_series": rig["carrier_series"],
+        "rigidity_carrier_mean": rig_mean,
+        "rigidity_series": rig_series,
         "omega_span": span,
         "g5": g5,
     }
