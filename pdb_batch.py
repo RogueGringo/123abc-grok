@@ -23,6 +23,7 @@ from realm.validate.decoys import make_ca_decoys
 from realm.validate.dual import (
     dual_score_geometry,
     forge_crit_geometry,
+    multimode_for_ca_length,
     sectors_for_ca_length,
 )
 from realm.validate.pdb_io import PdbIOError, fetch_pdb, load_ca_cyclic_band
@@ -43,7 +44,7 @@ DEFAULT_CYCLIC_IDS = [
     "1JBL",
     "5EOC",
     "3AVB",
-    "3AV9",  # expanded short cyclic holdout
+    "3AV9",
     "5LSO",
     "1TET",
 ]
@@ -66,6 +67,8 @@ def rank_one(
     soft_T: float = 0.08,
     aggregate: str = "softmin",
     sectors_mode: str = "fixed",
+    multimode: bool | None = None,
+    multimode_mode: str = "adaptive_short",
 ) -> dict:
     """Native-vs-decoy rank. alpha_proj=1 pure Crit projection; <1 dual L blend."""
     path = fetch_pdb(pdb_id)
@@ -83,8 +86,16 @@ def rank_one(
     # Match Keymaker N to backbone length (geometry scaffold size)
     N = max(n_ca, 7)
     n_sec = sectors_for_ca_length(n_ca, mode=sectors_mode, default=n_sectors)
+    if multimode is None:
+        use_mm = multimode_for_ca_length(n_ca, mode=multimode_mode)
+    else:
+        use_mm = bool(multimode)
     pack = forge_crit_geometry(
-        knobs, N=N, n_zeros=n_zeros, n_sectors=n_sec
+        knobs,
+        N=N,
+        n_zeros=n_zeros,
+        n_sectors=n_sec,
+        multimode=use_mm,
     )
     a = float(np.clip(alpha_proj, 0.0, 1.0))
     sc_kw = dict(alpha_proj=a, soft_T=soft_T, aggregate=aggregate)
@@ -148,6 +159,8 @@ def rank_one(
         "aggregate": aggregate,
         "n_sectors_used": n_sec,
         "sectors_mode": sectors_mode,
+        "multimode": use_mm,
+        "multimode_mode": multimode_mode if multimode is None else "override",
         "operator": pack["operator"].to_dict() if a < 1.0 else None,
     }
 
@@ -191,6 +204,19 @@ def main(argv=None) -> int:
         default="softmin",
         choices=("softmin", "topk", "min", "softmin_min"),
         help="Crit template aggregation (softmin_min = geom mean soft×min)",
+    )
+    p.add_argument(
+        "--multimode-mode",
+        type=str,
+        default="adaptive_short",
+        choices=("adaptive_short", "on", "off"),
+        help="adaptive_short: multimode only CA≤8; on/off force all",
+    )
+    p.add_argument(
+        "--multimode",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="override multimode-mode (force on/off for all IDs)",
     )
     p.add_argument("--null-json", type=Path, default=Path("null_battery_result.json"))
     p.add_argument("--force", action="store_true")
@@ -247,6 +273,8 @@ def main(argv=None) -> int:
                 soft_T=args.soft_T,
                 aggregate=args.aggregate,
                 sectors_mode=args.sectors_mode,
+                multimode=args.multimode,
+                multimode_mode=args.multimode_mode,
             )
         except PdbIOError as exc:
             row = {"pdb": pid, "status": "IO_FAIL", "error": str(exc)}
@@ -304,12 +332,14 @@ def main(argv=None) -> int:
             "aggregate": args.aggregate,
             "sectors_mode": args.sectors_mode,
             "sectors_default": args.sectors,
+            "multimode": args.multimode,
+            "multimode_mode": args.multimode_mode,
         },
         "knobs": knobs,
         "ontology": "projection_geometry_dual_ready_not_lambda_eq_gamma",
         "note": (
             "Curated cyclic PDB IDs only. Substrate→Crit projection ranking "
-            "(softmin Kabsch; adaptive sectors optional). alpha_proj<1 L dual. "
+            "(softmin Kabsch; adaptive sectors; multimode adaptive_short). "
             "ζ residual preference remains RETRACTED. Multi-seed stability."
         ),
     }

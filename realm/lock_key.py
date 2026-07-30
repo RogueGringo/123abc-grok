@@ -459,12 +459,16 @@ class Keymaker:
         gammas = knobs.get("gammas")
         if gammas is not None:
             gammas = np.asarray(gammas, dtype=float).ravel()
+        multimode = knobs.get("multimode", True)
+        if isinstance(multimode, str):
+            multimode = multimode.strip().lower() in ("1", "true", "yes", "on")
         return Deriver(
             N=self.N,
             d=self.d,
             n_zeros=self.n_zeros,
             n_sectors=self.n_sectors,
             Lambda=knobs.get("Lambda"),
+            multimode=bool(multimode),
             omega_scale=float(knobs.get("omega_scale", 1.0)),
             weight_power=float(knobs.get("weight_power", 1.0)),
             tier_split=float(knobs.get("tier_split", 0.45)),

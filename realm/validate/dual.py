@@ -138,6 +138,22 @@ def operator_distance_to_crit(
     }
 
 
+def multimode_for_ca_length(n_ca: int, mode: str = "adaptive_short") -> bool:
+    """Whether Crit rings use Fourier multimode height field.
+
+    adaptive_short: multimode only for short rings (CA≤8) — height ribbon
+    helps tiny cyclics; planar holonomy circle ranks better for longer rings.
+    on / off: force all multimode or all planar.
+    """
+    mode = str(mode or "adaptive_short").lower().strip()
+    if mode in ("on", "true", "1", "yes"):
+        return True
+    if mode in ("off", "false", "0", "no", "planar"):
+        return False
+    # adaptive_short (default production)
+    return int(n_ca) <= 8
+
+
 def sectors_for_ca_length(n_ca: int, mode: str = "fixed", default: int = 6) -> int:
     """Choose Crit sector count from ring length (projection mold capacity).
 
@@ -164,11 +180,14 @@ def forge_crit_geometry(
     n_sectors: int = 6,
     gammas: np.ndarray | None = None,
     prefer_maxop: bool = True,
+    multimode: bool | None = None,
 ) -> dict[str, Any]:
     """Forge substrate → Crit templates + operator fingerprint."""
     kn = dict(knobs)
     if gammas is not None:
         kn["gammas"] = np.asarray(gammas, float).ravel()
+    if multimode is not None:
+        kn["multimode"] = bool(multimode)
     der = Keymaker(N=N, n_zeros=n_zeros, n_sectors=n_sectors).forge(**kn)
     templates: list[np.ndarray] = []
     thetas: list[float] = []
@@ -187,6 +206,7 @@ def forge_crit_geometry(
         "derivation": der,
         "n_sectors": len(templates),
         "N": N,
+        "multimode": bool(kn.get("multimode", True)),
     }
 
 
