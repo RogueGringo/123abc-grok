@@ -33,6 +33,24 @@ from realm.validate.report import load_knobs, write_json
 logger = logging.getLogger("handoff_export")
 
 
+def _resnames_from_sequence(seq: str | None, N: int) -> list[str] | None:
+    if not seq:
+        return None
+    s = seq.strip()
+    aa1 = {
+        "A": "ALA", "G": "GLY", "V": "VAL", "L": "LEU", "I": "ILE", "P": "PRO",
+        "F": "PHE", "Y": "TYR", "W": "TRP", "S": "SER", "T": "THR", "C": "CYS",
+        "M": "MET", "N": "ASN", "Q": "GLN", "D": "ASP", "E": "GLU", "K": "LYS",
+        "R": "ARG", "H": "HIS",
+    }
+    if len(s) == N and s.isalpha():
+        return [aa1.get(c.upper(), "GLY") for c in s]
+    parts = [p.strip().upper() for p in s.replace(",", " ").split() if p.strip()]
+    if len(parts) == N:
+        return parts
+    raise SystemExit(f"--sequence length must match N={N}")
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(description="Geometric handoff export (Crit+Coutsias)")
     p.add_argument("-N", type=int, default=11, help="cycle length (CA count)")
@@ -70,6 +88,12 @@ def main(argv=None) -> int:
         type=str,
         default=None,
         help="PDB id for --mode structure (uses data/pdb cache / RCSB)",
+    )
+    p.add_argument(
+        "--sequence",
+        type=str,
+        default=None,
+        help="1-letter or 3-letter seq for resnames",
     )
     p.add_argument("-v", action="store_true")
     args = p.parse_args(argv)
@@ -130,9 +154,36 @@ def main(argv=None) -> int:
     decorate_ad = select_adapter(args.decorate)
     physics_ad = get_physics_adapter(args.physics)
 
+    # Proposal: sequence must match args.N once. Structure: per-mold N.
+    resnames_proposal: list[str] | None = None
+    if args.sequence and args.mode == "proposal":
+        resnames_proposal = _resnames_from_sequence(args.sequence, int(args.N))
+
     index_molds = []
     for i, m in enumerate(ranked):
         stem = f"{i:03d}_{m.source}"
+        mold_N = int(m.N)
+        if args.mode == "proposal":
+            mold_resnames = resnames_proposal
+        elif args.sequence:
+            s = args.sequence.strip()
+            parts = [
+                p.strip().upper()
+                for p in s.replace(",", " ").split()
+                if p.strip()
+            ]
+            if (len(s) == mold_N and s.isalpha()) or len(parts) == mold_N:
+                mold_resnames = _resnames_from_sequence(args.sequence, mold_N)
+            else:
+                logger.warning(
+                    "--sequence length does not match mold N=%d for %s; "
+                    "skipping sequence for this mold",
+                    mold_N,
+                    stem,
+                )
+                mold_resnames = None
+        else:
+            mold_resnames = None
         paths = write_mold_pair(
             molds_dir,
             stem,
@@ -142,6 +193,7 @@ def main(argv=None) -> int:
             method=m.method,
             twist=m.twist,
             maxop_gap=m.maxop_gap,
+            resnames=mold_resnames,
         )
         art = BackboneArtifact(
             path_ca=Path(paths["path_ca"]),
