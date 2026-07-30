@@ -182,3 +182,70 @@ def verify_handoff_tree(
         checks.append(False)
     report["ok"] = all(checks)
     return report
+
+
+def quality_gate(
+    export_summary: dict[str, Any] | None,
+    verify_report: dict[str, Any] | None,
+    *,
+    min_ok_fraction: float = 1.0,
+    min_openable_pdbs: int = 1,
+    require_verify_ok: bool = True,
+) -> dict[str, Any]:
+    """Commercial release gate: pin + openable molds + export success rate.
+
+    Does **not** re-rank or chase enrichment. Openable PDBs / manifest are the
+    success metric; enrichment stamp is informational only.
+    """
+    reasons: list[str] = []
+    pin = verify_dual_gate_pin()
+    if not pin.get("ok"):
+        reasons.append(
+            f"dual_gate_pin_failed soft_T={pin.get('soft_T')} expected={pin.get('expected_soft_T')}"
+        )
+
+    n_ok = 0
+    n_ids = 0
+    ok_fraction: float | None = None
+    if export_summary:
+        n_ok = int(export_summary.get("n_ok") or 0)
+        n_ids = int(export_summary.get("n_ids") or 0)
+        if n_ids <= 0:
+            reasons.append("export_n_ids_zero")
+        else:
+            ok_fraction = float(n_ok) / float(n_ids)
+            if ok_fraction + 1e-12 < float(min_ok_fraction):
+                reasons.append(
+                    f"ok_fraction {ok_fraction:.3f} < min_ok_fraction {min_ok_fraction}"
+                )
+        if n_ok < 1:
+            reasons.append("export_n_ok_zero")
+
+    n_pdb = 0
+    n_remark_ok = False
+    if verify_report:
+        if require_verify_ok and verify_report.get("ok") is not True:
+            reasons.append("verify_report_not_ok")
+        remarks = verify_report.get("ontology_remarks") or {}
+        n_pdb = int(remarks.get("n_pdb") or 0)
+        n_remark_ok = remarks.get("ok") is True
+        if n_pdb < int(min_openable_pdbs):
+            reasons.append(f"n_pdb {n_pdb} < min_openable_pdbs {min_openable_pdbs}")
+        if not n_remark_ok and n_pdb > 0:
+            reasons.append("ontology_remarks_incomplete")
+        bio = verify_report.get("biopython") or {}
+        if bio.get("ok") is False:
+            reasons.append("biopython_open_failed")
+
+    ok = len(reasons) == 0
+    return {
+        "ok": ok,
+        "reasons": reasons,
+        "pin": pin,
+        "export": {"n_ok": n_ok, "n_ids": n_ids, "ok_fraction": ok_fraction},
+        "n_pdb": n_pdb,
+        "min_ok_fraction": float(min_ok_fraction),
+        "min_openable_pdbs": int(min_openable_pdbs),
+        "ontology": "handoff_quality_gate_not_lambda_eq_gamma",
+        "note": "Gate on openable PDBs + dual-gate pin; not enrichment score-chase.",
+    }

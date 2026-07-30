@@ -36,8 +36,15 @@ Ontology: **Crit projection molds** (ζ substrate scaffolding only).
 | `molds/` or `<PDB>/molds/` | CA-only (`*_ca.pdb`) and idealized backbone (`*_bb.pdb`) |
 | `manifest.tsv` | Per-mold paths, rank scores, soft_T, REMARK check |
 | `enrichment_summary.tsv` | Optional dual-gate enrichment stamp (if campaign used `--with-enrichment`) |
+| `SUMMARY.md` | Human-readable campaign summary (export batch root) |
 | `batch_index.json` / `index.json` | Machine-readable index + LengthPolicy snapshot |
 | `SHA256SUMS.txt` | Checksums of packaged files |
+
+Verify a package with:
+
+```bash
+python handoff_verify.py . --require-sha256
+```
 
 ## How to open
 
@@ -154,14 +161,17 @@ def build_partner_package(
             lines.append(f"{_sha256_file(p)}  {rel}")
     (dest / "SHA256SUMS.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
+    has_summary = (dest / "SUMMARY.md").is_file()
     meta = {
         "label": name,
         "created_utc": stamp,
         "source_dir": str(src),
         "package_dir": str(dest.resolve()),
         "n_files": len(lines) + 1,
+        "has_summary_md": has_summary,
         "ontology": "partner_package_not_lambda_eq_gamma",
         "note": "Dual-gate export packaging only; ranking policy not modified.",
+        "verify_cli": "python handoff_verify.py <package_dir> --require-sha256",
     }
     (dest / "package_meta.json").write_text(
         json.dumps(meta, indent=2) + "\n", encoding="utf-8"
