@@ -78,6 +78,7 @@ realm/validate/
   harness.py        # forge + residual + mold score from knobs + seed
   report.py         # JSON/table writers
   pdb_io.py         # RCSB fetch + cyclic backbone extract
+  hf_io.py          # Hugging Face Hub download/cache (data plane only)
   decoys.py         # torsion/coordinate decoys from native
 
 null_battery.py     # CLI Phase 1
@@ -166,7 +167,10 @@ Does **not** rewrite residual weights to “win.”
 
 ### Phase 3 — Single cyclic PDB deep dive
 
-1. **Fetch:** RCSB download `https://files.rcsb.org/download/{PDB_ID}.pdb` (cache under `data/pdb/`).  
+1. **Fetch (priority order):**  
+   a. Local cache `data/pdb/{PDB_ID}.pdb` if present.  
+   b. **RCSB:** `https://files.rcsb.org/download/{PDB_ID}.pdb`.  
+   c. **Hugging Face fallback (optional):** `hf_hub_download` for CPSea2 demo/metadata or a mirrored PDB file when `--source hf` or RCSB fails and `--allow-hf-fallback`.  
 2. **Parse:** backbone N–CA–C (or CA-trace fallback) for a cyclic chain; detect cycle by SEQRES/link or user `--chain` + first–last bond assumption for known cyclic peptides.  
 3. **Native score:** embed as sector geometry or map torsions → θ proxy → mold distance on ζ landscape built from champion knobs.  
    - Preferred: reduce native ring to holonomy-like twist + embed_multimode path consistent with `zeta_geometry`.  
@@ -176,6 +180,21 @@ Does **not** rewrite residual weights to “win.”
 6. Report native rank, percentile, enrichment vs random.
 
 **Default PDB:** configurable CLI `--pdb`; recommend a well-known cyclic peptide with public PDB (document choice in plan). If fetch fails, exit nonzero with clear message (no silent synthetic swap unless `--allow-synthetic-fallback`).
+
+### Hugging Face data plane (not critical path for residual)
+
+Hub is **data + I/O only**. Engine remains ζ → Crit → mold → residual. No pLM fine-tune in the seal path; no λ=γ.
+
+| Resource | Use | Constraint |
+|----------|-----|------------|
+| [`YZY010418/CPSea2`](https://huggingface.co/datasets/YZY010418/CPSea2) | Demo TSV + PDB-side metadata for cyclic peptide IDs / later mass ranking | Do **not** load full multi-GB dump on ARM; use `hf_hub_download` of **demo** or specific files. Prefer experimental PDB slice over AFDB-mined pseudo-cycles for first claim. |
+| [`LiteFold/CycPepMPDB`](https://huggingface.co/datasets/LiteFold/CycPepMPDB) | Optional later property labels (permeability); not v1 gate | Sequence/property only |
+| [`RosettaCommons/ProteinMPNN`](https://huggingface.co/datasets/RosettaCommons/ProteinMPNN) tensors | Optional later coords `xyz` for decoy basing | Heavy; post single-structure |
+| `huggingface_hub` | Cache under `data/hf/` or default HF cache; version-pin repo revision when possible | Dependency optional: if not installed, Phase 3 RCSB-only still works |
+
+**Out of critical path (optional baselines only):** Rostlab ProtT5 / ProstT5 / ProtBERT — may later score same decoys as a **comparison ranker** (“does mold beat pLM distance?”). Never replace Crit residual with embedding loss.
+
+**v1 Phase 3b (after null gate + single deep dive):** thin CLI flag `--cpsea-demo` lists cyclic PDB ids from CPSea2 demo metadata for a multi-id ranking loop (still not full 2.7M).
 
 ---
 
@@ -227,6 +246,7 @@ Exit codes: `0` pass/gate ok, `2` gate fail, `3` I/O/fetch/parse fail.
 - Unit: harness ζ path matches Keymaker residual within float tol for champion knobs.  
 - Integration: null_battery dry-run 1 rep serial.  
 - Integration: pdb fetch mocked with fixture PDB snippet in `tests/fixtures/`.  
+- Unit: `hf_io` resolves demo path with mocked hub (no network in CI).  
 - Ontology guard: grep/tests ensure no `abs(lambda - gamma)` style scorer in validate path.
 
 ---
@@ -243,10 +263,11 @@ Exit codes: `0` pass/gate ok, `2` gate fail, `3` I/O/fetch/parse fail.
 
 | Artifact | Phase |
 |----------|--------|
-| `realm/validate/*` | all |
+| `realm/validate/*` including `hf_io.py` | all |
 | `null_battery.py` + `null_battery_result.json` | 1 |
 | `sec_scale.py` + `sec_scale_result.json` | 2 |
 | `pdb_decoy.py` + `pdb_decoy_result.png/json` | 3 |
+| Optional: `data/hf/` cache (gitignored) | 3 / 3b |
 | This design doc | planning |
 | Implementation plan under `docs/superpowers/plans/` | next skill |
 
@@ -260,6 +281,8 @@ Exit codes: `0` pass/gate ok, `2` gate fail, `3` I/O/fetch/parse fail.
 | PDB cycle detection brittle | Single known target first; explicit chain flags |
 | High sec cannot form enough valleys | FAIL_CAPACITY; keep sec=6 champion |
 | Overclaim biology | Phase 3 language = ranking experiment, not fold proof |
+| HF dump too large for 8 GB RAM | Demo/metadata only; never `load_dataset` full CPSea2 |
+| pLM creep | ProtT5 only as optional baseline ranker, never residual |
 
 ---
 
@@ -269,8 +292,10 @@ Exit codes: `0` pass/gate ok, `2` gate fail, `3` I/O/fetch/parse fail.
 |----------|--------|
 | Scope | Full validation ladder (phased) |
 | Phase 1 gate | Hard ζ preference: F_ζ < 0.8 × min F_null |
-| Phase 3 data | Live RCSB/PDB fetch |
+| Phase 3 data | Live RCSB/PDB fetch + optional HF Hub fallback |
 | Phase 3 scale v1 | Single structure deep dive |
 | Architecture | Approach A — one CLI per phase + `realm/validate` harness |
+| Hugging Face | Data plane (CPSea2 demo, hub download); not pLM critical path |
 
-**Brainstorm approval:** user selected approach A and approved design sections §1–§4 (2026-07-30 session).
+**Brainstorm approval:** user selected approach A and approved design sections §1–§4 (2026-07-30 session).  
+**HF amendment:** approved (“hit it”) same session — data plane section added.
