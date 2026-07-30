@@ -26,6 +26,7 @@ from realm.lock_key import Keymaker
 from realm.ontology import ONTOLOGY, ontology_note
 from realm.validate.decoys import make_ca_decoys, score_geometry_vs_crit
 from realm.validate.dual import (
+    dual_score_geometry,
     forge_crit_geometry,
     sectors_for_ca_length,
     select_mold_by_fit,
@@ -33,9 +34,10 @@ from realm.validate.dual import (
 from realm.validate.pdb_io import fetch_pdb, load_ca_cyclic_band
 from realm.validate.seeds import make_seed
 
-# Production mold bank (projection-primary)
+# Production mold bank (projection-primary) + sheaf defect blend
 DENSE_OMEGA = (0.85, 0.95, 1.0, 1.1, 1.2)
 SOFT_T = 0.04
+DEFECT_BETA = 0.20
 
 
 def forge_with_substrate(
@@ -142,13 +144,22 @@ def rank_enrichment(
     n_seeds: int,
     soft_T: float = SOFT_T,
     noise: float = 0.45,
+    defect_beta: float = DEFECT_BETA,
     rng: np.random.Generator,
 ) -> dict[str, Any]:
-    """Multi-seed native-vs-decoy enrichment under a fixed Crit mold."""
-    templates = pack["templates"]
-    native = float(
-        score_geometry_vs_crit(xyz, templates, soft_T=soft_T)["mean_dist"]
+    """Multi-seed native-vs-decoy enrichment under a fixed Crit mold.
+
+    Projection-primary Kabsch softmin with production sheaf-defect blend
+    (defect_beta default 0.20). Same scoring path as pdb_batch.rank_one.
+    """
+    sc_kw = dict(
+        alpha_proj=1.0,
+        soft_T=soft_T,
+        aggregate="softmin",
+        defect_beta=float(defect_beta),
     )
+    native_sc = dual_score_geometry(xyz, pack, **sc_kw)
+    native = float(native_sc["mean_dist"])
     enrichments = []
     ranks = []
     tops = []
@@ -159,7 +170,7 @@ def rank_enrichment(
         decoys = make_ca_decoys(xyz, n_soft, sub, noise=noise)
         decoys += make_ca_decoys(xyz, n_hard, sub, noise=noise * 1.8)
         scores = [
-            float(score_geometry_vs_crit(d, templates, soft_T=soft_T)["mean_dist"])
+            float(dual_score_geometry(d, pack, **sc_kw)["mean_dist"])
             for d in decoys
         ]
         worse = sum(1 for s in scores if s > native)
@@ -170,12 +181,16 @@ def rank_enrichment(
         tops.append(rank <= max(1, int(0.2 * n_tot)))
     return {
         "native_dist": native,
+        "native_proj": float(native_sc.get("proj_dist", native)),
+        "native_defect": float(native_sc.get("defect_dist", 0.0)),
         "enrichment": float(np.mean(enrichments)),
         "enrichment_std": float(np.std(enrichments)) if len(enrichments) > 1 else 0.0,
         "native_rank": float(np.mean(ranks)),
         "top20": bool(np.mean(tops) >= 0.5),
         "n_seeds": n_seeds,
         "n_decoys": n_decoys,
+        "defect_beta": float(defect_beta),
+        "method": native_sc.get("method"),
     }
 
 
@@ -188,11 +203,12 @@ def substrate_projection_table(
     n_seeds: int = 2,
     n_zeros: int = 14,
     soft_T: float = SOFT_T,
+    defect_beta: float = DEFECT_BETA,
     rng_seed: int = 17,
 ) -> dict[str, Any]:
     """Equal mold-bank budget ranking table across substrates.
 
-    Reports projection enrichment only. Does **not** claim ζ preference
+    Reports projection+sheaf-defect enrichment. Does **not** claim ζ preference
     (knobs may be ζ-seating defaults — stated in note).
     """
     rng = np.random.default_rng(rng_seed)
@@ -223,6 +239,7 @@ def substrate_projection_table(
                 n_decoys=n_decoys,
                 n_seeds=n_seeds,
                 soft_T=soft_T,
+                defect_beta=defect_beta,
                 rng=rng,
             )
             aqft = aqft_dual_report(pack["operator"])
@@ -252,12 +269,14 @@ def substrate_projection_table(
             "n_seeds": n_seeds,
             "n_zeros": n_zeros,
             "soft_T": soft_T,
+            "defect_beta": float(defect_beta),
             "omega_scales": list(DENSE_OMEGA),
             "equal_budget": "mold_bank_cells_per_substrate",
         },
         "note": (
             "Equal mold-selection budget per substrate. Knobs may be "
             "ζ-seating defaults — not equal-budget knob refit. "
+            "Ranking uses production sheaf-defect blend. "
             "No ζ-preference claim."
         ),
         "ontology": ontology_note(),
@@ -272,6 +291,7 @@ def fold_one_structure(
     n_seeds: int = 3,
     n_zeros: int = 14,
     soft_T: float = SOFT_T,
+    defect_beta: float = DEFECT_BETA,
     rng: np.random.Generator | None = None,
 ) -> dict[str, Any]:
     """Full fold protocol elements for one RCSB cyclic structure (ζ substrate)."""
@@ -295,7 +315,13 @@ def fold_one_structure(
         rng=rng,
     )
     enr = rank_enrichment(
-        xyz, pack, n_decoys=n_decoys, n_seeds=n_seeds, soft_T=soft_T, rng=rng
+        xyz,
+        pack,
+        n_decoys=n_decoys,
+        n_seeds=n_seeds,
+        soft_T=soft_T,
+        defect_beta=defect_beta,
+        rng=rng,
     )
     aqft = aqft_dual_report(pack["operator"])
 
@@ -322,6 +348,8 @@ def fold_one_structure(
             "operator": "L=delta*delta connection Laplacian",
             "backend": "MaxOp CellularSheaf or numpy",
             "fiber": "R^d stalks with SO(2) monodromy on cut edge",
+            "multi_scale": "edge + hop2/3 chord obstruction cocycles",
+            "defect_beta": float(defect_beta),
         },
         "ontology": ontology_note(),
     }

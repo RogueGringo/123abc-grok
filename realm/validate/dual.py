@@ -335,33 +335,59 @@ def dual_score_geometry(
     xyz: np.ndarray,
     pack: dict[str, Any],
     *,
-    alpha_proj: float = 0.85,
+    alpha_proj: float = 1.0,
     prefer_maxop: bool = True,
     soft_T: float = 0.04,
     aggregate: str = "softmin",
+    defect_beta: float = 0.0,
 ) -> dict[str, Any]:
-    """Joint score: α·projection + (1-α)·operator distance (lower better).
+    """Projection-primary score with optional sheaf-defect / operator dual.
 
-    Projection = Crit Kabsch ensemble (softmin / blend). Operator = NN
-    distance in L-feature space at θ_geom vs Crit. α=1 pure projection.
+    Ranking defaults:
+      α_proj=1, defect_beta>0 → Kabsch softmin blended with sheaf Dirichlet
+      defect (local obstruction on C_N under Crit monodromy). α_proj<1 adds
+      legacy θ_proxy operator NN (usually weaker than defect track).
+
+    Never λ=γ.
     """
+    from realm.sheaf_defects import blend_projection_defect, softmin_defect_vs_crit
+
     templates = pack["templates"]
     crit_fp: OperatorFingerprint = pack["operator"]
     N = int(pack["N"])
+    thetas = pack.get("thetas")
+    if thetas is None:
+        thetas = crit_fp.thetas
     proj = score_geometry_vs_crit(
         xyz, templates, soft_T=soft_T, aggregate=aggregate
     )
+    proj_d = float(proj["mean_dist"])
     a = float(np.clip(alpha_proj, 0.0, 1.0))
-    # skip expensive L eval when pure projection ranking
+    b = float(np.clip(defect_beta, 0.0, 1.0))
+
+    defect_d = 0.0
+    if b > 1e-12:
+        defc = softmin_defect_vs_crit(
+            xyz, thetas, soft_T=soft_T, prefer_maxop=prefer_maxop
+        )
+        defect_d = float(defc["mean_dist"])
+        base = blend_projection_defect(proj_d, defect_d, beta=b)
+        method = "PROJ_SHEAF_DEFECT"
+    else:
+        base = proj_d
+        method = proj.get("method")
+
     if a >= 1.0 - 1e-12:
         return {
-            "mean_dist": float(proj["mean_dist"]),
-            "proj_dist": float(proj["mean_dist"]),
+            "mean_dist": base,
+            "proj_dist": proj_d,
+            "defect_dist": defect_d,
             "op_dist": 0.0,
             "op_dist_scaled": 0.0,
             "theta_geom": None,
             "alpha_proj": a,
-            "method": proj.get("method"),
+            "defect_beta": b,
+            "method": method,
             "in_basin": bool(proj.get("in_basin")),
             "n_templates": proj.get("n_templates"),
             "top_k": proj.get("top_k"),
@@ -369,20 +395,22 @@ def dual_score_geometry(
             "soft_T": proj.get("soft_T"),
             "aggregate": proj.get("aggregate"),
         }
+
     op = operator_distance_to_crit(
         xyz, crit_fp, N=N, prefer_maxop=prefer_maxop
     )
-    # soft scale op into projection Kabsch range
     op_s = float(op["op_dist"]) * 0.25
-    dual = a * float(proj["mean_dist"]) + (1.0 - a) * op_s
+    dual = a * base + (1.0 - a) * op_s
     return {
         "mean_dist": dual,
-        "proj_dist": float(proj["mean_dist"]),
+        "proj_dist": proj_d,
+        "defect_dist": defect_d,
         "op_dist": float(op["op_dist"]),
         "op_dist_scaled": op_s,
         "theta_geom": op["theta_geom"],
         "alpha_proj": a,
-        "method": "DUAL_PROJ_OP",
+        "defect_beta": b,
+        "method": "DUAL_PROJ_OP_DEFECT" if b > 1e-12 else "DUAL_PROJ_OP",
         "in_basin": bool(proj.get("in_basin")),
         "n_templates": proj.get("n_templates"),
         "top_k": proj.get("top_k"),

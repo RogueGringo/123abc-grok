@@ -25,6 +25,7 @@ if str(ROOT) not in sys.path:
 from pdb_batch import DEFAULT_CYCLIC_IDS, HOLDOUT_IDS, PROBE_IDS, rank_one
 from realm.axiomz import activation_signature, run_term_series
 from realm.fold_protocol import (
+    DEFECT_BETA,
     DENSE_OMEGA,
     fold_one_structure,
     substrate_projection_table,
@@ -53,6 +54,12 @@ def main(argv=None) -> int:
     p.add_argument("--n-decoys", type=int, default=24)
     p.add_argument("--n-seeds", type=int, default=2)
     p.add_argument("-k", type=int, default=14)
+    p.add_argument(
+        "--defect-beta",
+        type=float,
+        default=DEFECT_BETA,
+        help="sheaf Dirichlet+chord defect blend (production 0.20)",
+    )
     p.add_argument(
         "--full-batch",
         action="store_true",
@@ -95,7 +102,16 @@ def main(argv=None) -> int:
             "aqft_proxy": "local observables {gap,frustration,logZ} on Crit cycle net",
             "never": "lambda_eq_gamma",
         },
-        "mold_bank": {"omega_scales": list(DENSE_OMEGA), "multimodes": [False, True]},
+        "mold_bank": {
+            "omega_scales": list(DENSE_OMEGA),
+            "multimodes": [False, True],
+            "defect_beta": float(args.defect_beta),
+        },
+        "tracks": {
+            "sheaf_defects": "multi-residue chord + Dirichlet L=δ*δ",
+            "witten_morse": "mid-band SpectralAction envelope",
+            "projection": "Kabsch softmin primary + defect blend",
+        },
     }
 
     # --- 1 CTS ---
@@ -121,6 +137,7 @@ def main(argv=None) -> int:
             n_decoys=args.n_decoys,
             n_seeds=args.n_seeds,
             n_zeros=args.k,
+            defect_beta=args.defect_beta,
         )
         payload["substrate_projection"] = table
         print("\n  === SUBSTRATE PROJECTION (equal mold bank budget) ===")
@@ -147,11 +164,13 @@ def main(argv=None) -> int:
             n_decoys=min(args.n_decoys, 32),
             n_seeds=args.n_seeds,
             n_zeros=args.k,
+            defect_beta=args.defect_beta,
         )
         fo = payload["fold_one"]
         print(
             f"\n  fold_one {fo['pdb']}: enrich={fo['ranking']['enrichment']:.0%}  "
             f"native_dist={fo['ranking']['native_dist']:.3f}  "
+            f"method={fo['ranking'].get('method')}  "
             f"aqft adj_gap_corr={fo['aqft_dual']['net']['adjacent_gap_corr']:.3f}"
         )
 
@@ -176,6 +195,7 @@ def main(argv=None) -> int:
                     soft_T=0.04,
                     sectors_mode="adaptive",
                     multimode_mode="self_fit_dense",
+                    defect_beta=args.defect_beta,
                 )
             except Exception as exc:  # noqa: BLE001
                 row = {"pdb": pid, "status": "ERROR", "error": str(exc)}
@@ -207,11 +227,13 @@ def main(argv=None) -> int:
                 "n_seeds": args.full_seeds,
                 "n_decoys": args.full_decoys,
                 "multimode_mode": "self_fit_dense",
+                "defect_beta": float(args.defect_beta),
             },
         }
         print(
             f"\n  FULL BATCH: OK={len(ok)}/{len(rows)}  mean={mean_e:.1%}  "
-            f"probe={pe:.1%}  holdout={he:.1%}  top20={n_top}"
+            f"probe={pe:.1%}  holdout={he:.1%}  top20={n_top}  "
+            f"defect_beta={args.defect_beta}"
         )
 
     payload["commit_policy"] = {

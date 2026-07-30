@@ -72,8 +72,9 @@ def rank_one(
     sectors_mode: str = "fixed",
     multimode: bool | None = None,
     multimode_mode: str = "adaptive_short",
+    defect_beta: float = 0.0,
 ) -> dict:
-    """Native-vs-decoy rank. alpha_proj=1 pure Crit projection; <1 dual L blend."""
+    """Native-vs-decoy rank. Projection-primary; defect_beta blends sheaf energy."""
     path = fetch_pdb(pdb_id)
     xyz, chain_used = load_ca_cyclic_band(path, lo=6, hi=40)
     n_ca = int(xyz.shape[0])
@@ -154,8 +155,13 @@ def rank_one(
             multimode=use_mm,
         )
     a = float(np.clip(alpha_proj, 0.0, 1.0))
-    sc_kw = dict(alpha_proj=a, soft_T=soft_T, aggregate=aggregate)
-    # Ranking is pure projection by default (α=1). MaxOp dual is diagnostic.
+    sc_kw = dict(
+        alpha_proj=a,
+        soft_T=soft_T,
+        aggregate=aggregate,
+        defect_beta=float(defect_beta),
+    )
+    # Ranking: projection (+ optional sheaf-defect blend). MaxOp dual diagnostic.
     native = dual_score_geometry(xyz, pack, **sc_kw)
     native_dist = float(native["mean_dist"])
     op = pack.get("operator")
@@ -231,6 +237,8 @@ def rank_one(
             "override" if multimode is not None else multimode_mode
         ),
         "multimode_fit": fit_diag,
+        "defect_beta": float(defect_beta),
+        "defect_dist": float(native.get("defect_dist") or 0.0),
         "maxop_dual": dual_diag,
         "operator": pack["operator"].to_dict() if a < 1.0 else op_diag,
     }
@@ -298,6 +306,12 @@ def main(argv=None) -> int:
         default=None,
         help="override multimode-mode (force on/off for all IDs)",
     )
+    p.add_argument(
+        "--defect-beta",
+        type=float,
+        default=0.20,
+        help="blend sheaf Dirichlet defect into ranking (0=pure Kabsch; 0.20 production)",
+    )
     p.add_argument("--null-json", type=Path, default=Path("null_battery_result.json"))
     p.add_argument("--force", action="store_true")
     p.add_argument("--json", type=Path, default=Path("pdb_batch_result.json"))
@@ -357,6 +371,7 @@ def main(argv=None) -> int:
                 sectors_mode=args.sectors_mode,
                 multimode=args.multimode,
                 multimode_mode=args.multimode_mode,
+                defect_beta=args.defect_beta,
             )
         except PdbIOError as exc:
             row = {"pdb": pid, "status": "IO_FAIL", "error": str(exc)}
@@ -416,13 +431,14 @@ def main(argv=None) -> int:
             "sectors_default": args.sectors,
             "multimode": args.multimode,
             "multimode_mode": args.multimode_mode,
+            "defect_beta": args.defect_beta,
         },
         "knobs": knobs,
-        "ontology": "substrate_crit_projection_maxop_dual_not_lambda_eq_gamma",
+        "ontology": "substrate_crit_projection_sheaf_defect_maxop_dual_not_lambda_eq_gamma",
         "note": (
             "ζ=substrate seed only. Ranking = Crit→geometry projection "
-            "(softmin Kabsch + self_fit mold bank). MaxOp L = dual diagnostic. "
-            "Never λ=γ. Multi-seed stability; full-batch continuity (AXiomZ 6.2)."
+            "(Kabsch softmin + optional sheaf defect β) with self_fit mold bank. "
+            "MaxOp L = connection dual / local obstruction. Never λ=γ."
         ),
     }
     write_json(args.json, payload)

@@ -126,6 +126,15 @@ class SpectralAction:
         ir = np.clip(ir, 1e-6, None)
         n_ir = min(3, k)
         weights[:n_ir] *= ir[:n_ir]
+        # Multi-scale harmonic envelope (Witten–Morse landscape aid): mild
+        # mid-band boost so intermediate-length Crit structure is not washed
+        # out by pure IR or pure UV heat weighting. Scale-free, sum-normalized.
+        if k >= 6:
+            idx = np.arange(k, dtype=float)
+            mid = 0.5 * (k - 1)
+            width = max(0.25 * k, 1.0)
+            envelope = 1.0 + 0.12 * np.exp(-((idx - mid) ** 2) / (2.0 * width**2))
+            weights = weights * envelope
         weights = weights / (np.sum(weights) + 1e-15)
         return cls(omega=omega, weights=weights, cutoff_Lambda=Lambda)
 

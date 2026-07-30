@@ -65,6 +65,9 @@ def test_select_mold_and_rank_smoke():
         n_decoys=8,
         n_seeds=1,
         soft_T=0.04,
+        defect_beta=0.20,
         rng=np.random.default_rng(2),
     )
     assert 0.0 <= enr["enrichment"] <= 1.0
+    assert enr["defect_beta"] == 0.20
+    assert enr.get("method") == "PROJ_SHEAF_DEFECT"
