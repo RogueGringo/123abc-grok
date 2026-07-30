@@ -33,6 +33,7 @@ def test_sectors_for_ca_length_adaptive():
     assert sectors_for_ca_length(6, "adaptive") == 4
     assert sectors_for_ca_length(8, "adaptive") == 4
     assert sectors_for_ca_length(10, "adaptive") == 6
+    assert sectors_for_ca_length(12, "adaptive") == 4  # 1TET-class
     assert sectors_for_ca_length(14, "adaptive") == 6  # cap-6 (not 8)
     assert sectors_for_ca_length(26, "adaptive") == 6
     assert sectors_for_ca_length(11, "fixed", default=6) == 6
@@ -82,8 +83,8 @@ def test_select_mold_bank_by_fit():
 
 def test_adaptive_defect_beta():
     assert adaptive_defect_beta(8, 0.20) == 0.20
-    assert adaptive_defect_beta(12, 0.20) == 0.25
-    assert adaptive_defect_beta(13, 0.20) == 0.28
+    assert abs(adaptive_defect_beta(12, 0.20) - 0.25) < 1e-12
+    assert abs(adaptive_defect_beta(13, 0.20) - 0.28) < 1e-12
     assert adaptive_defect_beta(14, 0.0) == 0.0
 
 
@@ -100,10 +101,12 @@ def test_combine_sector_weights():
 
 def test_mid_length_bank_and_defect_tie():
     assert mid_length_omega_bank(11) == (0.85, 0.95, 1.0, 1.1, 1.2)
-    assert 0.85 in mid_length_omega_bank(12) and 0.90 in mid_length_omega_bank(12)
+    b12 = mid_length_omega_bank(12)
     b13 = mid_length_omega_bank(13)
-    assert set((0.85, 0.95, 1.0, 1.1, 1.2)).issubset(set(b13))
-    assert len(b13) == 9
+    assert set((0.85, 0.95, 1.0, 1.1, 1.2)).issubset(set(b12))
+    assert 0.80 in b12 and 1.3 in b12
+    assert b12 == b13
+    assert len(b13) == 10
     kn = _knobs()
     t = np.linspace(0, 2 * np.pi, 13, endpoint=False)
     xyz = np.column_stack([np.cos(t), np.sin(t), 0.04 * np.sin(2 * t)])
@@ -122,7 +125,7 @@ def test_mid_length_bank_and_defect_tie():
     assert isinstance(use_m, bool)
     assert diag["defect_tie"] is True
     assert diag["selection"] == "min_proj_then_defect_then_maxop_gap"
-    assert len(diag["bank"]) == 18  # 2 × 9
+    assert len(diag["bank"]) == 20  # 2 × 10
     assert len(pack["templates"]) >= 1
 
 

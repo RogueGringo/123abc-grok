@@ -308,7 +308,7 @@ def adaptive_defect_beta(n_ca: int, base: float = 0.20) -> float:
     if n >= 13:
         return float(min(0.32, b + 0.08))
     if n >= 12:
-        return float(min(0.28, b + 0.05))  # 1TET-class: milder uplift
+        return float(min(0.28, b + 0.05))
     return b
 
 
@@ -361,11 +361,10 @@ def mid_length_omega_bank(n_ca: int) -> tuple[float, ...]:
     """
     n = int(n_ca)
     dense = (0.85, 0.95, 1.0, 1.1, 1.2)
-    if n >= 13:
-        # superset: keep dense anchors + wings/bridges
-        return (0.80, 0.85, 0.90, 0.95, 1.0, 1.05, 1.1, 1.2, 1.3)
     if n >= 12:
-        return (0.85, 0.90, 0.95, 1.0, 1.1, 1.15, 1.2)
+        # 1TET-class (n=12) needs same wing/bridge density as n≥13
+        # (prior n=12-only bridges left planar Crit under-resolved).
+        return (0.80, 0.85, 0.90, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.3)
     return dense
 
 
@@ -512,6 +511,10 @@ def sectors_for_ca_length(n_ca: int, mode: str = "fixed", default: int = 6) -> i
     if mode == "adaptive":
         n = int(n_ca)
         if n <= 8:
+            return 4
+        # 1TET-class (n=12): fewer Crit valleys — softmin less diluted
+        # (structure probe: nsec=4 lower native Kabsch than nsec=6).
+        if n == 12:
             return 4
         return 6
     return max(2, int(default))

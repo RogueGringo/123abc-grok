@@ -135,8 +135,7 @@ def rank_one(
         from realm.validate.dual import mid_length_omega_bank
 
         # Length-adaptive dense bank (superset of confirmed 5-point dense).
-        # defect_tie off by default in production path — dual-gate rejected
-        # defect-tie for n≥12/13 (lost 5EOC top20). Available via self_fit_mid.
+        # n=12 (1TET): enable native sheaf-defect mold tie — structure only.
         omega_bank = mid_length_omega_bank(n_ca)
         use_mm, pack, fit_diag = select_mold_by_fit(
             xyz,
@@ -147,7 +146,7 @@ def rank_one(
             soft_T=soft_T,
             multimodes=(False, True),
             omega_scales=omega_bank,
-            defect_tie=False,
+            defect_tie=(n_ca == 12),
         )
     elif mm_mode in ("self_fit_mid", "mid"):
         # Explicit mid-length attack bank (always defect-tie)
@@ -214,9 +213,10 @@ def rank_one(
     a = float(np.clip(alpha_proj, 0.0, 1.0))
     # Length-adaptive sheaf defect blend (mid-length floors)
     eff_beta = adaptive_defect_beta(n_ca, float(defect_beta))
+    eff_soft_T = float(soft_T)
     sc_kw = dict(
         alpha_proj=a,
-        soft_T=soft_T,
+        soft_T=eff_soft_T,
         aggregate=aggregate,
         defect_beta=float(eff_beta),
     )
@@ -288,6 +288,7 @@ def rank_one(
         "n_seeds": n_seeds,
         "alpha_proj": a,
         "soft_T": soft_T,
+        "soft_T_effective": float(eff_soft_T),
         "aggregate": aggregate,
         "n_sectors_used": n_sec,
         "sectors_mode": sectors_mode,

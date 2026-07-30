@@ -60,15 +60,15 @@
     "null_battery_zeta_preference": "RETRACTED",
     "residual_fitness": "informative_density_return",
     "probe_enrichment": 0.8833333333333334,
-    "holdout_enrichment": 0.8520833333333333,
-    "batch_mean_enrichment": 0.8625000000000002,
-    "batch_mean_enrichment_std": 0.0487828157385732,
-    "batch_top20": 11,
+    "holdout_enrichment": 0.85625,
+    "batch_mean_enrichment": 0.8652777777777779,
+    "batch_mean_enrichment_std": 0.047815269088848235,
+    "batch_top20": 12,
     "batch_n_ok": 12,
     "batch_n_seeds": 3,
     "batch_n_decoys": 40,
     "path": "geometry_off_zeta_external_cyclic_ranking",
-    "method": "PROJ_SHEAF_DEFECT_CTS + mid-length gap×basin softmin + multimode-8/6 + adaptive beta",
+    "method": "PROJ_SHEAF_DEFECT_CTS + n=12 sectors=4 (1TET) + full mid omega bank + gap×basin",
     "dual": "realm/validate/dual.py + dual_probe.py (substrate\u2192L vs projection)",
     "axiomz": "01-DEVELOPMENT-AXiomZ + realm/axiomz.py CTS + stage_ledger.py",
     "commit_policy": {
@@ -82,16 +82,17 @@
       "accepted": true,
       "confirmed_full_batch": true,
       "sectors_mode": "adaptive",
-      "sectors_rule": "n<=8->4 else 6",
+      "sectors_rule": "n<=8->4; n==12->4 (1TET); else 6",
       "multimode_mode": "self_fit_dense",
-      "multimode_rule": "length-adaptive omega superset of dense; n>=13 adds wings/bridges",
-      "note": "40x3: mean 86.3% probe 88.3% hold 85.2% top20=11; 4K8Y top20; gapxbasin n>=12",
+      "multimode_rule": "length-adaptive omega superset; n>=12 full wings; multimode modes 8 if N>=12",
+      "note": "40x3: mean 86.5% probe 88.3% hold 85.6% top20=12/12; 1TET 80% top20",
       "defect_beta": 0.2,
       "defect_beta_adaptive": "base 0.20; +0.05 n>=12; +0.08 n>=13 (capped)",
       "chord_weight": "adaptive: 0 if n<12, 0.12 if n=12, 0.25 if n>=13",
       "cts_basin_weights": true,
       "gap_basin_mix": "0.20 gap×basin softmin weights for n_ca>=12 only",
-      "multimode_n_modes": "4 if N<12; 6 if N>=12; 8 if N>=13"
+      "multimode_n_modes": "4 if N<12 else 8",
+      "defect_tie_n12": true
     },
     "rank_polish": "softmin_min T=0.04 probe-win rejected by full-batch continuity (76.7->74.1)",
     "sectors_mode": "adaptive_cap6",
@@ -114,7 +115,8 @@
       "mid_length_bank": "mid_length_omega_bank superset — dual-gate accepted 85.3%",
       "cts_basin_weights": "basin_persistence_weights reweight Kabsch softmin — dual-gate 85.5% top20=10",
       "mid_length_v2": "adaptive defect_beta + multimode modes=6 + basin mold select — dual-gate 86.1%",
-      "mid_length_v3": "MaxOp gap×CTS basin softmin (n>=12) + multimode-8 — dual-gate 86.3% top20=11"
+      "mid_length_v3": "MaxOp gap×CTS basin softmin (n>=12) + multimode-8 — dual-gate 86.3% top20=11",
+      "1tet_v1": "n=12 sectors=4 + full omega wings + defect_tie — dual-gate 86.5% top20=12"
     },
     "adaptive_ns_last": {
       "accepted": false,
@@ -122,6 +124,7 @@
       "cli": "python evolve_ns.py --internal-gens 0 --n-pop 8 --epochs 5 --write-evolve"
     },
     "note_4K8Y": "path: 73%→77.5%→79.2%→82.5% top20 under gap×basin mid-length softmin",
+    "note_1TET": "n=12 Crit sectors 6→4 lifts enrich ~77%→80% and top20; full mid omega bank",
     "holonomy_polish": {
       "default": false,
       "cli": "--holonomy-polish",
@@ -134,15 +137,16 @@
     "accepted": true,
     "confirmed_full_batch": true,
     "sectors_mode": "adaptive",
-    "sectors_rule": "n<=8->4 else 6",
+    "sectors_rule": "n<=8->4; n==12->4 (1TET); else 6",
     "multimode_mode": "self_fit_dense",
-    "multimode_rule": "length-adaptive omega superset of dense; n>=13 adds wings/bridges",
-    "note": "40x3: mean 86.3% probe 88.3% hold 85.2% top20=11; 4K8Y top20; gapxbasin n>=12",
+    "multimode_rule": "length-adaptive omega superset; n>=12 full wings; multimode modes 8 if N>=12",
+    "note": "40x3: mean 86.5% probe 88.3% hold 85.6% top20=12/12; 1TET 80% top20",
     "defect_beta": 0.2,
     "defect_beta_adaptive": "base 0.20; +0.05 n>=12; +0.08 n>=13 (capped)",
     "chord_weight": "adaptive: 0 if n<12, 0.12 if n=12, 0.25 if n>=13",
     "cts_basin_weights": true,
     "gap_basin_mix": "0.20 gap×basin softmin weights for n_ca>=12 only",
-    "multimode_n_modes": "4 if N<12; 6 if N>=12; 8 if N>=13"
+    "multimode_n_modes": "4 if N<12 else 8",
+    "defect_tie_n12": true
   }
 }

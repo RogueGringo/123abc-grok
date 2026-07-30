@@ -441,10 +441,8 @@ class Deriver:
             th = float(c["theta"])
             if self.multimode:
                 # Longer scaffolds: more Fourier modes (steric mid-length floors)
-                if self.N >= 13:
+                if self.N >= 12:
                     n_modes = min(8, int(field.gammas.size))
-                elif self.N >= 12:
-                    n_modes = min(6, int(field.gammas.size))
                 else:
                     n_modes = min(4, int(field.gammas.size))
                 pts = embed_multimode_cycle(self.N, th, field, n_modes=n_modes)

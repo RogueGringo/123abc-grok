@@ -19,6 +19,7 @@
       "n_seeds": 3,
       "alpha_proj": 1.0,
       "soft_T": 0.04,
+      "soft_T_effective": 0.04,
       "aggregate": "softmin",
       "n_sectors_used": 6,
       "sectors_mode": "adaptive",
@@ -180,6 +181,7 @@
       "n_seeds": 3,
       "alpha_proj": 1.0,
       "soft_T": 0.04,
+      "soft_T_effective": 0.04,
       "aggregate": "softmin",
       "n_sectors_used": 6,
       "sectors_mode": "adaptive",
@@ -341,6 +343,7 @@
       "n_seeds": 3,
       "alpha_proj": 1.0,
       "soft_T": 0.04,
+      "soft_T_effective": 0.04,
       "aggregate": "softmin",
       "n_sectors_used": 6,
       "sectors_mode": "adaptive",
@@ -502,6 +505,7 @@
       "n_seeds": 3,
       "alpha_proj": 1.0,
       "soft_T": 0.04,
+      "soft_T_effective": 0.04,
       "aggregate": "softmin",
       "n_sectors_used": 6,
       "sectors_mode": "adaptive",
@@ -663,6 +667,7 @@
       "n_seeds": 3,
       "alpha_proj": 1.0,
       "soft_T": 0.04,
+      "soft_T_effective": 0.04,
       "aggregate": "softmin",
       "n_sectors_used": 4,
       "sectors_mode": "adaptive",
@@ -816,6 +821,7 @@
       "n_seeds": 3,
       "alpha_proj": 1.0,
       "soft_T": 0.04,
+      "soft_T_effective": 0.04,
       "aggregate": "softmin",
       "n_sectors_used": 6,
       "sectors_mode": "adaptive",
@@ -831,7 +837,7 @@
         "maxop_mean_frustration": 0.08722736068844057,
         "selection": "min_proj_then_max_maxop_gap",
         "ontology": "projection_primary_maxop_tiebreak_not_lambda_eq_gamma",
-        "n_bank": 18,
+        "n_bank": 20,
         "bank": [
           {
             "multimode": false,
@@ -881,6 +887,13 @@
             "dist": 0.524049338906663,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.026026025684402546
+          },
+          {
+            "multimode": false,
+            "omega_scale_mult": 1.15,
+            "dist": 0.5232020298133189,
+            "defect_dist": 0.0,
+            "maxop_mean_gap": 0.027301660605648422
           },
           {
             "multimode": false,
@@ -944,6 +957,13 @@
             "dist": 0.524360951860961,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.026026025684402546
+          },
+          {
+            "multimode": true,
+            "omega_scale_mult": 1.15,
+            "dist": 0.5236352651563124,
+            "defect_dist": 0.0,
+            "maxop_mean_gap": 0.027301660605648422
           },
           {
             "multimode": true,
@@ -1033,6 +1053,7 @@
       "n_seeds": 3,
       "alpha_proj": 1.0,
       "soft_T": 0.04,
+      "soft_T_effective": 0.04,
       "aggregate": "softmin",
       "n_sectors_used": 6,
       "sectors_mode": "adaptive",
@@ -1048,7 +1069,7 @@
         "maxop_mean_frustration": 0.06595388161544735,
         "selection": "min_proj_then_max_maxop_gap",
         "ontology": "projection_primary_maxop_tiebreak_not_lambda_eq_gamma",
-        "n_bank": 18,
+        "n_bank": 20,
         "bank": [
           {
             "multimode": false,
@@ -1098,6 +1119,13 @@
             "dist": 0.5202972365996221,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.022450261414334663
+          },
+          {
+            "multimode": false,
+            "omega_scale_mult": 1.15,
+            "dist": 0.5209444445502844,
+            "defect_dist": 0.0,
+            "maxop_mean_gap": 0.02355112763071744
           },
           {
             "multimode": false,
@@ -1161,6 +1189,13 @@
             "dist": 0.5319026429810275,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.022450261414334663
+          },
+          {
+            "multimode": true,
+            "omega_scale_mult": 1.15,
+            "dist": 0.5303557936637929,
+            "defect_dist": 0.0,
+            "maxop_mean_gap": 0.02355112763071744
           },
           {
             "multimode": true,
@@ -1250,6 +1285,7 @@
       "n_seeds": 3,
       "alpha_proj": 1.0,
       "soft_T": 0.04,
+      "soft_T_effective": 0.04,
       "aggregate": "softmin",
       "n_sectors_used": 6,
       "sectors_mode": "adaptive",
@@ -1265,7 +1301,7 @@
         "maxop_mean_frustration": 0.07736036369628352,
         "selection": "min_proj_then_max_maxop_gap",
         "ontology": "projection_primary_maxop_tiebreak_not_lambda_eq_gamma",
-        "n_bank": 18,
+        "n_bank": 20,
         "bank": [
           {
             "multimode": false,
@@ -1315,6 +1351,13 @@
             "dist": 0.5157526275959954,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.026026025684402546
+          },
+          {
+            "multimode": false,
+            "omega_scale_mult": 1.15,
+            "dist": 0.5158515339718163,
+            "defect_dist": 0.0,
+            "maxop_mean_gap": 0.027301660605648422
           },
           {
             "multimode": false,
@@ -1378,6 +1421,13 @@
             "dist": 0.5273763522943495,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.026026025684402546
+          },
+          {
+            "multimode": true,
+            "omega_scale_mult": 1.15,
+            "dist": 0.5305760027050209,
+            "defect_dist": 0.0,
+            "maxop_mean_gap": 0.027301660605648422
           },
           {
             "multimode": true,
@@ -1467,6 +1517,7 @@
       "n_seeds": 3,
       "alpha_proj": 1.0,
       "soft_T": 0.04,
+      "soft_T_effective": 0.04,
       "aggregate": "softmin",
       "n_sectors_used": 4,
       "sectors_mode": "adaptive",
@@ -1620,6 +1671,7 @@
       "n_seeds": 3,
       "alpha_proj": 1.0,
       "soft_T": 0.04,
+      "soft_T_effective": 0.04,
       "aggregate": "softmin",
       "n_sectors_used": 4,
       "sectors_mode": "adaptive",
@@ -1773,6 +1825,7 @@
       "n_seeds": 3,
       "alpha_proj": 1.0,
       "soft_T": 0.04,
+      "soft_T_effective": 0.04,
       "aggregate": "softmin",
       "n_sectors_used": 4,
       "sectors_mode": "adaptive",
@@ -1913,198 +1966,233 @@
       "n_ca": 12,
       "chain": "P",
       "N_scaffold": 12,
-      "native_dist": 0.49598644822342697,
-      "native_proj": 0.5461159142269206,
+      "native_dist": 0.49398811340767995,
+      "native_proj": 0.5433415935102479,
       "native_op": 0.0,
-      "native_rank": 10.333333333333334,
+      "native_rank": 9.0,
       "n_total": 41,
-      "enrichment": 0.7666666666666666,
-      "enrichment_std": 0.06561673228343173,
-      "top20": false,
+      "enrichment": 0.7999999999999999,
+      "enrichment_std": 0.05400617248673217,
+      "top20": true,
       "method": "PROJ_SHEAF_DEFECT_CTS",
-      "n_templates": 6,
+      "n_templates": 4,
       "n_seeds": 3,
       "alpha_proj": 1.0,
       "soft_T": 0.04,
+      "soft_T_effective": 0.04,
       "aggregate": "softmin",
-      "n_sectors_used": 6,
+      "n_sectors_used": 4,
       "sectors_mode": "adaptive",
       "multimode": false,
       "multimode_mode": "self_fit_dense",
       "multimode_fit": {
         "chosen": "planar",
-        "omega_scale_mult": 0.9,
-        "dist": 0.5462894363210353,
-        "defect_dist": 0.0,
-        "defect_tie": false,
-        "maxop_mean_gap": 0.02611043675689742,
-        "maxop_mean_frustration": 0.10752721026809993,
-        "selection": "min_proj_then_max_maxop_gap",
+        "omega_scale_mult": 0.8,
+        "dist": 0.5439473241284808,
+        "defect_dist": 2.305444068452027,
+        "defect_tie": true,
+        "maxop_mean_gap": 0.01979881914769283,
+        "maxop_mean_frustration": 0.10327454837584482,
+        "selection": "min_proj_then_defect_then_maxop_gap",
         "ontology": "projection_primary_maxop_tiebreak_not_lambda_eq_gamma",
-        "n_bank": 14,
+        "n_bank": 20,
         "bank": [
           {
             "multimode": false,
+            "omega_scale_mult": 0.8,
+            "dist": 0.5439473241284808,
+            "defect_dist": 2.305444068452027,
+            "maxop_mean_gap": 0.01979881914769283
+          },
+          {
+            "multimode": false,
             "omega_scale_mult": 0.85,
-            "dist": 0.5470923733076188,
-            "defect_dist": 0.0,
-            "maxop_mean_gap": 0.030864935377177643
+            "dist": 0.5453175682432302,
+            "defect_dist": 2.2982231250421252,
+            "maxop_mean_gap": 0.020895605503686406
           },
           {
             "multimode": false,
             "omega_scale_mult": 0.9,
-            "dist": 0.5462894363210353,
-            "defect_dist": 0.0,
-            "maxop_mean_gap": 0.02611043675689742
+            "dist": 0.5449575869550145,
+            "defect_dist": 2.299956256805951,
+            "maxop_mean_gap": 0.013610132121062239
           },
           {
             "multimode": false,
             "omega_scale_mult": 0.95,
-            "dist": 0.5474676961820192,
-            "defect_dist": 0.0,
-            "maxop_mean_gap": 0.027085395020073733
+            "dist": 0.5459865933310839,
+            "defect_dist": 2.307745835983505,
+            "maxop_mean_gap": 0.014216680708826363
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.0,
-            "dist": 0.5484783857843353,
-            "defect_dist": 0.0,
-            "maxop_mean_gap": 0.02793016374995894
+            "dist": 0.5480679220495248,
+            "defect_dist": 2.3195113129279212,
+            "maxop_mean_gap": 0.01531971719574952
+          },
+          {
+            "multimode": false,
+            "omega_scale_mult": 1.05,
+            "dist": 0.5493473455671292,
+            "defect_dist": 2.3337634754907493,
+            "maxop_mean_gap": 0.016771769805935286
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.1,
-            "dist": 0.5468477670179894,
-            "defect_dist": 0.0,
-            "maxop_mean_gap": 0.03052822360258946
+            "dist": 0.5509588255194665,
+            "defect_dist": 2.3494680487874255,
+            "maxop_mean_gap": 0.018465438063808324
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.15,
-            "dist": 0.5475950788221907,
-            "defect_dist": 0.0,
-            "maxop_mean_gap": 0.032023683361779486
+            "dist": 0.5533035965981795,
+            "defect_dist": 2.3659595733355845,
+            "maxop_mean_gap": 0.020321958636476303
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.2,
-            "dist": 0.5490623024079769,
-            "defect_dist": 0.0,
-            "maxop_mean_gap": 0.03183041753258287
+            "dist": 0.5555772725500796,
+            "defect_dist": 2.3829728343998307,
+            "maxop_mean_gap": 0.022283267994016507
+          },
+          {
+            "multimode": false,
+            "omega_scale_mult": 1.3,
+            "dist": 0.5574143797639871,
+            "defect_dist": 2.4208946892831107,
+            "maxop_mean_gap": 0.02635958762629708
+          },
+          {
+            "multimode": true,
+            "omega_scale_mult": 0.8,
+            "dist": 0.555967503771023,
+            "defect_dist": 2.305444068452027,
+            "maxop_mean_gap": 0.01979881914769283
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.85,
-            "dist": 0.5773954339274355,
-            "defect_dist": 0.0,
-            "maxop_mean_gap": 0.030864935377177643
+            "dist": 0.5546595093465451,
+            "defect_dist": 2.2982231250421252,
+            "maxop_mean_gap": 0.020895605503686406
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.9,
-            "dist": 0.5778515254487632,
-            "defect_dist": 0.0,
-            "maxop_mean_gap": 0.02611043675689742
+            "dist": 0.5562724261073118,
+            "defect_dist": 2.299956256805951,
+            "maxop_mean_gap": 0.013610132121062239
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.95,
-            "dist": 0.5770432217253799,
-            "defect_dist": 0.0,
-            "maxop_mean_gap": 0.027085395020073733
+            "dist": 0.5609347639767703,
+            "defect_dist": 2.307745835983505,
+            "maxop_mean_gap": 0.014216680708826363
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.0,
-            "dist": 0.5804515715219317,
-            "defect_dist": 0.0,
-            "maxop_mean_gap": 0.02793016374995894
+            "dist": 0.5737696208492438,
+            "defect_dist": 2.3195113129279212,
+            "maxop_mean_gap": 0.01531971719574952
+          },
+          {
+            "multimode": true,
+            "omega_scale_mult": 1.05,
+            "dist": 0.5752321484040054,
+            "defect_dist": 2.3337634754907493,
+            "maxop_mean_gap": 0.016771769805935286
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.1,
-            "dist": 0.582364407156488,
-            "defect_dist": 0.0,
-            "maxop_mean_gap": 0.03052822360258946
+            "dist": 0.5694618656763046,
+            "defect_dist": 2.3494680487874255,
+            "maxop_mean_gap": 0.018465438063808324
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.15,
-            "dist": 0.5829740337950501,
-            "defect_dist": 0.0,
-            "maxop_mean_gap": 0.032023683361779486
+            "dist": 0.576787683556663,
+            "defect_dist": 2.3659595733355845,
+            "maxop_mean_gap": 0.020321958636476303
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.2,
-            "dist": 0.5834331245610095,
-            "defect_dist": 0.0,
-            "maxop_mean_gap": 0.03183041753258287
+            "dist": 0.5832397287402846,
+            "defect_dist": 2.3829728343998307,
+            "maxop_mean_gap": 0.022283267994016507
+          },
+          {
+            "multimode": true,
+            "omega_scale_mult": 1.3,
+            "dist": 0.5763596818807067,
+            "defect_dist": 2.4208946892831107,
+            "maxop_mean_gap": 0.02635958762629708
           }
         ],
-        "dist_planar": 0.5462894363210353,
-        "dist_multimode": 0.5770432217253799,
-        "margin": -0.03075378540434459
+        "dist_planar": 0.5439473241284808,
+        "dist_multimode": 0.5546595093465451,
+        "margin": -0.010712185218064274
       },
       "holonomy_polish": null,
       "defect_beta": 0.2,
       "defect_beta_effective": 0.25,
-      "defect_dist": 2.3039870014196415,
+      "defect_dist": 2.3061844873331743,
       "maxop_dual": {
-        "maxop_mean_gap": 0.02611043675689742,
-        "maxop_gap_cv": 0.8479121445133877,
-        "maxop_mean_frustration": 0.10752721026809993,
-        "projection_dist": 0.49598644822342697,
+        "maxop_mean_gap": 0.01979881914769283,
+        "maxop_gap_cv": 0.7483852964856774,
+        "maxop_mean_frustration": 0.10327454837584482,
+        "projection_dist": 0.49398811340767995,
         "ontology": "projection_primary_maxop_dual_diagnostic"
       },
       "operator": {
         "thetas": [
-          6.03715859291378,
-          1.1742030420339016,
-          5.037611585365056,
-          2.2056462447036984,
-          4.006874628698411,
-          3.18363620402805
+          1.3209784222883154,
+          5.6673130335355975,
+          2.481352025291574,
+          4.507733957285664
         ],
         "gaps": [
-          0.00042032655500484617,
-          0.009567035019514154,
-          0.010764315635390286,
-          0.03368885127433967,
-          0.03587549572357268,
-          0.0663465963335629
+          0.012105712283779293,
+          0.002633440334128104,
+          0.04260555884334469,
+          0.021850565129519234
         ],
         "frustrations": [
-          0.24781241600863302,
-          0.00956703501951428,
-          0.17365983870930823,
-          0.033688851274340514,
-          0.11046130782513419,
-          0.06997381277166936
+          0.012105712283779324,
+          0.21892965704088518,
+          0.04260555884334494,
+          0.13945726533536984
         ],
         "logZ": [
-          0.6949138438468453,
-          0.5359662795824679,
-          0.5161952113872341,
-          0.20116118028956623,
-          0.17866586478729227,
-          0.023780002605443096
+          0.4943663425765962,
+          0.6552881364983331,
+          0.11892804200353459,
+          0.34728091673399186
         ],
-        "mean_gap": 0.02611043675689742,
-        "gap_cv": 0.8479121445133877,
-        "mean_frustration": 0.10752721026809993,
-        "mean_logZ": 0.3584470637498081
+        "mean_gap": 0.01979881914769283,
+        "gap_cv": 0.7483852964856774,
+        "mean_frustration": 0.10327454837584482,
+        "mean_logZ": 0.4039658594531139
       }
     }
   ],
   "summary": {
     "n_ok": 12,
     "n_total_ids": 12,
-    "mean_enrichment": 0.8625000000000002,
-    "mean_enrichment_std": 0.0487828157385732,
+    "mean_enrichment": 0.8652777777777779,
+    "mean_enrichment_std": 0.047815269088848235,
     "probe_mean_enrichment": 0.8833333333333334,
-    "holdout_mean_enrichment": 0.8520833333333333,
-    "top20_count": 11,
+    "holdout_mean_enrichment": 0.85625,
+    "top20_count": 12,
     "n_seeds": 3,
     "n_decoys": 40,
     "alpha_proj": 1.0,
