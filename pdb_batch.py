@@ -25,6 +25,7 @@ from realm.validate.dual import (
     forge_crit_geometry,
     multimode_for_ca_length,
     sectors_for_ca_length,
+    select_mold_by_fit,
     select_multimode_by_fit,
 )
 from realm.validate.pdb_io import PdbIOError, fetch_pdb, load_ca_cyclic_band
@@ -106,6 +107,18 @@ def rank_one(
             n_zeros=n_zeros,
             n_sectors=n_sec,
             soft_T=soft_T,
+        )
+    elif mm_mode in ("self_fit_omega", "self_fit_bank", "bank"):
+        # multimode × omega_scale bank (structure-conditioned mold pick)
+        use_mm, pack, fit_diag = select_mold_by_fit(
+            xyz,
+            knobs,
+            N=N,
+            n_zeros=n_zeros,
+            n_sectors=n_sec,
+            soft_T=soft_T,
+            multimodes=(False, True),
+            omega_scales=(0.9, 1.0, 1.15),
         )
     else:
         use_mm = multimode_for_ca_length(n_ca, mode=mm_mode)
@@ -230,10 +243,10 @@ def main(argv=None) -> int:
     p.add_argument(
         "--multimode-mode",
         type=str,
-        default="self_fit",
-        choices=("self_fit", "adaptive_short", "on", "off"),
-        help="self_fit: pick planar/multimode by native Crit distance; "
-        "adaptive_short: multimode only CA≤8; on/off force all",
+        default="self_fit_omega",
+        choices=("self_fit_omega", "self_fit", "adaptive_short", "on", "off"),
+        help="self_fit_omega: bank multimode×omega_scale by native Crit distance; "
+        "self_fit: planar/multimode only; adaptive_short: multimode CA≤8; on/off",
     )
     p.add_argument(
         "--multimode",

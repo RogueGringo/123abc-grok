@@ -10170,7 +10170,7 @@
         "G2": "S_\u039b(\u03b8) is the value-warped potential on holonomy",
         "G3": "Hyperparam geodesic on ranking geometry; holdout/full-batch guards",
         "1.1": "Seed ordinates as discrete condition:states of the field",
-        "2.4": "Projected Crit geometry M_v; sectors CA\u22648\u21924 else 6; multimode only CA\u22648 (planar otherwise)",
+        "2.4": "Projected Crit geometry M_v; sectors 4/6; self_fit planar vs multimode by native Crit distance",
         "4.1": "H0 / holonomy frustration as discrete topological invariants of L",
         "4.2": "Filtration of S(\u03b8) on S1 reveals multi-scale Crit structure",
         "4.3": "Long-lived Crit wells + multi-seed ranking stability = signal",
@@ -10190,10 +10190,10 @@
     "batch": {
       "n_ok": 12,
       "n_total_ids": 12,
-      "mean_enrichment": 0.8319444444444445,
-      "mean_enrichment_std": 0.04886063680420527,
-      "probe_mean_enrichment": 0.8541666666666666,
-      "holdout_mean_enrichment": 0.8208333333333333,
+      "mean_enrichment": 0.8305555555555556,
+      "mean_enrichment_std": 0.048468844159047224,
+      "probe_mean_enrichment": 0.8395833333333332,
+      "holdout_mean_enrichment": 0.8260416666666666,
       "top20_count": 7,
       "n_seeds": 3,
       "n_decoys": 40,
@@ -10203,7 +10203,7 @@
       "sectors_mode": "adaptive",
       "sectors_default": 6,
       "multimode": null,
-      "multimode_mode": "self_fit"
+      "multimode_mode": "self_fit_omega"
     },
     "transfer_holdout_preference": false,
     "null_claim": "RETRACTED",
@@ -10262,7 +10262,7 @@
     {
       "name": "external_ranking_signal",
       "ok": true,
-      "detail": "batch mean_enrichment=83.2% (projection path)",
+      "detail": "batch mean_enrichment=83.1% (projection path)",
       "axioms": [
         "2.4",
         "5.2",

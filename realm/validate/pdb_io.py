@@ -63,6 +63,10 @@ def parse_ca_trace(pdb_text: str, chain: str | None = None) -> np.ndarray:
         name = line[12:16].strip()
         if name != "CA":
             continue
+        # skip alternate locations other than primary (blank or A)
+        alt = line[16].strip() if len(line) > 16 else ""
+        if alt not in ("", "A"):
+            continue
         ch = line[21].strip() if len(line) > 21 else ""
         if chain is not None and ch != chain:
             continue
@@ -98,6 +102,9 @@ def chain_ca_counts(pdb_text: str) -> dict[str, int]:
         if not (line.startswith("ATOM") or line.startswith("HETATM")):
             continue
         if len(line) < 22 or line[12:16].strip() != "CA":
+            continue
+        alt = line[16].strip() if len(line) > 16 else ""
+        if alt not in ("", "A"):
             continue
         ch = line[21].strip() or "_"
         counts[ch] = counts.get(ch, 0) + 1

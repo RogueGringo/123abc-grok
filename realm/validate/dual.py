@@ -158,6 +158,86 @@ def multimode_for_ca_length(n_ca: int, mode: str = "adaptive_short") -> bool:
     return int(n_ca) <= 8
 
 
+def select_mold_by_fit(
+    xyz: np.ndarray,
+    knobs: dict[str, Any],
+    *,
+    N: int,
+    n_zeros: int,
+    n_sectors: int,
+    soft_T: float = 0.04,
+    prefer_maxop: bool = True,
+    multimodes: tuple[bool, ...] = (False, True),
+    omega_scales: tuple[float, ...] = (1.0,),
+) -> tuple[bool, dict[str, Any], dict[str, Any]]:
+    """Pick Crit mold from a small bank by native projection distance.
+
+    Structure-conditioned (not decoy-label training): forge each
+    (multimode × omega_scale) candidate, keep lowest softmin Kabsch to native CA.
+    ``omega_scales`` are multipliers on knobs['omega_scale'].
+    Returns (use_multimode, pack, diagnostics).
+    """
+    from realm.validate.decoys import score_geometry_vs_crit
+
+    base_omega = float(knobs.get("omega_scale", 1.0))
+    candidates: list[dict[str, Any]] = []
+    for mm in multimodes:
+        for os in omega_scales:
+            kn = dict(knobs)
+            kn["omega_scale"] = base_omega * float(os)
+            kn["multimode"] = bool(mm)
+            pack = forge_crit_geometry(
+                kn,
+                N=N,
+                n_zeros=n_zeros,
+                n_sectors=n_sectors,
+                multimode=bool(mm),
+                prefer_maxop=prefer_maxop,
+            )
+            dist = float(
+                score_geometry_vs_crit(
+                    xyz, pack["templates"], soft_T=soft_T
+                )["mean_dist"]
+            )
+            candidates.append(
+                {
+                    "multimode": bool(mm),
+                    "omega_scale_mult": float(os),
+                    "omega_scale": kn["omega_scale"],
+                    "dist": dist,
+                    "pack": pack,
+                }
+            )
+    best = min(candidates, key=lambda c: c["dist"])
+    diag = {
+        "chosen": "multimode" if best["multimode"] else "planar",
+        "omega_scale_mult": best["omega_scale_mult"],
+        "dist": best["dist"],
+        "bank": [
+            {
+                "multimode": c["multimode"],
+                "omega_scale_mult": c["omega_scale_mult"],
+                "dist": c["dist"],
+            }
+            for c in candidates
+        ],
+        # back-compat fields for self2 bank
+        "dist_planar": min(
+            (c["dist"] for c in candidates if not c["multimode"]),
+            default=best["dist"],
+        ),
+        "dist_multimode": min(
+            (c["dist"] for c in candidates if c["multimode"]),
+            default=best["dist"],
+        ),
+        "margin": float(
+            min((c["dist"] for c in candidates if not c["multimode"]), default=best["dist"])
+            - min((c["dist"] for c in candidates if c["multimode"]), default=best["dist"])
+        ),
+    }
+    return bool(best["multimode"]), best["pack"], diag
+
+
 def select_multimode_by_fit(
     xyz: np.ndarray,
     knobs: dict[str, Any],
@@ -168,45 +248,18 @@ def select_multimode_by_fit(
     soft_T: float = 0.04,
     prefer_maxop: bool = True,
 ) -> tuple[bool, dict[str, Any], dict[str, Any]]:
-    """Pick planar vs multimode Crit mold by native projection distance.
-
-    Structure-conditioned mold choice (not decoy-label training): forge both,
-    keep the ensemble with lower softmin Kabsch distance to the native CA.
-    Returns (use_multimode, pack, diagnostics).
-    """
-    from realm.validate.decoys import score_geometry_vs_crit
-
-    pack_p = forge_crit_geometry(
+    """Pick planar vs multimode Crit mold by native projection distance."""
+    return select_mold_by_fit(
+        xyz,
         knobs,
         N=N,
         n_zeros=n_zeros,
         n_sectors=n_sectors,
-        multimode=False,
+        soft_T=soft_T,
         prefer_maxop=prefer_maxop,
+        multimodes=(False, True),
+        omega_scales=(1.0,),
     )
-    pack_m = forge_crit_geometry(
-        knobs,
-        N=N,
-        n_zeros=n_zeros,
-        n_sectors=n_sectors,
-        multimode=True,
-        prefer_maxop=prefer_maxop,
-    )
-    d_p = float(
-        score_geometry_vs_crit(xyz, pack_p["templates"], soft_T=soft_T)["mean_dist"]
-    )
-    d_m = float(
-        score_geometry_vs_crit(xyz, pack_m["templates"], soft_T=soft_T)["mean_dist"]
-    )
-    use_m = d_m < d_p - 1e-12
-    pack = pack_m if use_m else pack_p
-    diag = {
-        "dist_planar": d_p,
-        "dist_multimode": d_m,
-        "chosen": "multimode" if use_m else "planar",
-        "margin": float(d_p - d_m),
-    }
-    return use_m, pack, diag
 
 
 def sectors_for_ca_length(n_ca: int, mode: str = "fixed", default: int = 6) -> int:

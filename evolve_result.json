@@ -59,16 +59,16 @@
     "R_note": "legacy R is Crit seating self-consistency; not \u03b6 evidence (RETRACTED 2026-07-29)",
     "null_battery_zeta_preference": "RETRACTED",
     "residual_fitness": "informative_density_return",
-    "probe_enrichment": 0.8541666666666666,
-    "holdout_enrichment": 0.8208333333333333,
-    "batch_mean_enrichment": 0.8319444444444445,
-    "batch_mean_enrichment_std": 0.04886063680420527,
+    "probe_enrichment": 0.8395833333333332,
+    "holdout_enrichment": 0.8260416666666666,
+    "batch_mean_enrichment": 0.8305555555555556,
+    "batch_mean_enrichment_std": 0.048468844159047224,
     "batch_top20": 7,
     "batch_n_ok": 12,
     "batch_n_seeds": 3,
     "batch_n_decoys": 40,
     "path": "geometry_off_zeta_external_cyclic_ranking",
-    "method": "CRIT_KABSCH_SOFTMIN T=0.04 + adaptive sectors + self_fit multimode + multi-seed",
+    "method": "CRIT_KABSCH_SOFTMIN T=0.04 + adaptive sectors + self_fit_omega mold bank + multi-seed",
     "dual": "realm/validate/dual.py + dual_probe.py (substrate\u2192L vs projection)",
     "axiomz": "01-DEVELOPMENT-AXiomZ + realm/axiomz.py CTS + stage_ledger.py",
     "commit_policy": {
@@ -83,14 +83,15 @@
       "confirmed_full_batch": true,
       "sectors_mode": "adaptive",
       "sectors_rule": "n<=8->4 else 6",
-      "multimode_mode": "self_fit",
-      "multimode_rule": "choose planar vs multimode by native Crit softmin distance",
-      "note": "40x3: mean 83.2% probe 85.4% hold 82.1% top20=7; 4M6E 80%"
+      "multimode_mode": "self_fit_omega",
+      "multimode_rule": "bank multimode x omega_scale in {0.9,1.0,1.15} by native Crit dist",
+      "note": "40x3: mean 83.1% probe 84.0% hold 82.6% top20=7; altloc-correct 4M6E"
     },
     "rank_polish": "softmin_min T=0.04 probe-win rejected by full-batch continuity (76.7->74.1)",
     "sectors_mode": "adaptive_cap6",
     "batch_n_ids": 12,
-    "multimode_mode": "self_fit"
+    "multimode_mode": "self_fit_omega",
+    "note_4M6E": "altloc fix: 10 CA not 11 (was double-counting LEU A/B)"
   },
   "ranking_hparams": {
     "aggregate": "softmin",
@@ -99,8 +100,8 @@
     "confirmed_full_batch": true,
     "sectors_mode": "adaptive",
     "sectors_rule": "n<=8->4 else 6",
-    "multimode_mode": "self_fit",
-    "multimode_rule": "choose planar vs multimode by native Crit softmin distance",
-    "note": "40x3: mean 83.2% probe 85.4% hold 82.1% top20=7; 4M6E 80%"
+    "multimode_mode": "self_fit_omega",
+    "multimode_rule": "bank multimode x omega_scale in {0.9,1.0,1.15} by native Crit dist",
+    "note": "40x3: mean 83.1% probe 84.0% hold 82.6% top20=7; altloc-correct 4M6E"
   }
 }
