@@ -138,6 +138,24 @@ def operator_distance_to_crit(
     }
 
 
+def sectors_for_ca_length(n_ca: int, mode: str = "fixed", default: int = 6) -> int:
+    """Choose Crit sector count from ring length (projection mold capacity).
+
+    adaptive: short rings use fewer valleys (cleaner softmin); long rings use more.
+      n_ca ≤ 8 → 4,  n_ca ≥ 12 → 8,  else 6
+    fixed: always ``default``
+    """
+    mode = str(mode or "fixed").lower().strip()
+    if mode == "adaptive":
+        n = int(n_ca)
+        if n <= 8:
+            return 4
+        if n >= 12:
+            return 8
+        return 6
+    return max(2, int(default))
+
+
 def forge_crit_geometry(
     knobs: dict[str, Any],
     *,

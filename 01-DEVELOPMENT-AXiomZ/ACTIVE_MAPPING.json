@@ -40,9 +40,9 @@
     {
       "axiom_id": "2.4",
       "name": "operational_geometry",
-      "code": ["realm/projection.py", "realm/zeta_geometry.py", "realm/validate/decoys.py"],
+      "code": ["realm/projection.py", "realm/zeta_geometry.py", "realm/validate/decoys.py", "realm/validate/dual.py:sectors_for_ca_length"],
       "status": "active",
-      "role": "Projected Crit multimode geometry = operational geometry M_v"
+      "role": "Projected Crit multimode geometry = operational geometry M_v; adaptive sector count by ring length"
     },
     {
       "axiom_id": "4.1",

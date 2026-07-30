@@ -20,7 +20,11 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from realm.validate.decoys import make_ca_decoys
-from realm.validate.dual import dual_score_geometry, forge_crit_geometry
+from realm.validate.dual import (
+    dual_score_geometry,
+    forge_crit_geometry,
+    sectors_for_ca_length,
+)
 from realm.validate.pdb_io import PdbIOError, fetch_pdb, load_ca_cyclic_band
 from realm.validate.report import load_knobs, write_json
 
@@ -60,6 +64,7 @@ def rank_one(
     alpha_proj: float = 1.0,
     soft_T: float = 0.08,
     aggregate: str = "softmin",
+    sectors_mode: str = "fixed",
 ) -> dict:
     """Native-vs-decoy rank. alpha_proj=1 pure Crit projection; <1 dual L blend."""
     path = fetch_pdb(pdb_id)
@@ -76,8 +81,9 @@ def rank_one(
 
     # Match Keymaker N to backbone length (geometry scaffold size)
     N = max(n_ca, 7)
+    n_sec = sectors_for_ca_length(n_ca, mode=sectors_mode, default=n_sectors)
     pack = forge_crit_geometry(
-        knobs, N=N, n_zeros=n_zeros, n_sectors=n_sectors
+        knobs, N=N, n_zeros=n_zeros, n_sectors=n_sec
     )
     a = float(np.clip(alpha_proj, 0.0, 1.0))
     sc_kw = dict(alpha_proj=a, soft_T=soft_T, aggregate=aggregate)
@@ -139,6 +145,8 @@ def rank_one(
         "alpha_proj": a,
         "soft_T": soft_T,
         "aggregate": aggregate,
+        "n_sectors_used": n_sec,
+        "sectors_mode": sectors_mode,
         "operator": pack["operator"].to_dict() if a < 1.0 else None,
     }
 
@@ -150,6 +158,13 @@ def main(argv=None) -> int:
     p.add_argument("--n-decoys", type=int, default=32)
     p.add_argument("-k", type=int, default=14)
     p.add_argument("--sectors", type=int, default=6)
+    p.add_argument(
+        "--sectors-mode",
+        type=str,
+        default="adaptive",
+        choices=("fixed", "adaptive"),
+        help="adaptive: 4/6/8 sectors by CA length (default); fixed: --sectors",
+    )
     p.add_argument("--noise", type=float, default=0.45)
     p.add_argument(
         "--n-seeds",
@@ -230,6 +245,7 @@ def main(argv=None) -> int:
                 alpha_proj=args.alpha_proj,
                 soft_T=args.soft_T,
                 aggregate=args.aggregate,
+                sectors_mode=args.sectors_mode,
             )
         except PdbIOError as exc:
             row = {"pdb": pid, "status": "IO_FAIL", "error": str(exc)}
@@ -285,12 +301,14 @@ def main(argv=None) -> int:
             "alpha_proj": args.alpha_proj,
             "soft_T": args.soft_T,
             "aggregate": args.aggregate,
+            "sectors_mode": args.sectors_mode,
+            "sectors_default": args.sectors,
         },
         "knobs": knobs,
         "ontology": "projection_geometry_dual_ready_not_lambda_eq_gamma",
         "note": (
             "Curated cyclic PDB IDs only. Substrate→Crit projection ranking "
-            "(softmin / softmin_min Kabsch). alpha_proj<1 enables L dual. "
+            "(softmin Kabsch; adaptive sectors optional). alpha_proj<1 L dual. "
             "ζ residual preference remains RETRACTED. Multi-seed stability."
         ),
     }

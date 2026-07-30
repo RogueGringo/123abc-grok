@@ -12,6 +12,7 @@ from realm.validate.dual import (
     dual_score_geometry,
     forge_crit_geometry,
     operator_fingerprint,
+    sectors_for_ca_length,
 )
 
 
@@ -20,6 +21,14 @@ def _knobs():
     if not p.is_file():
         pytest.skip("need evolve_result.json")
     return json.loads(p.read_text(encoding="utf-8"))["best_knobs"]
+
+
+def test_sectors_for_ca_length_adaptive():
+    assert sectors_for_ca_length(6, "adaptive") == 4
+    assert sectors_for_ca_length(8, "adaptive") == 4
+    assert sectors_for_ca_length(10, "adaptive") == 6
+    assert sectors_for_ca_length(14, "adaptive") == 8
+    assert sectors_for_ca_length(11, "fixed", default=6) == 6
 
 
 def test_operator_fingerprint_shapes():
