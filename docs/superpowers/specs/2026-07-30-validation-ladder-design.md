@@ -1,9 +1,33 @@
 # Validation Ladder Design — Null Battery → sec≈k → Cyclic PDB Deep Dive
 
 **Date:** 2026-07-30  
-**Status:** Approved for implementation planning  
+**Status:** Implemented, then **falsified as an instrument** — see
+`2026-07-29-falsification-findings.md`  
 **Branch / context:** `feat/zeta-kinematic-resonance` after EVOLVED_SEAL R≈0.00453  
 **Related:** prior design `2026-07-29-zeta-kinematic-resonance-design.md` (stub ontology flip)
+
+---
+
+> **PHASE 1 AND 2 RESULTS RETRACTED.** The ladder shipped and its gates passed, but the gates
+> could not discriminate. Two independent findings:
+>
+> 1. **The residual is degenerate.** At `n_sectors=6` the D4 sector pool is filled from
+>    Crit(S) minima, so `build_lock` and `build_key` compare the same set against itself.
+>    Stationarity, `crit_coverage`, `pin_align`, and `theta_ladder_l1` — 0.70 of the residual
+>    weight — sit at machine zero *by construction*, for any seed yielding ≥6 usable minima.
+>    R ≈ 0.00453 is carried by `density_return` under a 0.05 weight.
+> 2. **Goal 1's "equal compute budget" was equal *scoring* cost, not equal *tuning* budget.**
+>    The champion knobs were fit against ζ (`score_worker.py:53` forges with no `gammas`);
+>    nulls were scored with those frozen knobs and never optimized. Under a genuine
+>    equal-budget cold-start refit a constant-gap arithmetic progression beats ζ.
+>
+> Phase 2's sec≈k cliff is explained by (1): past sectors=6 the minima count stays at 6, so
+> surplus keys come from non-minima and the free coincidence breaks. It is not a
+> scale-dependent physical relation.
+>
+> **The derivation ladder (spectral action → Crit(θ*) → multimode geometry) is unaffected and
+> retained.** Only the residual used for selection needs redesign. Do **not** repair this by
+> reintroducing λ≈γ scoring — the obstruction is in the selector, not the ontology.
 
 ---
 

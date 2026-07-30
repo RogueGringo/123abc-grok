@@ -16,3 +16,12 @@ __pycache__/
 data/pdb/
 data/hf/
 
+# Detached-run logs
+ff.log
+ff.err.log
+ft.log
+ft.err.log
+
+# Incremental resume checkpoints — fully duplicated in each *_result.json "runs"
+*_result.runs.jsonl
+
