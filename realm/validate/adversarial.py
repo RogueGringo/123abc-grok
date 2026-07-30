@@ -14,7 +14,11 @@ from __future__ import annotations
 
 import numpy as np
 
-from realm.validate.seeds import _sample_gue_spacings
+from realm.validate.seeds import (
+    _sample_gue_spacings,
+    sample_goe_spacings,
+    sample_gue_spacings,
+)
 
 # Seeds whose spectrum is fully determined (no RNG); reps differ only by optimizer path.
 DETERMINISTIC = frozenset({"zeta", "arith", "geometric", "primes", "reversed", "outlier"})
@@ -28,9 +32,37 @@ KINDS = (
     "outlier",  # constant gaps + one dominating gap
     "sorted_uniform",  # sorted uniform draws
     "scramble",  # ζ gap multiset, permuted
-    "goe",  # Wigner-surmise spacings
+    "goe",  # DEPRECATED alias of goe_legacy — see below
     "poisson",  # exponential spacings
+    # --- correct random-matrix arms (added after the sampler repair) ---
+    "gue",  # β=2 Wigner surmise, inverse-CDF. The statistically right null for ζ.
+    "goe_true",  # β=1 Wigner surmise, inverse-CDF.
+    "goe_legacy",  # the broken sampler the published artifacts used. Reproducibility only.
 )
+
+# Explicit, frozen seed ids. Deliberately NOT `KINDS.index(kind)`: with positional
+# ids, appending or reordering an arm silently reseeds every arm after it, so old
+# and new runs would disagree for reasons unrelated to the science. Assign a new
+# integer for each new arm and never reuse or renumber.
+ARM_SEED_ID: dict[str, int] = {
+    "zeta": 0,
+    "arith": 1,
+    "geometric": 2,
+    "primes": 3,
+    "reversed": 4,
+    "outlier": 5,
+    "sorted_uniform": 6,
+    "scramble": 7,
+    "goe": 8,
+    "poisson": 9,
+    "gue": 10,
+    "goe_true": 11,
+    "goe_legacy": 12,
+}
+
+# Arms that do not sample a defensible spacing distribution. Excluded from any
+# claim; retained so published artifacts stay reproducible.
+DEPRECATED = frozenset({"goe", "goe_legacy"})
 
 
 def arm_seed_id(kind: str) -> int:
@@ -38,11 +70,11 @@ def arm_seed_id(kind: str) -> int:
 
     `hash(str)` is randomized per process (PYTHONHASHSEED), so using it to seed a
     spectrum draw makes stochastic arms irreproducible across runs *and* across
-    pool workers. Index into KINDS instead.
+    pool workers.
     """
     try:
-        return KINDS.index(kind)
-    except ValueError as exc:
+        return ARM_SEED_ID[kind]
+    except KeyError as exc:
         raise ValueError(f"unknown adversarial kind: {kind!r}") from exc
 
 
@@ -111,8 +143,16 @@ def make_adversarial_seed(
         rng.shuffle(gaps)
         return _span_match(gaps, g0, span)
 
-    if kind == "goe":
+    if kind in ("goe", "goe_legacy"):
+        # Broken sampler — matches neither surmise. Reproducibility only; see
+        # seeds._sample_gue_spacings and DEPRECATED.
         return _span_match(_sample_gue_spacings(n_gaps, rng), g0, span)
+
+    if kind == "gue":
+        return _span_match(sample_gue_spacings(n_gaps, rng), g0, span)
+
+    if kind == "goe_true":
+        return _span_match(sample_goe_spacings(n_gaps, rng), g0, span)
 
     if kind == "poisson":
         return _span_match(rng.exponential(1.0, size=n_gaps), g0, span)

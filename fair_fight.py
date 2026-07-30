@@ -51,6 +51,25 @@ def _ckpt_path(json_path: Path) -> Path:
     return json_path.with_suffix(".runs.jsonl")
 
 
+def slim_run(run: dict) -> dict:
+    """Drop the per-eval trace from a run destined for the committed artifact.
+
+    The anytime curve is convergence *telemetry*, not evidence — it was ~46% of
+    `fair_fight_result.json` by bytes. The load-bearing convergence fields
+    (`best_found_at_eval`, `F_pre_polish`, `polish_gain`, `de_nit`) are kept, and
+    the full untruncated trace stays in the `.runs.jsonl` checkpoint, which is
+    gitignored and is where a convergence audit should read it from.
+    """
+    out = dict(run)
+    conv = dict(out.get("convergence") or {})
+    trace = conv.pop("trace_subsampled", None)
+    if trace is not None:
+        conv["trace_points_dropped"] = len(trace)
+        conv["trace_location"] = "*_result.runs.jsonl checkpoint (not versioned)"
+    out["convergence"] = conv
+    return out
+
+
 def load_checkpoint(json_path: Path) -> tuple[list[dict], set[tuple[str, int]]]:
     """Completed runs from a prior (possibly interrupted) invocation.
 
@@ -354,7 +373,7 @@ def main(argv=None) -> int:
                 "smallest attainable value is 1/(M+1). Report M alongside any claim."
             ),
         },
-        "runs": results,
+        "runs": [slim_run(r) for r in results],
         "ontology": "equal_budget_refit_not_lambda_eq_gamma",
     }
     write_json(args.json, payload)

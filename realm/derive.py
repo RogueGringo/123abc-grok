@@ -91,6 +91,7 @@ class SpectralAction:
         w1_mult: float = 1.0,
         w2_mult: float = 1.0,
         w3_mult: float = 1.0,
+        omega_span: float | None = None,
     ) -> "SpectralAction":
         """Build action; knobs tune cutoff, frequencies, and multi-scale weights.
 
@@ -110,7 +111,24 @@ class SpectralAction:
         """
         g = field.gammas
         Lambda = float(Lambda if Lambda is not None else 2.0 * g[-1])
-        omega = (g / (g[0] + 1e-15)) * float(omega_scale)
+        if omega_span is None:
+            # Legacy path, kept bit-identical so published artifacts reproduce.
+            # NOTE (Axiom G5 violation): the frequency ratio omega_max/omega_min is
+            # g[-1]/g[0] here — a property of the *window*, not of any knob. It runs
+            # 4.3037 on gamma_1..14 but only 1.4724 on gamma_15..28, and omega_scale
+            # multiplies uniformly so no knob can recover the difference. Prefer
+            # omega_span for anything that compares across windows.
+            omega = (g / (g[0] + 1e-15)) * float(omega_scale)
+        else:
+            # Window-invariant: the ratio is omega_span in *every* window.
+            # Anchor identity: omega_span = g[-1]/g[0] reproduces the legacy form,
+            # since 1 + (g-g0)/(gK-g0)*(gK/g0 - 1) = g/g0.
+            span = float(omega_span)
+            if not np.isfinite(span) or span <= 0.0:
+                raise ValueError(f"omega_span must be positive and finite, got {span!r}")
+            width = float(g[-1] - g[0])
+            frac = (g - g[0]) / (width + 1e-15) if width > 0 else np.zeros_like(g)
+            omega = float(omega_scale) * (1.0 + frac * (span - 1.0))
         weights = np.exp(-g / Lambda) ** float(weight_power)
         # Tiered IR boost on the first floor(tier_split * K) zeros
         k = g.size
@@ -312,6 +330,8 @@ class Deriver:
     w2_mult: float = 1.0
     w3_mult: float = 1.0
     gammas: np.ndarray | None = None  # optional seed inject (null battery)
+    # Opt-in window-invariant frequency ratio (Axiom G5). None = legacy path.
+    omega_span: float | None = None
 
     def run(self) -> DerivationResult:
         steps: list[DerivationStep] = []
@@ -359,6 +379,7 @@ class Deriver:
             w1_mult=self.w1_mult,
             w2_mult=self.w2_mult,
             w3_mult=self.w3_mult,
+            omega_span=self.omega_span,
         )
         th_grid = np.linspace(0, 2 * np.pi, 361)
         steps.append(

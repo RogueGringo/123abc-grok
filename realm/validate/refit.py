@@ -32,6 +32,8 @@ from scipy.optimize import differential_evolution, minimize
 from realm.lock_key import Keymaker, build_key, build_lock, residual
 from realm.projection import build_moduli_landscape, test_valley_occupancy
 from realm.validate.adversarial import DETERMINISTIC, arm_seed_id, make_adversarial_seed
+from realm.validate.components import LEGACY_WEIGHTS
+from realm.validate.guard import measure_degeneracy, require_non_degenerate
 
 # Identical to evolve.py:506 so refits are comparable to the original fit.
 # All eight coordinates are dimensionless; v[0] is the Lambda/g_last ratio.
@@ -81,6 +83,9 @@ def knobs_to_vec(knobs: dict[str, Any], g_last: float) -> np.ndarray:
     )
 
 
+GUARD_POLICIES = ("stamp", "reject", "off")
+
+
 def score_gammas(
     vec: np.ndarray,
     *,
@@ -90,6 +95,8 @@ def score_gammas(
     alpha: float = 0.45,
     beta: float = 0.25,
     gamma: float = 0.15,
+    guard: str = "stamp",
+    omega_span: float | None = None,
 ) -> dict[str, Any]:
     """F for a dimensionless knob vector on an explicit spectrum.
 
@@ -97,9 +104,13 @@ def score_gammas(
     but the spectrum is passed in rather than selected by `kind`, so held-out
     windows and adversarial seeds go through an identical code path.
     """
+    if guard not in GUARD_POLICIES:
+        raise ValueError(f"guard must be one of {GUARD_POLICIES}, got {guard!r}")
     g = np.asarray(gammas, dtype=float).ravel()
     n_zeros = int(g.size)
     kn = vec_to_knobs(vec, float(g[-1]))
+    if omega_span is not None:
+        kn = {**kn, "omega_span": float(omega_span)}
     try:
         der = Keymaker(N=N, n_zeros=n_zeros, n_sectors=n_sectors).forge(**kn, gammas=g)
         lock = build_lock(der)
@@ -137,6 +148,31 @@ def score_gammas(
         + beta * max(0, n_sectors - n_keys) / max(n_sectors, 1)
         + gamma * max(0.0, 1.0 - n_valleys / max(n_sectors, 1))
     )
+    # Axiom 6.2 — measure degeneracy on the path that actually computes fitness.
+    # A guard wired only into a side module is the same as no guard.
+    diag = res.diagnostics or {}
+    sig = None
+    if guard != "off":
+        sig = measure_degeneracy(
+            key_thetas=key.thetas,
+            lock_minima=lock.minima_theta,
+            stationarity=float(res.shape_l1),
+            crit_coverage=float(res.crit_coverage),
+            occupancy=occ,
+        )
+        if guard == "reject":
+            require_non_degenerate(sig)
+
+    # Axiom 9.3 — report components, and never let a scalar be anonymous.
+    components = {
+        "stationarity": float(res.shape_l1),
+        "crit_coverage": float(res.crit_coverage),
+        "pin_align": float(diag.get("pin_align", float("nan"))),
+        "theta_ladder_l1": float(diag.get("theta_ladder_l1", float("nan"))),
+        "corr_penalty": float(res.corr_penalty),
+        "density_return_l1": float(diag.get("density_return_l1", float("nan"))),
+    }
+
     return {
         "F": float(F),
         "R": float(res.total),
@@ -146,7 +182,12 @@ def score_gammas(
         "n_valleys": n_valleys,
         "mean_dist": float(test.mean_distance_to_valley),
         "breakdown": res.to_dict(),
-        "diagnostics": res.diagnostics or {},
+        "diagnostics": diag,
+        "components": components,
+        "degeneracy": sig.to_dict() if sig is not None else None,
+        "reduction": LEGACY_WEIGHTS.to_dict(),
+        "guard_policy": guard,
+        "omega_span": (float(omega_span) if omega_span is not None else None),
     }
 
 

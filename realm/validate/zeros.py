@@ -42,10 +42,16 @@ def _riemann_von_mangoldt(T: float) -> float:
     return float(t / (2 * mp.pi) * mp.log(t / (2 * mp.pi)) - t / (2 * mp.pi) + 0.875)
 
 
-def verify_zeros(g: np.ndarray) -> dict[str, Any]:
-    """Run all three checks. Raises ZeroVerificationError on failure."""
+def verify_zeros(g: np.ndarray, *, dps: int = 30) -> dict[str, Any]:
+    """Run all three checks. Raises ZeroVerificationError on failure.
+
+    Precision is set explicitly rather than inherited from ambient mpmath state,
+    so a caller that lowered `mp.mp.dps` elsewhere cannot cause a precision-driven
+    false failure as n grows. Matches the precision used by `_compute`.
+    """
     import mpmath as mp
 
+    mp.mp.dps = int(dps)
     g = np.asarray(g, dtype=float)
     report: dict[str, Any] = {"n": int(g.size)}
 
@@ -105,8 +111,17 @@ def real_zeros(n: int, *, cache: Path | None = CACHE, verify: bool = True) -> np
             blob = json.loads(path.read_text(encoding="utf-8"))
             cached = np.asarray(blob["gammas"], dtype=float)
             if cached.size >= n:
-                return cached[:n].copy()
-        except Exception:  # noqa: BLE001 - corrupt cache just gets rebuilt
+                out = cached[:n].copy()
+                if verify:
+                    # `verify=True` must mean verified, including on a cache hit.
+                    # Otherwise correctness silently depends on the cache file never
+                    # having been edited or truncated — which defeats the point of a
+                    # module whose contract is "computed and checked, never recalled".
+                    if not (blob.get("verification") or {}).get("verified"):
+                        raise ZeroVerificationError("cache lacks a verified stamp")
+                    verify_zeros(out)
+                return out
+        except Exception:  # noqa: BLE001 - a bad cache is rebuilt, never trusted
             pass
 
     # Compute a little extra so the next request is likely a cache hit

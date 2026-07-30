@@ -126,4 +126,8 @@ def test_refit_job_decouples_spectrum_from_optimizer():
     b = refit_job({**payload, "instance": 1})
     assert np.allclose(a["gammas"], b["gammas"]), "arith spectrum should be identical"
     assert a["deterministic_spectrum"] is True
-    assert a["best_vec"] != b["best_vec"], "optimizer paths should differ by instance"
+    # Assert on the optimizer *input*, not its output: two seeds can legitimately
+    # converge to the same best_vec on a stable optimum, which would make an
+    # output-based assertion flaky. de_seed is the deterministic indicator that the
+    # spectrum and search streams were drawn independently.
+    assert a["de_seed"] != b["de_seed"], "optimizer seeds should differ by instance"

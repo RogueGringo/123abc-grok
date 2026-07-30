@@ -62,3 +62,45 @@ def test_verify_accepts_real_zeros():
     assert report["verified"] is True
     assert report["max_abs_siegelz"] < 1e-6
     assert abs(report["N_T_asymptotic"] - 20) < 2.0
+
+
+def test_cache_hit_still_verifies(tmp_path):
+    """verify=True must verify even when the value comes from cache (PR #2 review).
+
+    A cache hit previously returned unverified values, so correctness depended on
+    the cache file never being edited or truncated.
+    """
+    cache = tmp_path / "z.json"
+    good = real_zeros(20, cache=cache)  # writes a verified cache
+    assert np.allclose(real_zeros(20, cache=cache), good)
+
+    # Tamper with the values but keep the verified stamp.
+    import json as _json
+
+    blob = _json.loads(cache.read_text(encoding="utf-8"))
+    blob["gammas"][5] += 0.5
+    cache.write_text(_json.dumps(blob), encoding="utf-8")
+    # Must not return the tampered value: verification fails, cache is rebuilt.
+    out = real_zeros(20, cache=cache)
+    assert np.allclose(out, good), "tampered cache was trusted"
+
+
+def test_cache_without_verified_stamp_is_rebuilt(tmp_path):
+    import json as _json
+
+    cache = tmp_path / "z.json"
+    good = real_zeros(18, cache=cache)
+    blob = _json.loads(cache.read_text(encoding="utf-8"))
+    blob["verification"] = {}  # stamp removed
+    cache.write_text(_json.dumps(blob), encoding="utf-8")
+    assert np.allclose(real_zeros(18, cache=cache), good)
+
+
+def test_verify_sets_precision_explicitly():
+    """Ambient mpmath precision must not be able to cause a false failure."""
+    import mpmath as mp
+
+    mp.mp.dps = 5  # deliberately too low
+    report = verify_zeros(real_zeros(15))
+    assert report["verified"] is True
+    assert mp.mp.dps == 30

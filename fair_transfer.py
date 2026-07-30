@@ -48,27 +48,47 @@ from realm.validate.zeros import window
 
 logger = logging.getLogger("fair_transfer")
 
-DEFAULT_ARMS = ("zeta", "arith", "scramble", "goe", "poisson")
+DEFAULT_ARMS = ("zeta", "arith", "scramble", "gue", "poisson")
 
 
-def _exact_rank_p(a: list[float], b: list[float]) -> tuple[int, float]:
+def _slim(run: dict) -> dict:
+    """Strip per-eval traces from the committed artifact (see fair_fight.slim_run)."""
+    from fair_fight import slim_run
+
+    return slim_run(run)
+
+
+def _exact_rank_p(a: list[float], b: list[float]) -> tuple[float, float]:
     """Exact one-sided rank-sum p: P(ranksum(a) <= observed) under exchangeability.
 
     Enumerated rather than approximated because n is tiny; the normal approximation
     is meaningless at n=3 and would understate the p-value.
+
+    Ties get **midranks** (the average of the positions they span), and both the
+    observed statistic and the enumerated reference distribution are computed from
+    the same rank vector. An earlier version mapped every duplicate to its *first*
+    occurrence while enumerating distinct positional ranks, so the two sides used
+    different scales whenever values repeated — on all-identical input that
+    returned p = 0.0, i.e. maximal significance for data with no separation at all.
+    Untied input is unaffected (midranks reduce to positions), so previously
+    reported results stand.
     """
     import itertools
 
-    pooled = sorted(a + b)
+    from scipy.stats import rankdata
+
+    pooled = list(a) + list(b)
     n = len(a)
-    rank = {}
-    for i, x in enumerate(pooled):
-        rank.setdefault(x, i + 1)
-    obs = sum(rank[x] for x in a)
+    if n == 0 or len(b) == 0:
+        return 0.0, 1.0
+    ranks = np.asarray(rankdata(pooled), dtype=float)  # midranks for ties
+    obs = float(np.sum(ranks[:n]))
     hits = total = 0
     for combo in itertools.combinations(range(len(pooled)), n):
         total += 1
-        if sum(i + 1 for i in combo) <= obs:
+        # Tolerance: midranks are fractional, so an exact <= on floats would
+        # drop arrangements that tie with the observed statistic.
+        if float(sum(ranks[i] for i in combo)) <= obs + 1e-9:
             hits += 1
     return obs, hits / total if total else 1.0
 
@@ -358,7 +378,9 @@ def main(argv=None) -> int:
                 "warm_start": False,
                 "transfer_convention": "dimensionless v[0]; Lambda = v[0]*g_last(window)",
             },
-            "runs": results,
+            # Traces stripped: telemetry, not evidence. Full curves stay in the
+            # gitignored .runs.jsonl checkpoint. See fair_fight.slim_run.
+            "runs": [_slim(r) for r in results],
             "ontology": "fair_transfer_not_lambda_eq_gamma",
         },
     )
