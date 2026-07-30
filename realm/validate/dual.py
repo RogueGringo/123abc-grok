@@ -308,8 +308,47 @@ def adaptive_defect_beta(n_ca: int, base: float = 0.20) -> float:
     if n >= 13:
         return float(min(0.32, b + 0.08))
     if n >= 12:
-        return float(min(0.28, b + 0.05))
+        return float(min(0.28, b + 0.05))  # 1TET-class: milder uplift
     return b
+
+
+def combine_sector_weights(
+    basin_w: np.ndarray | list[float] | None,
+    gaps: np.ndarray | list[float] | None,
+    *,
+    gap_mix: float = 0.20,
+) -> np.ndarray | None:
+    """CTS basin depth × MaxOp spectral-gap dual for Crit softmin weights.
+
+    Projection stays primary; gaps only modulate softmin membership so
+    sharper sheaf sectors (larger λ₂ of L) pull slightly more.
+    """
+    if basin_w is None and gaps is None:
+        return None
+    if basin_w is not None:
+        bw = np.asarray(basin_w, dtype=float).ravel()
+    else:
+        bw = None
+    if gaps is not None:
+        g = np.asarray(gaps, dtype=float).ravel()
+        g = np.clip(g, 0.0, None)
+        gm = float(np.mean(g)) + 1e-15
+        gw = 0.40 + 0.60 * (g / gm)
+    else:
+        gw = None
+    if bw is None:
+        w = gw
+    elif gw is None:
+        w = bw
+    else:
+        n = min(bw.size, gw.size)
+        mix = float(np.clip(gap_mix, 0.0, 1.0))
+        w = (1.0 - mix) * bw[:n] + mix * (bw[:n] * gw[:n])
+    if w is None or w.size == 0:
+        return None
+    w = np.clip(np.asarray(w, float), 1e-6, None)
+    w = w / (float(np.mean(w)) + 1e-15)
+    return w
 
 
 def mid_length_omega_bank(n_ca: int) -> tuple[float, ...]:
@@ -554,9 +593,16 @@ def dual_score_geometry(
     if thetas is None:
         thetas = crit_fp.thetas
     basin_w = pack.get("basin_weights")
-    # Use CTS persistence reweight when weights present (production softmin path)
+    gaps = None
+    if crit_fp is not None and getattr(crit_fp, "gaps", None) is not None:
+        gaps = crit_fp.gaps
+    # MaxOp gap mix only on mid/long scaffolds (short rings stay pure CTS basin)
+    n_ca_guess = int(np.asarray(xyz).shape[0])
+    gap_mix = 0.20 if n_ca_guess >= 12 else 0.0
+    sector_w = combine_sector_weights(basin_w, gaps, gap_mix=gap_mix)
+    # Use CTS×MaxOp reweight when weights present (production softmin path)
     agg = aggregate
-    if basin_w is not None and str(aggregate).lower().strip() in (
+    if sector_w is not None and str(aggregate).lower().strip() in (
         "softmin",
         "softmin_persist",
         "persist",
@@ -568,7 +614,7 @@ def dual_score_geometry(
         templates,
         soft_T=soft_T,
         aggregate=agg,
-        sector_weights=basin_w,
+        sector_weights=sector_w,
     )
     proj_d = float(proj["mean_dist"])
     a = float(np.clip(alpha_proj, 0.0, 1.0))
@@ -577,7 +623,11 @@ def dual_score_geometry(
     defect_d = 0.0
     if b > 1e-12:
         defc = softmin_defect_vs_crit(
-            xyz, thetas, soft_T=soft_T, prefer_maxop=prefer_maxop
+            xyz,
+            thetas,
+            soft_T=soft_T,
+            prefer_maxop=prefer_maxop,
+            sector_weights=sector_w if n_ca_guess >= 12 else basin_w,
         )
         defect_d = float(defc["mean_dist"])
         base = blend_projection_defect(proj_d, defect_d, beta=b)

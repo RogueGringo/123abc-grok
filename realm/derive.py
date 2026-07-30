@@ -441,7 +441,12 @@ class Deriver:
             th = float(c["theta"])
             if self.multimode:
                 # Longer scaffolds: more Fourier modes (steric mid-length floors)
-                n_modes = min(6 if self.N >= 12 else 4, int(field.gammas.size))
+                if self.N >= 13:
+                    n_modes = min(8, int(field.gammas.size))
+                elif self.N >= 12:
+                    n_modes = min(6, int(field.gammas.size))
+                else:
+                    n_modes = min(4, int(field.gammas.size))
                 pts = embed_multimode_cycle(self.N, th, field, n_modes=n_modes)
             else:
                 pts = embed_cycle_from_twist(self.N, th)

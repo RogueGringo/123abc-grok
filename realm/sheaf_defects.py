@@ -231,12 +231,14 @@ def softmin_defect_vs_crit(
     d: int = 2,
     prefer_maxop: bool = True,
     chord_weight: float | None = None,
+    sector_weights: np.ndarray | list[float] | None = None,
 ) -> dict[str, Any]:
     """Softmin multi-scale sheaf defect against Crit monodromies.
 
     Uses augmented energy (Dirichlet + adaptive multi-residue chords).
     Projection-primary ranking may blend this with Kabsch; alone it is the
     local-to-global obstruction score (sheaf defect track / AQFT local strain).
+    Optional sector_weights reweight Crit monodromies (CTS/MaxOp dual).
     """
     th = np.asarray(thetas, dtype=float).ravel()
     if th.size == 0:
@@ -261,6 +263,10 @@ def softmin_defect_vs_crit(
     m = float(np.min(s))
     T = max(float(soft_T), 1e-12)
     w = np.exp(-(s - m) / T)
+    if sector_weights is not None:
+        sw = np.asarray(sector_weights, dtype=float).ravel()
+        if sw.size == s.size and float(np.sum(sw)) > 0:
+            w = w * np.clip(sw, 1e-6, None)
     soft = float(np.sum(w * s) / (np.sum(w) + 1e-15))
     method = "SHEAF_DEFECT_MULTISCALE" if cw > 1e-12 else "SHEAF_DEFECT_SOFTMIN"
     return {

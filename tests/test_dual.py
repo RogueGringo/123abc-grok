@@ -87,6 +87,17 @@ def test_adaptive_defect_beta():
     assert adaptive_defect_beta(14, 0.0) == 0.0
 
 
+def test_combine_sector_weights():
+    from realm.validate.dual import combine_sector_weights
+
+    bw = np.array([1.0, 1.2, 0.8])
+    gaps = np.array([0.01, 0.05, 0.02])
+    w = combine_sector_weights(bw, gaps)
+    assert w is not None
+    assert abs(float(w.mean()) - 1.0) < 1e-6
+    assert float(w.min()) > 0.0
+
+
 def test_mid_length_bank_and_defect_tie():
     assert mid_length_omega_bank(11) == (0.85, 0.95, 1.0, 1.1, 1.2)
     assert 0.85 in mid_length_omega_bank(12) and 0.90 in mid_length_omega_bank(12)
