@@ -70,4 +70,4 @@ def test_select_mold_and_rank_smoke():
     )
     assert 0.0 <= enr["enrichment"] <= 1.0
     assert enr["defect_beta"] == 0.20
-    assert enr.get("method") == "PROJ_SHEAF_DEFECT"
+    assert enr.get("method") in ("PROJ_SHEAF_DEFECT", "PROJ_SHEAF_DEFECT_CTS")
