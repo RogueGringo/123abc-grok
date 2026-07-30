@@ -5,13 +5,13 @@
 
 ## PR / phase order
 
-| Phase | Files | Done when |
-|-------|--------|-----------|
-| **P1** | `realm/validate/pdb_write.py`, `tests/test_pdb_write.py` | CA + bb write, REMARKs, round-trip tests |
-| **P2** | `realm/handoff/generate.py`, `types.py`, `handoff_export.py` | Crit+Coutsias ensemble, rank, out-dir dump |
-| **P3** | `realm/handoff/decorate.py` | Protocol + Null + PolyAlaStub |
-| **P4** | `realm/handoff/physics.py` | GeometrySelfCheck JSON |
-| **P5** | optional adapters | import-guarded only |
+| Phase | Files | Done when | Status |
+|-------|--------|-----------|--------|
+| **P1** | `realm/validate/pdb_write.py`, `tests/test_pdb_write.py` | CA + bb write, REMARKs, round-trip tests | **DONE** |
+| **P2** | `realm/handoff/generate.py`, `types.py`, `handoff_export.py` | Crit+Coutsias ensemble, rank, out-dir dump (+ structure mode) | **DONE** |
+| **P3** | `realm/handoff/decorate.py` | Protocol + Null + PolyAlaStub | **DONE** |
+| **P4** | `realm/handoff/physics.py` | GeometrySelfCheck JSON | **DONE** |
+| **P5** | optional adapters | import-guarded only | **DONE** (import-guarded) |
 
 ## P1 tasks
 1. `write_ca_pdb`, `write_backbone_pdb`, remark builder

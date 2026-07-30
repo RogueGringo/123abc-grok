@@ -94,3 +94,12 @@ def test_generate_crit_merge_rank_ordered():
     assert scores == sorted(scores)
     assert all(m.source == "crit" for m in ranked)
     assert all(m.xyz.shape == (n, 3) for m in ranked)
+
+
+def test_handoff_does_not_alter_length_policy():
+    from realm.validate.length_policy import policy_for
+
+    p = policy_for(12, base_beta=0.20)
+    assert abs(p.soft_T - 0.036) < 1e-12
+    assert p.seq_mix == 0.0
+    assert abs(p.face_weight - 0.08) < 1e-12
