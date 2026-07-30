@@ -288,6 +288,8 @@ def adaptive_defect_scale(n_ca: int) -> float:
         return 0.18
     if n >= 12:
         return 0.17
+    if n == 10:
+        return 0.16  # 4M6E mild uplift without full mid-bank
     return 0.15
 
 

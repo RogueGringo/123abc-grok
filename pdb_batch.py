@@ -147,7 +147,7 @@ def rank_one(
             soft_T=soft_T,
             multimodes=(False, True),
             omega_scales=omega_bank,
-            defect_tie=(n_ca == 12),
+            defect_tie=(n_ca in (10, 12)),
         )
     elif mm_mode in ("self_fit_mid", "mid"):
         # Explicit mid-length attack bank (always defect-tie)
@@ -211,9 +211,9 @@ def rank_one(
             soft_T=soft_T,
             prefer_maxop=True,
         )
-    # 1TET-class only: structure-conditioned height-amp mold refine.
-    # Broader n>=12 dual-gate lost 4K8Y top20 while lifting 1TET.
-    if n_ca == 12 and mm_mode in (
+    # Structure-conditioned height-amp mold refine on soft floors only:
+    # n=12 (1TET) and n=10 (4M6E). Broader n>=12 dual-gate lost 4K8Y top20.
+    if n_ca in (10, 12) and mm_mode in (
         "self_fit_dense",
         "dense",
         "self_fit_mid",

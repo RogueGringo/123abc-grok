@@ -443,6 +443,8 @@ class Deriver:
                 # Longer scaffolds: more Fourier modes (steric mid-length floors)
                 if self.N >= 12:
                     n_modes = min(8, int(field.gammas.size))
+                elif self.N >= 10:
+                    n_modes = min(6, int(field.gammas.size))  # 4M6E-class
                 else:
                     n_modes = min(4, int(field.gammas.size))
                 pts = embed_multimode_cycle(self.N, th, field, n_modes=n_modes)

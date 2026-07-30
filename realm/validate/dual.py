@@ -309,6 +309,8 @@ def adaptive_defect_beta(n_ca: int, base: float = 0.20) -> float:
         return float(min(0.34, b + 0.10))
     if n >= 12:
         return float(min(0.30, b + 0.08))
+    if n == 10:
+        return float(min(0.26, b + 0.04))  # 4M6E mild; full mid dual-gate unsafe
     return b
 
 
@@ -362,9 +364,11 @@ def mid_length_omega_bank(n_ca: int) -> tuple[float, ...]:
     n = int(n_ca)
     dense = (0.85, 0.95, 1.0, 1.1, 1.2)
     if n >= 12:
-        # 1TET/4K8Y-class: full wings/bridges (n=10 4M6E kept on dense —
-        # full bank dual-gate regressed 4M6E hard).
+        # 1TET/4K8Y-class: full wings/bridges
         return (0.80, 0.85, 0.90, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.3)
+    if n == 10:
+        # 4M6E: mild bridges only (full mid-bank dual-gate regressed hard)
+        return (0.85, 0.90, 0.95, 1.0, 1.1, 1.15, 1.2)
     return dense
 
 
@@ -717,9 +721,9 @@ def dual_score_geometry(
 
         d_scale = adaptive_defect_scale(n_ca_guess)
         base = blend_projection_defect(proj_d, defect_d, beta=b, scale=d_scale)
-        # Mild hard-min pull on 1TET-class only (n=12); broader mid-length
-        # pull dual-gate cost a top20 on 4K8Y.
-        if n_ca_guess == 12 and proj.get("min_dist") is not None:
+        # Mild hard-min pull on soft floors only (n=10 4M6E, n=12 1TET).
+        # Broader mid-length pull dual-gate cost a top20 on 4K8Y.
+        if n_ca_guess in (10, 12) and proj.get("min_dist") is not None:
             dmin = float(proj["min_dist"])
             base = 0.88 * float(base) + 0.12 * dmin
         method = (
