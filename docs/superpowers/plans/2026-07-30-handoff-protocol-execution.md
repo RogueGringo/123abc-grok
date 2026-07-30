@@ -25,9 +25,9 @@
 | P2 | Crit+Coutsias generate, rank, CLI, index | **DONE** — `realm/handoff/generate.py`, `handoff_export.py` |
 | P3 | Decorate Protocol + Null + PolyAla | **DONE** — `realm/handoff/decorate.py` |
 | P4 | GeometrySelfCheck + JSON | **DONE** — `realm/handoff/physics.py` |
-| P5 | Optional Rosetta/BioPython | **PARTIAL** — BioPython validate only; no PyRosetta |
+| P5 | Optional Rosetta/BioPython | **DONE** (import-guarded) — `PyRosettaAdapter` skips when pyrosetta absent |
 
-**Remaining work (this plan):** verification suite for P2–P4, structure mode, CLI flags from spec, PyRosetta optional stub, plan/doc status sync. **Do not replace P1 with alternate Gemini API** (`write_ca_pdb(xyz, path)` vs current `write_ca_pdb(path, xyz)`).
+**Remaining work (this plan):** **COMPLETE** — P1–P5 DONE; dual-gate policy guard + plan doc sync (Task 7). **Do not replace P1 with alternate Gemini API** (`write_ca_pdb(xyz, path)` vs current `write_ca_pdb(path, xyz)`).
 
 ## File map
 
@@ -59,13 +59,13 @@
 - Consumes: `build_remarks(*, source, N, rank_score=None, method=None, twist=None, maxop_gap=None, extra=None) -> list[str]`
 - Produces: green pytest for P1 contract
 
-- [ ] **Step 1: Run existing P1 tests**
+- [x] **Step 1: Run existing P1 tests**
 
 Run: `pytest tests/test_pdb_write.py -v`
 
 Expected: PASS (3 tests). If FAIL, fix `pdb_write.py` only — do **not** replace with path-last Gemini signatures.
 
-- [ ] **Step 2: Add explicit ontology REMARK unit test if missing**
+- [x] **Step 2: Add explicit ontology REMARK unit test if missing**
 
 Append to `tests/test_pdb_write.py`:
 
@@ -79,13 +79,13 @@ def test_remark_ontology_literal():
     assert "SOURCE crit" in joined
 ```
 
-- [ ] **Step 3: Run test**
+- [x] **Step 3: Run test**
 
 Run: `pytest tests/test_pdb_write.py::test_remark_ontology_literal -v`
 
 Expected: PASS
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add tests/test_pdb_write.py
@@ -107,7 +107,7 @@ git commit -m "test: lock handoff REMARK ontology contract for P1"
 - Consumes: `DecorateRequest(backbone, sequence=None, poly_ala=True)`
 - Produces: tests proving Null SKIP, polyala OK file, physics report dict
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Create `tests/test_handoff.py`:
 
@@ -165,7 +165,7 @@ def test_select_adapter_null():
     assert a.name == "null"
 ```
 
-- [ ] **Step 2: Run tests (expect PASS if adapters already correct)**
+- [x] **Step 2: Run tests (expect PASS if adapters already correct)**
 
 Run: `pytest tests/test_handoff.py -v`
 
@@ -176,13 +176,13 @@ Expected: all PASS. If polyala fails path layout (`parent.parent / "decorated"`)
 out_dir = bb.parent / "decorated" if bb.parent.name != "molds" else bb.parent.parent / "decorated"
 ```
 
-- [ ] **Step 3: Re-run until green**
+- [x] **Step 3: Re-run until green**
 
 Run: `pytest tests/test_handoff.py -v`
 
 Expected: PASS
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add tests/test_handoff.py realm/handoff/decorate.py
@@ -203,7 +203,7 @@ git commit -m "test: handoff decorate and physics adapter contracts"
 - Consumes: `MoldRecord.source`, `.xyz`, `.rank_score`
 - Produces: test that Crit ensemble non-empty and top-k ordered
 
-- [ ] **Step 1: Write Crit-only unit smoke (no network, no long Coutsias)**
+- [x] **Step 1: Write Crit-only unit smoke (no network, no long Coutsias)**
 
 Append to `tests/test_handoff.py`:
 
@@ -228,13 +228,13 @@ def test_generate_crit_merge_rank_ordered():
     assert all(m.xyz.shape[1] >= 3 for m in ranked)
 ```
 
-- [ ] **Step 2: Run test**
+- [x] **Step 2: Run test**
 
 Run: `pytest tests/test_handoff.py::test_generate_crit_merge_rank_ordered -v`
 
 Expected: PASS (may take ~30s for Keymaker forges). If empty molds, check `forge_crit_geometry` templates for N=8.
 
-- [ ] **Step 3: Manual CLI smoke (document in commit message)**
+- [x] **Step 3: Manual CLI smoke (document in commit message)**
 
 Run:
 
@@ -244,7 +244,7 @@ python handoff_export.py -N 8 --top-k 3 --sources crit --decorate null --physics
 
 Expected: `out/handoff_plan_smoke/index.json` exists; `molds/*_ca.pdb` and `*_bb.pdb` present; index `ontology` contains `not_lambda_eq_gamma`.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add tests/test_handoff.py
@@ -265,7 +265,7 @@ git commit -m "test: Crit ensemble rank smoke for handoff generate"
 - Consumes: `load_ca_cyclic_band(path, with_resnames=True)`, `fetch_pdb`
 - Produces: `generate_structure_ensemble(pdb_id, knobs, *, top_k) -> list[MoldRecord]` with `source="crit"` from selected pack templates, optional Coutsias scored vs native
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 Create `tests/test_handoff_structure.py`:
 
@@ -298,13 +298,13 @@ def test_structure_ensemble_from_local_pdb():
     assert all(m.source in ("crit", "coutsias") for m in molds)
 ```
 
-- [ ] **Step 2: Run test — expect FAIL**
+- [x] **Step 2: Run test — expect FAIL**
 
 Run: `pytest tests/test_handoff_structure.py::test_structure_ensemble_from_local_pdb -v`
 
 Expected: FAIL `ImportError` or `generate_structure_ensemble` not defined
 
-- [ ] **Step 3: Implement `generate_structure_ensemble`**
+- [x] **Step 3: Implement `generate_structure_ensemble`**
 
 Add to `realm/handoff/generate.py`:
 
@@ -381,7 +381,7 @@ from realm.validate.decoys import score_geometry_vs_crit
 
 Use that for Crit molds so lower score = better native fit.
 
-- [ ] **Step 4: Wire CLI**
+- [x] **Step 4: Wire CLI**
 
 In `handoff_export.py` add:
 
@@ -411,7 +411,7 @@ else:
     ...
 ```
 
-- [ ] **Step 5: Run tests + structure smoke**
+- [x] **Step 5: Run tests + structure smoke**
 
 Run:
 
@@ -422,7 +422,7 @@ python handoff_export.py --mode structure --pdb 1CSA --top-k 3 --sources crit --
 
 Expected: tests PASS; PDBs under `out/handoff_struct_smoke/molds/`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add realm/handoff/generate.py handoff_export.py tests/test_handoff_structure.py
@@ -439,7 +439,7 @@ git commit -m "feat: structure-mode handoff ensemble from native CA self_fit"
 **Interfaces:**
 - Produces CLI: `--mode`, `--pdb`, `--sequence`, `--poly-ala` (or keep polyala via decorate), existing flags
 
-- [ ] **Step 1: Add sequence handling**
+- [x] **Step 1: Add sequence handling**
 
 ```python
 p.add_argument("--sequence", type=str, default=None, help="1-letter or 3-letter seq for resnames")
@@ -470,7 +470,7 @@ def _resnames_from_sequence(seq: str | None, N: int) -> list[str] | None:
 
 Pass `resnames` into `write_mold_pair(..., resnames=resnames)`.
 
-- [ ] **Step 2: Smoke**
+- [x] **Step 2: Smoke**
 
 ```bash
 python handoff_export.py -N 6 --sequence GGGGGG --sources crit --top-k 2 --out-dir out/handoff_seq
@@ -478,7 +478,7 @@ python handoff_export.py -N 6 --sequence GGGGGG --sources crit --top-k 2 --out-d
 
 Expected: PDB residue names GLY; exit 0.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add handoff_export.py
@@ -496,7 +496,7 @@ git commit -m "feat: handoff CLI --mode structure and --sequence resnames"
 **Interfaces:**
 - Produces: `PyRosettaAdapter` with `available()` False when import fails; `decorate` never raises into CLI uncaught
 
-- [ ] **Step 1: Write skippable test**
+- [x] **Step 1: Write skippable test**
 
 ```python
 def test_pyrosetta_adapter_available_flag():
@@ -507,7 +507,7 @@ def test_pyrosetta_adapter_available_flag():
         pytest.skip("pyrosetta not installed")
 ```
 
-- [ ] **Step 2: Implement stub adapter**
+- [x] **Step 2: Implement stub adapter**
 
 ```python
 class PyRosettaAdapter:
@@ -539,13 +539,13 @@ class PyRosettaAdapter:
 
 Register in `get_decorate_adapters()` after polyala.
 
-- [ ] **Step 3: Run tests**
+- [x] **Step 3: Run tests**
 
 Run: `pytest tests/test_handoff.py -v`
 
 Expected: PASS (pyrosetta test skipped without install)
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add realm/handoff/decorate.py tests/test_handoff.py
@@ -563,7 +563,7 @@ git commit -m "feat: optional PyRosetta decorate adapter (import-guarded)"
 **Interfaces:**
 - Consumes: `policy_for(12).soft_T == 0.036` (production lock)
 
-- [ ] **Step 1: Add regression guard**
+- [x] **Step 1: Add regression guard**
 
 In `tests/test_handoff.py`:
 
@@ -576,7 +576,7 @@ def test_handoff_does_not_alter_length_policy():
     assert abs(p.face_weight - 0.08) < 1e-12
 ```
 
-- [ ] **Step 2: Run full handoff-related suite**
+- [x] **Step 2: Run full handoff-related suite**
 
 ```bash
 pytest tests/test_pdb_write.py tests/test_handoff.py tests/test_handoff_structure.py tests/test_dual.py::test_length_policy_table_baseline_locked -q
@@ -584,7 +584,7 @@ pytest tests/test_pdb_write.py tests/test_handoff.py tests/test_handoff_structur
 
 Expected: all PASS
 
-- [ ] **Step 3: Update phase status in plan markdown**
+- [x] **Step 3: Update phase status in plan markdown**
 
 Edit `docs/superpowers/plans/2026-07-30-handoff-protocol-plan.md` table:
 
@@ -596,7 +596,7 @@ Edit `docs/superpowers/plans/2026-07-30-handoff-protocol-plan.md` table:
 | P5 | DONE (import-guarded) |
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add tests/test_handoff.py docs/superpowers/plans/2026-07-30-handoff-protocol-plan.md docs/superpowers/plans/2026-07-30-handoff-protocol-execution.md

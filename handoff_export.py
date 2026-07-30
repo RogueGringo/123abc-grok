@@ -22,6 +22,7 @@ from realm.handoff.decorate import select_adapter
 from realm.handoff.generate import (
     generate_coutsias_ensemble,
     generate_crit_ensemble,
+    generate_structure_ensemble,
     merge_and_rank,
 )
 from realm.handoff.physics import get_physics_adapter
@@ -30,6 +31,24 @@ from realm.validate.pdb_write import write_mold_pair
 from realm.validate.report import load_knobs, write_json
 
 logger = logging.getLogger("handoff_export")
+
+
+def _resnames_from_sequence(seq: str | None, N: int) -> list[str] | None:
+    if not seq:
+        return None
+    s = seq.strip()
+    aa1 = {
+        "A": "ALA", "G": "GLY", "V": "VAL", "L": "LEU", "I": "ILE", "P": "PRO",
+        "F": "PHE", "Y": "TYR", "W": "TRP", "S": "SER", "T": "THR", "C": "CYS",
+        "M": "MET", "N": "ASN", "Q": "GLN", "D": "ASP", "E": "GLU", "K": "LYS",
+        "R": "ARG", "H": "HIS",
+    }
+    if len(s) == N and s.isalpha():
+        return [aa1.get(c.upper(), "GLY") for c in s]
+    parts = [p.strip().upper() for p in s.replace(",", " ").split() if p.strip()]
+    if len(parts) == N:
+        return parts
+    raise SystemExit(f"--sequence length must match N={N}")
 
 
 def main(argv=None) -> int:
@@ -58,6 +77,24 @@ def main(argv=None) -> int:
         default="geometry",
         choices=("geometry", "none"),
     )
+    p.add_argument(
+        "--mode",
+        choices=("proposal", "structure"),
+        default="proposal",
+        help="proposal: Crit×omega bank; structure: native CA self_fit pack",
+    )
+    p.add_argument(
+        "--pdb",
+        type=str,
+        default=None,
+        help="PDB id for --mode structure (uses data/pdb cache / RCSB)",
+    )
+    p.add_argument(
+        "--sequence",
+        type=str,
+        default=None,
+        help="1-letter or 3-letter seq for resnames",
+    )
     p.add_argument("-v", action="store_true")
     args = p.parse_args(argv)
 
@@ -71,24 +108,45 @@ def main(argv=None) -> int:
         knobs = knobs["best_knobs"]
 
     sources = {s.strip().lower() for s in args.sources.split(",") if s.strip()}
-    molds = []
-    if "crit" in sources:
-        logger.info("generating Crit ensemble N=%d …", args.N)
-        molds.extend(
-            generate_crit_ensemble(knobs, N=int(args.N), n_zeros=int(args.k))
+    if args.mode == "structure":
+        if not args.pdb:
+            logger.error("--mode structure requires --pdb")
+            return 2
+        logger.info(
+            "structure mode pdb=%s sources=%s top_k=%d …",
+            args.pdb,
+            sorted(sources),
+            int(args.top_k),
         )
-    if "coutsias" in sources:
-        logger.info("generating Coutsias ensemble N=%d …", args.N)
-        molds.extend(
-            generate_coutsias_ensemble(
-                N=int(args.N), n_starts=int(args.coutsias_starts)
+        ranked = generate_structure_ensemble(
+            args.pdb,
+            knobs,
+            n_zeros=int(args.k),
+            top_k=int(args.top_k),
+            include_coutsias=("coutsias" in sources),
+        )
+    else:
+        molds = []
+        if "crit" in sources:
+            logger.info("generating Crit ensemble N=%d …", args.N)
+            molds.extend(
+                generate_crit_ensemble(knobs, N=int(args.N), n_zeros=int(args.k))
             )
-        )
-    if not molds:
+        if "coutsias" in sources:
+            logger.info("generating Coutsias ensemble N=%d …", args.N)
+            molds.extend(
+                generate_coutsias_ensemble(
+                    N=int(args.N), n_starts=int(args.coutsias_starts)
+                )
+            )
+        if not molds:
+            logger.error("no molds generated")
+            return 1
+        ranked = merge_and_rank(molds, top_k=int(args.top_k))
+
+    if not ranked:
         logger.error("no molds generated")
         return 1
-
-    ranked = merge_and_rank(molds, top_k=int(args.top_k))
     out = Path(args.out_dir)
     molds_dir = out / "molds"
     molds_dir.mkdir(parents=True, exist_ok=True)
@@ -96,9 +154,36 @@ def main(argv=None) -> int:
     decorate_ad = select_adapter(args.decorate)
     physics_ad = get_physics_adapter(args.physics)
 
+    # Proposal: sequence must match args.N once. Structure: per-mold N.
+    resnames_proposal: list[str] | None = None
+    if args.sequence and args.mode == "proposal":
+        resnames_proposal = _resnames_from_sequence(args.sequence, int(args.N))
+
     index_molds = []
     for i, m in enumerate(ranked):
         stem = f"{i:03d}_{m.source}"
+        mold_N = int(m.N)
+        if args.mode == "proposal":
+            mold_resnames = resnames_proposal
+        elif args.sequence:
+            s = args.sequence.strip()
+            parts = [
+                p.strip().upper()
+                for p in s.replace(",", " ").split()
+                if p.strip()
+            ]
+            if (len(s) == mold_N and s.isalpha()) or len(parts) == mold_N:
+                mold_resnames = _resnames_from_sequence(args.sequence, mold_N)
+            else:
+                logger.warning(
+                    "--sequence length does not match mold N=%d for %s; "
+                    "skipping sequence for this mold",
+                    mold_N,
+                    stem,
+                )
+                mold_resnames = None
+        else:
+            mold_resnames = None
         paths = write_mold_pair(
             molds_dir,
             stem,
@@ -108,6 +193,7 @@ def main(argv=None) -> int:
             method=m.method,
             twist=m.twist,
             maxop_gap=m.maxop_gap,
+            resnames=mold_resnames,
         )
         art = BackboneArtifact(
             path_ca=Path(paths["path_ca"]),
@@ -145,9 +231,12 @@ def main(argv=None) -> int:
             None if phys is None else phys.status,
         )
 
+    n_export = int(ranked[0].N) if ranked else int(args.N)
     payload = {
         "n_molds": len(index_molds),
-        "N": int(args.N),
+        "N": n_export if args.mode == "structure" else int(args.N),
+        "mode": args.mode,
+        "pdb": args.pdb,
         "sources": sorted(sources),
         "top_k": int(args.top_k),
         "molds": index_molds,
