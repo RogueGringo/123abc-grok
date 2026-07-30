@@ -88,9 +88,52 @@ class PolyAlaStubAdapter:
         )
 
 
+class PyRosettaAdapter:
+    """Optional PyRosetta decorate: pose load/dump only; never required in CI."""
+
+    name = "pyrosetta"
+
+    def available(self) -> bool:
+        try:
+            import pyrosetta  # noqa: F401
+
+            return True
+        except Exception:  # noqa: BLE001
+            return False
+
+    def decorate(self, req: DecorateRequest) -> DecorateResult:
+        if not self.available():
+            return DecorateResult(
+                None, self.name, "SKIP", note="pyrosetta not installed"
+            )
+        try:
+            import pyrosetta
+
+            pyrosetta.init("-mute all")
+            pose = pyrosetta.pose_from_pdb(str(req.backbone.path_bb))
+            bb = req.backbone.path_bb
+            out_dir = (
+                bb.parent / "decorated"
+                if bb.parent.name != "molds"
+                else bb.parent.parent / "decorated"
+            )
+            out_dir.mkdir(parents=True, exist_ok=True)
+            out_path = out_dir / (bb.stem + "_pyrosetta.pdb")
+            pose.dump_pdb(str(out_path))
+            return DecorateResult(
+                out_path, self.name, "OK", note="pose load/dump only"
+            )
+        except Exception as exc:  # noqa: BLE001
+            return DecorateResult(None, self.name, "ERROR", note=str(exc))
+
+
 def get_decorate_adapters() -> list[DecorateAdapter]:
-    adapters: list[DecorateAdapter] = [NullDecorateAdapter(), PolyAlaStubAdapter()]
-    # Optional PyRosetta / BioPython later — import-guarded
+    adapters: list[DecorateAdapter] = [
+        NullDecorateAdapter(),
+        PolyAlaStubAdapter(),
+        PyRosettaAdapter(),
+    ]
+    # Optional BioPython — import-guarded
     try:
         import Bio  # noqa: F401
 

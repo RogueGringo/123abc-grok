@@ -66,6 +66,15 @@ def test_select_adapter_null():
     assert a.name == "null"
 
 
+def test_pyrosetta_adapter_available_flag():
+    from realm.handoff.decorate import PyRosettaAdapter
+
+    a = PyRosettaAdapter()
+    assert isinstance(a.available(), bool)
+    if not a.available():
+        pytest.skip("pyrosetta not installed")
+
+
 def test_generate_crit_merge_rank_ordered():
     import json
     from realm.handoff.generate import generate_crit_ensemble, merge_and_rank
