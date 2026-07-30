@@ -135,7 +135,7 @@ def rank_one(
         from realm.validate.dual import mid_length_omega_bank
 
         # Length-adaptive dense bank (superset of confirmed 5-point dense).
-        # n=12 (1TET): enable native sheaf-defect mold tie — structure only.
+        # n=12 (1TET): native sheaf-defect mold tie — structure only.
         omega_bank = mid_length_omega_bank(n_ca)
         use_mm, pack, fit_diag = select_mold_by_fit(
             xyz,

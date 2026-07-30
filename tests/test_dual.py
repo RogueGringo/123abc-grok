@@ -83,8 +83,9 @@ def test_select_mold_bank_by_fit():
 
 def test_adaptive_defect_beta():
     assert adaptive_defect_beta(8, 0.20) == 0.20
-    assert abs(adaptive_defect_beta(12, 0.20) - 0.25) < 1e-12
-    assert abs(adaptive_defect_beta(13, 0.20) - 0.28) < 1e-12
+    assert adaptive_defect_beta(10, 0.20) == 0.20  # 4M6E: no uplift
+    assert abs(adaptive_defect_beta(12, 0.20) - 0.28) < 1e-12
+    assert abs(adaptive_defect_beta(13, 0.20) - 0.30) < 1e-12
     assert adaptive_defect_beta(14, 0.0) == 0.0
 
 
@@ -100,7 +101,8 @@ def test_combine_sector_weights():
 
 
 def test_mid_length_bank_and_defect_tie():
-    assert mid_length_omega_bank(11) == (0.85, 0.95, 1.0, 1.1, 1.2)
+    assert mid_length_omega_bank(8) == (0.85, 0.95, 1.0, 1.1, 1.2)
+    assert mid_length_omega_bank(10) == (0.85, 0.95, 1.0, 1.1, 1.2)
     b12 = mid_length_omega_bank(12)
     b13 = mid_length_omega_bank(13)
     assert set((0.85, 0.95, 1.0, 1.1, 1.2)).issubset(set(b12))

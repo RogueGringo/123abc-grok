@@ -306,9 +306,9 @@ def adaptive_defect_beta(n_ca: int, base: float = 0.20) -> float:
         return 0.0
     n = int(n_ca)
     if n >= 13:
-        return float(min(0.32, b + 0.08))
+        return float(min(0.34, b + 0.10))
     if n >= 12:
-        return float(min(0.28, b + 0.05))
+        return float(min(0.30, b + 0.08))
     return b
 
 
@@ -362,8 +362,8 @@ def mid_length_omega_bank(n_ca: int) -> tuple[float, ...]:
     n = int(n_ca)
     dense = (0.85, 0.95, 1.0, 1.1, 1.2)
     if n >= 12:
-        # 1TET-class (n=12) needs same wing/bridge density as n≥13
-        # (prior n=12-only bridges left planar Crit under-resolved).
+        # 1TET/4K8Y-class: full wings/bridges (n=10 4M6E kept on dense —
+        # full bank dual-gate regressed 4M6E hard).
         return (0.80, 0.85, 0.90, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.3)
     return dense
 
@@ -599,7 +599,7 @@ def dual_score_geometry(
     gaps = None
     if crit_fp is not None and getattr(crit_fp, "gaps", None) is not None:
         gaps = crit_fp.gaps
-    # MaxOp gap mix only on mid/long scaffolds (short rings stay pure CTS basin)
+    # MaxOp gap mix on mid-length scaffolds (short rings stay pure CTS basin)
     n_ca_guess = int(np.asarray(xyz).shape[0])
     gap_mix = 0.20 if n_ca_guess >= 12 else 0.0
     sector_w = combine_sector_weights(basin_w, gaps, gap_mix=gap_mix)
