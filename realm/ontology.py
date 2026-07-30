@@ -35,10 +35,19 @@ ONTOLOGY = {
     "fold_protocol": "substrate→Crit(S)→MaxOp L net→mold bank→projection ranking",
     "axioms_primary": ["G1", "G2", "G3", "1.1", "2.4", "4.1", "5.2", "6.2", "12.3"],
     "math_refs_informal": [
+        "Connes spectral action / spectral triple (A,H,D) — finite proxy only",
         "Witten 1982 Supersymmetry and Morse Theory (Morse deformation analogy)",
         "cellular sheaves / connection Laplacian (discrete geometric analysis)",
         "Haag–Kastler local nets (combinatorial proxy only on Crit cycle)",
+        "geometric control: Σ=(M,f,g,U), D=(M,Δ,∇), S=(G,F,L_F)",
     ],
+    "control_tuples": {
+        "Sigma": "control-affine on holonomy×knobs",
+        "D": "distribution + monodromy connection",
+        "S": "cellular sheaf L_F=δ*δ",
+        "tuple_time": "(t, tau, resolution, F) until resolution maximized",
+        "module": "realm/manifold_control.py",
+    },
 }
 
 

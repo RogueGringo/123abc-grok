@@ -32,6 +32,7 @@ if str(ROOT) not in sys.path:
 
 from realm.adaptive_evolve import AdaptivePolicy, knobs_to_vec, run_natural_selection
 from realm.lock_key import Keymaker
+from realm.manifold_control import fold_control_snapshot
 from realm.ontology import ontology_note
 from realm.validate.report import load_knobs, write_json
 from pdb_batch import HOLDOUT_IDS, PROBE_IDS, rank_one
@@ -139,7 +140,35 @@ def main(argv=None) -> int:
     )
     p.add_argument("--de-iter", type=int, default=4, help="DE iters per internal gen")
     p.add_argument("--n-pop", type=int, default=8)
-    p.add_argument("--epochs", type=int, default=5)
+    p.add_argument(
+        "--epochs",
+        type=int,
+        default=5,
+        help="fixed epoch budget (ignored as hard stop when --until-resolved)",
+    )
+    p.add_argument(
+        "--until-resolved",
+        action="store_true",
+        help="run tuple-time until phenotype resolution is maximized (stable)",
+    )
+    p.add_argument(
+        "--max-epochs",
+        type=int,
+        default=24,
+        help="hard cap when --until-resolved (default 24)",
+    )
+    p.add_argument(
+        "--resolve-patience",
+        type=int,
+        default=4,
+        help="epochs with no resolution gain before stop (until-resolved)",
+    )
+    p.add_argument(
+        "--min-epochs",
+        type=int,
+        default=3,
+        help="minimum epochs before resolution-stop may fire",
+    )
     p.add_argument("--n-decoys", type=int, default=16, help="fast probe decoys in NS")
     p.add_argument("--verify-decoys", type=int, default=40)
     p.add_argument("--verify-seeds", type=int, default=3)
@@ -191,6 +220,14 @@ def main(argv=None) -> int:
     print(
         "  framing: genotype=knobs · phenotype=Crit→projection · "
         "environment=probe enrichment · adaptive τ"
+    )
+    print(
+        "  Connes discipline: geometry-from-spectrum; spectral action; "
+        "never λ=γ; control = admissible variation of D/knobs"
+    )
+    print(
+        "  tuples: Σ=(M,f,g,U) · D=(M,Δ,∇) · S=(G,F,L_F) · "
+        "time=(t,τ,resolution,F)"
     )
 
     # Snapshot pre-state so internal DE cannot erase sealed elite + stage meta
@@ -317,7 +354,19 @@ def main(argv=None) -> int:
         logger.info(msg)
         print(msg)
 
-    logger.info("natural selection: pop=%d epochs=%d …", args.n_pop, args.epochs)
+    if args.until_resolved:
+        logger.info(
+            "natural selection UNTIL RESOLVED: pop=%d max_epochs=%d patience=%d …",
+            args.n_pop,
+            args.max_epochs,
+            args.resolve_patience,
+        )
+        print(
+            f"  mode: tuple-time until resolution maximized "
+            f"(max_epochs={args.max_epochs}, patience={args.resolve_patience})"
+        )
+    else:
+        logger.info("natural selection: pop=%d epochs=%d …", args.n_pop, args.epochs)
     ns = run_natural_selection(
         knobs,
         g_last=g_last,
@@ -330,14 +379,24 @@ def main(argv=None) -> int:
         probe_fn=probe_fn,
         rng=rng,
         log=log_line,
+        until_resolved=bool(args.until_resolved),
+        resolve_patience=args.resolve_patience,
+        max_epochs=args.max_epochs if args.until_resolved else args.epochs,
+        min_epochs=args.min_epochs,
     )
 
     champ = ns["champion"]
     champ_kn = champ["knobs"]
+    argmax_tt = ns.get("argmax_resolution_tuple") or {}
     print(
         f"\n  champion F_tot={champ['F_total']:.4f}  probe={champ['probe_enrichment']:.1%}  "
+        f"res={ns.get('champion_resolution', float('nan')):.4f}  "
         f"R={champ['R']:.4f}  occ={champ['occupancy']:.0%}  "
         f"lineage={champ['lineage']}"
+    )
+    print(
+        f"  stop={ns.get('stop_reason')}  epochs_ran={ns.get('n_epochs_ran')}  "
+        f"argmax_res_t={argmax_tt.get('t')}  max_res={argmax_tt.get('resolution')}"
     )
 
     # multi-seed re-eval probe + holdout (honest report)
@@ -445,6 +504,7 @@ def main(argv=None) -> int:
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "ontology": ontology_note(),
         "framing": ns["framing"],
+        "manifold_control": fold_control_snapshot(),
         "baseline": {
             "knobs": knobs,
             "probe_enrichment_fast": base_pe,
