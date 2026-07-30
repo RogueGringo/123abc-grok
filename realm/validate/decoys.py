@@ -147,34 +147,54 @@ def score_geometry_vs_crit(
     xyz: np.ndarray,
     sector_points: list[np.ndarray],
     top_k: int = 3,
+    aggregate: str = "softmin",
+    soft_T: float = 0.08,
 ) -> dict[str, Any]:
-    """Cyclic Kabsch distance to Crit sector ensemble.
+    """Cyclic Kabsch distance to Crit sector ensemble (projection side).
 
-    Uses mean of the *top_k* nearest sector templates (not hard min). The
-    Crit mold is a multi-valley sheaf section; averaging the nearest few
-    sectors is more stable for native-vs-decoy ranking than a single match.
+    aggregate
+      softmin — temperature-weighted mean over all sector distances (default;
+                multi-valley sheaf; more stable than hard min / top-k alone)
+      topk    — mean of the *top_k* nearest templates
+      min     — hard nearest template only
     """
     if not sector_points:
         return {
             "mean_dist": 1e9,
-            "method": "CRIT_KABSCH_TOPK",
+            "method": "CRIT_KABSCH_SOFTMIN",
             "in_basin": False,
             "n_templates": 0,
         }
-    dists = np.sort(
-        np.asarray(
-            [_kabsch_rmsd(xyz, sp, cyclic=True) for sp in sector_points],
-            dtype=float,
-        )
+    dists = np.asarray(
+        [_kabsch_rmsd(xyz, sp, cyclic=True) for sp in sector_points],
+        dtype=float,
     )
-    k = max(1, min(int(top_k), dists.size))
-    dmean = float(np.mean(dists[:k]))
-    dmin = float(dists[0])
+    dmin = float(np.min(dists))
+    mode = str(aggregate or "softmin").lower().strip()
+    if mode == "min":
+        dmean = dmin
+        method = "CRIT_KABSCH_MIN"
+        k = 1
+    elif mode in ("topk", "top_k", "top-k"):
+        order = np.sort(dists)
+        k = max(1, min(int(top_k), order.size))
+        dmean = float(np.mean(order[:k]))
+        method = "CRIT_KABSCH_TOPK"
+    else:
+        # softmin over full Crit ensemble
+        T = max(float(soft_T), 1e-12)
+        m = dmin
+        w = np.exp(-(dists - m) / T)
+        dmean = float(np.sum(w * dists) / (np.sum(w) + 1e-15))
+        method = "CRIT_KABSCH_SOFTMIN"
+        k = int(dists.size)
     return {
         "mean_dist": dmean,
         "min_dist": dmin,
-        "method": "CRIT_KABSCH_TOPK",
+        "method": method,
         "in_basin": dmean < 0.35,
         "n_templates": len(sector_points),
         "top_k": k,
+        "aggregate": mode,
+        "soft_T": float(soft_T) if mode == "softmin" else None,
     }

@@ -59,16 +59,17 @@
     "R_note": "legacy R is Crit seating self-consistency; not ζ evidence (RETRACTED 2026-07-29)",
     "null_battery_zeta_preference": "RETRACTED",
     "residual_fitness": "informative_density_return",
-    "probe_enrichment": 0.8125,
-    "holdout_enrichment": 0.7297619047619047,
-    "batch_mean_enrichment": 0.7598484848484848,
-    "batch_mean_enrichment_std": 0.05911569382813167,
+    "probe_enrichment": 0.8083333333333333,
+    "holdout_enrichment": 0.744047619047619,
+    "batch_mean_enrichment": 0.7674242424242425,
+    "batch_mean_enrichment_std": 0.049339476435855116,
     "batch_top20": 3,
     "batch_n_ok": 11,
     "batch_n_seeds": 3,
     "batch_n_decoys": 40,
     "path": "geometry_off_zeta_external_cyclic_ranking",
-    "method": "CRIT_KABSCH_TOPK (k=3) + multi-seed + joint_polish holdout",
+    "method": "CRIT_KABSCH_SOFTMIN + multi-seed; dual L×proj instrument ready",
+    "dual": "realm/validate/dual.py + dual_probe.py (substrate→L vs projection)",
     "instrument": "see docs/RETRACTION_residual_instrument.md"
   }
 }

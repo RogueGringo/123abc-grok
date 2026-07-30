@@ -19,8 +19,8 @@ ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from realm.lock_key import Keymaker
-from realm.validate.decoys import make_ca_decoys, score_geometry_vs_crit
+from realm.validate.decoys import make_ca_decoys
+from realm.validate.dual import dual_score_geometry, forge_crit_geometry
 from realm.validate.pdb_io import PdbIOError, fetch_pdb, load_ca_cyclic_band
 from realm.validate.report import load_knobs, write_json
 
@@ -57,7 +57,9 @@ def rank_one(
     noise: float,
     rng: np.random.Generator,
     n_seeds: int = 1,
+    alpha_proj: float = 1.0,
 ) -> dict:
+    """Native-vs-decoy rank. alpha_proj=1 pure Crit projection; <1 dual L blend."""
     path = fetch_pdb(pdb_id)
     xyz, chain_used = load_ca_cyclic_band(path, lo=6, hi=40)
     n_ca = int(xyz.shape[0])
@@ -72,16 +74,11 @@ def rank_one(
 
     # Match Keymaker N to backbone length (geometry scaffold size)
     N = max(n_ca, 7)
-    der = Keymaker(N=N, n_zeros=n_zeros, n_sectors=n_sectors).forge(**knobs)
-    templates = []
-    for s in der.sectors:
-        pts = getattr(s, "positions", None)
-        if pts is not None:
-            arr = np.asarray(pts, dtype=float)
-            if arr.ndim == 2 and arr.shape[1] >= 3:
-                templates.append(arr[:, :3])
-
-    native = score_geometry_vs_crit(xyz, templates)
+    pack = forge_crit_geometry(
+        knobs, N=N, n_zeros=n_zeros, n_sectors=n_sectors
+    )
+    a = float(np.clip(alpha_proj, 0.0, 1.0))
+    native = dual_score_geometry(xyz, pack, alpha_proj=a)
     native_dist = float(native["mean_dist"])
     n_seeds = max(1, int(n_seeds))
     seed_metrics = []
@@ -94,7 +91,7 @@ def rank_one(
         decoys += make_ca_decoys(xyz, n_hard, sub, noise=noise * 1.8)
         rows = [{"label": "native", "mean_dist": native_dist}]
         for i, d in enumerate(decoys):
-            sc = score_geometry_vs_crit(d, templates)
+            sc = dual_score_geometry(d, pack, alpha_proj=a)
             sc["label"] = f"decoy_{i}"
             rows.append(sc)
         ranked = sorted(rows, key=lambda r: r["mean_dist"])
@@ -126,14 +123,18 @@ def rank_one(
         "chain": chain_used,
         "N_scaffold": N,
         "native_dist": native_dist,
+        "native_proj": float(native.get("proj_dist", native_dist)),
+        "native_op": float(native.get("op_dist", 0.0)),
         "native_rank": native_rank,
         "n_total": len(last_ranked) if last_ranked else n_decoys + 1,
         "enrichment": enrichment,
         "enrichment_std": float(np.std(enrichments)) if len(enrichments) > 1 else 0.0,
         "top20": top20,
         "method": native.get("method"),
-        "n_templates": len(templates),
+        "n_templates": pack["n_sectors"],
         "n_seeds": n_seeds,
+        "alpha_proj": a,
+        "operator": pack["operator"].to_dict() if a < 1.0 else None,
     }
 
 
@@ -150,6 +151,12 @@ def main(argv=None) -> int:
         type=int,
         default=3,
         help="Average enrichment over this many decoy RNG seeds (stability)",
+    )
+    p.add_argument(
+        "--alpha-proj",
+        type=float,
+        default=1.0,
+        help="1.0=pure Crit projection; <1 blends operator L distance (dual)",
     )
     p.add_argument("--null-json", type=Path, default=Path("null_battery_result.json"))
     p.add_argument("--force", action="store_true")
@@ -183,6 +190,7 @@ def main(argv=None) -> int:
                 args.noise,
                 rng,
                 n_seeds=args.n_seeds,
+                alpha_proj=args.alpha_proj,
             )
         except PdbIOError as exc:
             row = {"pdb": pid, "status": "IO_FAIL", "error": str(exc)}
@@ -235,13 +243,14 @@ def main(argv=None) -> int:
             "top20_count": n_top20,
             "n_seeds": args.n_seeds,
             "n_decoys": args.n_decoys,
+            "alpha_proj": args.alpha_proj,
         },
         "knobs": knobs,
-        "ontology": "structure_path_not_protein_lm_bench",
+        "ontology": "projection_geometry_dual_ready_not_lambda_eq_gamma",
         "note": (
-            "Curated cyclic PDB IDs only. HF language datasets (~400 repos) "
-            "are out of band; use CPSea/RCSB for coords. Multi-seed averages "
-            "enrichment over independent decoy RNG draws."
+            "Curated cyclic PDB IDs only. Substrate→Crit projection ranking "
+            "(softmin Kabsch). alpha_proj<1 enables L-operator dual blend. "
+            "ζ residual preference remains RETRACTED. Multi-seed stability."
         ),
     }
     write_json(args.json, payload)

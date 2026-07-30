@@ -33,15 +33,16 @@ def test_closure_closed_ring():
     assert closure_residual(xyz) > 0.5
 
 
-def test_score_geometry_topk_mean():
-    # native-like ring and three templates; top-3 mean uses ensemble
+def test_score_geometry_softmin_and_topk():
     ring = np.array(
         [[1.0, 0, 0], [0, 1, 0], [-1, 0, 0], [0, -1, 0], [0.7, -0.7, 0]],
         dtype=float,
     )
     tpls = [ring + 0.01 * i for i in range(4)]
-    sc = score_geometry_vs_crit(ring, tpls, top_k=3)
-    assert sc["method"] == "CRIT_KABSCH_TOPK"
-    assert sc["top_k"] == 3
-    assert sc["mean_dist"] >= sc["min_dist"]
-    assert sc["mean_dist"] < 0.2
+    soft = score_geometry_vs_crit(ring, tpls, aggregate="softmin")
+    topk = score_geometry_vs_crit(ring, tpls, top_k=3, aggregate="topk")
+    assert soft["method"] == "CRIT_KABSCH_SOFTMIN"
+    assert topk["method"] == "CRIT_KABSCH_TOPK"
+    assert soft["mean_dist"] + 1e-12 >= soft["min_dist"]
+    assert topk["mean_dist"] + 1e-12 >= topk["min_dist"]
+    assert soft["mean_dist"] < 0.2
