@@ -156,12 +156,21 @@ def main(argv=None) -> int:
     # Commit policy (12.3): only projection ranking + instrument honesty
     allowed_commits = {
         "zeta_preference": False,
-        "reason_blocked": "RETRACTED — use equal-budget + holdout + non-degenerate residual",
+        "reason_blocked": (
+            "RETRACTED — ζ is substrate seed only, not preference claim "
+            "(see realm/ontology.py)"
+        ),
+        "geometry_projection_ranking": bool(
+            batch and float((batch.get("summary") or {}).get("mean_enrichment", 0)) > 0.55
+        ),
+        # alias for older readers
         "geometry_ranking_external": bool(
             batch and float((batch.get("summary") or {}).get("mean_enrichment", 0)) > 0.55
         ),
+        "maxop_dual_diagnostic": dual is not None or cts is not None,
         "dual_instrument_ready": dual is not None or cts is not None,
         "cts_resolved": cts is not None,
+        "ontology": "substrate_projection_operator_dual",
     }
 
     n_ok = sum(1 for c in checks if c["ok"])

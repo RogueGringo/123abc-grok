@@ -1,13 +1,13 @@
 """Dual instrument: baseline operation matrix L vs geometric projection.
 
-Ontology
---------
-* Substrate  — zeta field (or control seed) → SpectralAction → Crit θ*
-* Operation  — connection Laplacian L(A(θ)) at those holonomies (MaxOp / numpy)
-* Projection — Crit-induced multimode geometry in R³ (CA mold / Kabsch)
+Ontology (see realm.ontology)
+-----------------------------
+* Substrate  — ζ field seeds Crit; **not** the actual physical target
+* Operation  — MaxOp/numpy connection Laplacian L(A(θ)) at Crit holonomies
+* Projection — Crit-induced geometry in R³ scored vs external CA rings
 
-Never scores λ ≈ γ. Dual score pairs projection distance with operator
-fingerprint distance so evidence lives on the dual, not lock–key seating.
+Operational ranking optimizes **projection fit** of substrate-derived molds.
+MaxOp supplies operator dual diagnostics and tie-breaks — never λ=γ.
 """
 
 from __future__ import annotations
@@ -199,25 +199,38 @@ def select_mold_by_fit(
                     xyz, pack["templates"], soft_T=soft_T
                 )["mean_dist"]
             )
+            op = pack["operator"]
             candidates.append(
                 {
                     "multimode": bool(mm),
                     "omega_scale_mult": float(os),
                     "omega_scale": kn["omega_scale"],
                     "dist": dist,
+                    # MaxOp dual: prefer sharper sheaf gaps on projection ties (4.1)
+                    "maxop_mean_gap": float(op.mean_gap),
+                    "maxop_mean_frustration": float(op.mean_frustration),
                     "pack": pack,
                 }
             )
-    best = min(candidates, key=lambda c: c["dist"])
+    # Primary: projection distance (operational geometry). Secondary: MaxOp gap.
+    best = min(
+        candidates,
+        key=lambda c: (c["dist"], -c["maxop_mean_gap"]),
+    )
     diag = {
         "chosen": "multimode" if best["multimode"] else "planar",
         "omega_scale_mult": best["omega_scale_mult"],
         "dist": best["dist"],
+        "maxop_mean_gap": best["maxop_mean_gap"],
+        "maxop_mean_frustration": best["maxop_mean_frustration"],
+        "selection": "min_proj_then_max_maxop_gap",
+        "ontology": "projection_primary_maxop_tiebreak_not_lambda_eq_gamma",
         "bank": [
             {
                 "multimode": c["multimode"],
                 "omega_scale_mult": c["omega_scale_mult"],
                 "dist": c["dist"],
+                "maxop_mean_gap": c["maxop_mean_gap"],
             }
             for c in candidates
         ],

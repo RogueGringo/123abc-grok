@@ -68,7 +68,7 @@
     "batch_n_seeds": 3,
     "batch_n_decoys": 40,
     "path": "geometry_off_zeta_external_cyclic_ranking",
-    "method": "CRIT_KABSCH_SOFTMIN T=0.04 + adaptive sectors + self_fit_dense mold bank + multi-seed",
+    "method": "projection-primary Crit mold (self_fit_dense) + MaxOp dual diagnostic",
     "dual": "realm/validate/dual.py + dual_probe.py (substrate\u2192L vs projection)",
     "axiomz": "01-DEVELOPMENT-AXiomZ + realm/axiomz.py CTS + stage_ledger.py",
     "commit_policy": {
@@ -91,7 +91,11 @@
     "sectors_mode": "adaptive_cap6",
     "batch_n_ids": 12,
     "multimode_mode": "self_fit_dense",
-    "note_4M6E": "altloc fix: 10 CA not 11 (was double-counting LEU A/B)"
+    "note_4M6E": "altloc fix: 10 CA not 11 (was double-counting LEU A/B)",
+    "ontology": "substrate_projection_operator_dual",
+    "zeta_role": "substrate_seed_field_not_physical_eigenvalues",
+    "external_goal": "cyclic_native_vs_decoy_enrichment_under_crit_projection",
+    "ontology_note": "\u03b6=substrate seed only; operational goal=Crit\u2192geometry projection (+ MaxOp L dual). Never \u03bb=\u03b3."
   },
   "ranking_hparams": {
     "aggregate": "softmin",

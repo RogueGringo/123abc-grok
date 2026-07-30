@@ -2,11 +2,12 @@
   "framework": "Jones Axiomatic Framework v2.0 / AXiomZ",
   "date_indexed": "2026-07-29",
   "project": "123abc-grok zeta-kinematic dual path",
-  "selection_note": "G1: we select substrate=ζ-field, operator=sheaf-L, projection=Crit-geometry — not λ=γ",
+  "selection_note": "G1: ζ is substrate seed only; operational goal=Crit→geometry projection; MaxOp L is dual — never λ=γ",
+  "operational_goal": "native_vs_decoy enrichment under substrate-derived Crit molds (projection)",
   "retracted": {
     "claim": "ζ preference via legacy residual R under frozen knobs",
     "axioms_violated_if_claimed": ["6.1", "12.2", "12.3", "G1"],
-    "reason": "instrument measured Crit seating (degenerate), not substrate discrimination"
+    "reason": "ζ is substrate not target; seating residual was degenerate lock=key instrument"
   },
   "activations": [
     {

@@ -10170,7 +10170,7 @@
         "G2": "S_\u039b(\u03b8) is the value-warped potential on holonomy",
         "G3": "Hyperparam geodesic on ranking geometry; holdout/full-batch guards",
         "1.1": "Seed ordinates as discrete condition:states of the field",
-        "2.4": "Projected Crit geometry M_v; sectors 4/6; self_fit_omega bank (multimode x omega_scale)",
+        "2.4": "Projected Crit geometry M_v; sectors 4/6; self_fit_dense bank (multimode x denser omega)",
         "4.1": "H0 / holonomy frustration as discrete topological invariants of L",
         "4.2": "Filtration of S(\u03b8) on S1 reveals multi-scale Crit structure",
         "4.3": "Long-lived Crit wells + multi-seed ranking stability = signal",
@@ -10298,10 +10298,13 @@
   "n_fail": 0,
   "commit_policy": {
     "zeta_preference": false,
-    "reason_blocked": "RETRACTED \u2014 use equal-budget + holdout + non-degenerate residual",
+    "reason_blocked": "RETRACTED \u2014 \u03b6 is substrate seed only, not preference claim (see realm/ontology.py)",
+    "geometry_projection_ranking": true,
     "geometry_ranking_external": true,
+    "maxop_dual_diagnostic": true,
     "dual_instrument_ready": true,
-    "cts_resolved": true
+    "cts_resolved": true,
+    "ontology": "substrate_projection_operator_dual"
   },
   "ontology": "axiomz_stage_ledger_not_lambda_eq_gamma"
 }

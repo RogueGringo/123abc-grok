@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Batch cyclic PDB native-vs-decoy ranking on the sealed geometric path.
+"""Batch cyclic PDB native-vs-decoy ranking on the geometric projection path.
 
-Stays structure-only. Does not ingest HF language benchmarks (~400 protein
-repos). Curated cyclic IDs + RCSB; N matched to CA count.
+Ontology: ζ is the *substrate* seed for Crit molds — not the physical target.
+Operational goal = native-vs-decoy enrichment under Crit→geometry projection
+(with MaxOp L dual diagnostics). Never λ=γ. AXiomZ: G1/G2/G3, 2.4, 6.2, 12.3.
 """
 
 from __future__ import annotations
@@ -154,8 +155,19 @@ def rank_one(
         )
     a = float(np.clip(alpha_proj, 0.0, 1.0))
     sc_kw = dict(alpha_proj=a, soft_T=soft_T, aggregate=aggregate)
+    # Ranking is pure projection by default (α=1). MaxOp dual is diagnostic.
     native = dual_score_geometry(xyz, pack, **sc_kw)
     native_dist = float(native["mean_dist"])
+    op = pack.get("operator")
+    op_diag = op.to_dict() if op is not None else None
+    # MaxOp dual fingerprint at Crit (operator layer; not ranking score)
+    dual_diag = {
+        "maxop_mean_gap": float(op.mean_gap) if op else None,
+        "maxop_gap_cv": float(op.gap_cv) if op else None,
+        "maxop_mean_frustration": float(op.mean_frustration) if op else None,
+        "projection_dist": native_dist,
+        "ontology": "projection_primary_maxop_dual_diagnostic",
+    }
     n_seeds = max(1, int(n_seeds))
     seed_metrics = []
     last_ranked = []
@@ -219,7 +231,8 @@ def rank_one(
             "override" if multimode is not None else multimode_mode
         ),
         "multimode_fit": fit_diag,
-        "operator": pack["operator"].to_dict() if a < 1.0 else None,
+        "maxop_dual": dual_diag,
+        "operator": pack["operator"].to_dict() if a < 1.0 else op_diag,
     }
 
 
@@ -405,11 +418,11 @@ def main(argv=None) -> int:
             "multimode_mode": args.multimode_mode,
         },
         "knobs": knobs,
-        "ontology": "projection_geometry_dual_ready_not_lambda_eq_gamma",
+        "ontology": "substrate_crit_projection_maxop_dual_not_lambda_eq_gamma",
         "note": (
-            "Curated cyclic PDB IDs only. Substrate→Crit projection ranking "
-            "(softmin Kabsch; adaptive sectors; multimode adaptive_short). "
-            "ζ residual preference remains RETRACTED. Multi-seed stability."
+            "ζ=substrate seed only. Ranking = Crit→geometry projection "
+            "(softmin Kabsch + self_fit mold bank). MaxOp L = dual diagnostic. "
+            "Never λ=γ. Multi-seed stability; full-batch continuity (AXiomZ 6.2)."
         ),
     }
     write_json(args.json, payload)
