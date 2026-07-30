@@ -22,6 +22,7 @@ from realm.handoff.decorate import select_adapter
 from realm.handoff.generate import (
     generate_coutsias_ensemble,
     generate_crit_ensemble,
+    generate_structure_ensemble,
     merge_and_rank,
 )
 from realm.handoff.physics import get_physics_adapter
@@ -58,6 +59,18 @@ def main(argv=None) -> int:
         default="geometry",
         choices=("geometry", "none"),
     )
+    p.add_argument(
+        "--mode",
+        choices=("proposal", "structure"),
+        default="proposal",
+        help="proposal: Crit×omega bank; structure: native CA self_fit pack",
+    )
+    p.add_argument(
+        "--pdb",
+        type=str,
+        default=None,
+        help="PDB id for --mode structure (uses data/pdb cache / RCSB)",
+    )
     p.add_argument("-v", action="store_true")
     args = p.parse_args(argv)
 
@@ -71,24 +84,45 @@ def main(argv=None) -> int:
         knobs = knobs["best_knobs"]
 
     sources = {s.strip().lower() for s in args.sources.split(",") if s.strip()}
-    molds = []
-    if "crit" in sources:
-        logger.info("generating Crit ensemble N=%d …", args.N)
-        molds.extend(
-            generate_crit_ensemble(knobs, N=int(args.N), n_zeros=int(args.k))
+    if args.mode == "structure":
+        if not args.pdb:
+            logger.error("--mode structure requires --pdb")
+            return 2
+        logger.info(
+            "structure mode pdb=%s sources=%s top_k=%d …",
+            args.pdb,
+            sorted(sources),
+            int(args.top_k),
         )
-    if "coutsias" in sources:
-        logger.info("generating Coutsias ensemble N=%d …", args.N)
-        molds.extend(
-            generate_coutsias_ensemble(
-                N=int(args.N), n_starts=int(args.coutsias_starts)
+        ranked = generate_structure_ensemble(
+            args.pdb,
+            knobs,
+            n_zeros=int(args.k),
+            top_k=int(args.top_k),
+            include_coutsias=("coutsias" in sources),
+        )
+    else:
+        molds = []
+        if "crit" in sources:
+            logger.info("generating Crit ensemble N=%d …", args.N)
+            molds.extend(
+                generate_crit_ensemble(knobs, N=int(args.N), n_zeros=int(args.k))
             )
-        )
-    if not molds:
+        if "coutsias" in sources:
+            logger.info("generating Coutsias ensemble N=%d …", args.N)
+            molds.extend(
+                generate_coutsias_ensemble(
+                    N=int(args.N), n_starts=int(args.coutsias_starts)
+                )
+            )
+        if not molds:
+            logger.error("no molds generated")
+            return 1
+        ranked = merge_and_rank(molds, top_k=int(args.top_k))
+
+    if not ranked:
         logger.error("no molds generated")
         return 1
-
-    ranked = merge_and_rank(molds, top_k=int(args.top_k))
     out = Path(args.out_dir)
     molds_dir = out / "molds"
     molds_dir.mkdir(parents=True, exist_ok=True)
@@ -145,9 +179,12 @@ def main(argv=None) -> int:
             None if phys is None else phys.status,
         )
 
+    n_export = int(ranked[0].N) if ranked else int(args.N)
     payload = {
         "n_molds": len(index_molds),
-        "N": int(args.N),
+        "N": n_export if args.mode == "structure" else int(args.N),
+        "mode": args.mode,
+        "pdb": args.pdb,
         "sources": sorted(sources),
         "top_k": int(args.top_k),
         "molds": index_molds,
