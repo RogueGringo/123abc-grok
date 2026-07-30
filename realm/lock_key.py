@@ -382,6 +382,9 @@ class Keymaker:
     n_sectors: int = 6
 
     def forge(self, **knobs) -> DerivationResult:
+        gammas = knobs.get("gammas")
+        if gammas is not None:
+            gammas = np.asarray(gammas, dtype=float).ravel()
         return Deriver(
             N=self.N,
             d=self.d,
@@ -395,6 +398,7 @@ class Keymaker:
             w1_mult=float(knobs.get("w1_mult", 1.0)),
             w2_mult=float(knobs.get("w2_mult", 1.0)),
             w3_mult=float(knobs.get("w3_mult", 1.0)),
+            gammas=gammas,
         ).run()
 
 

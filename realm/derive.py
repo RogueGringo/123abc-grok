@@ -311,12 +311,16 @@ class Deriver:
     w1_mult: float = 1.0
     w2_mult: float = 1.0
     w3_mult: float = 1.0
+    gammas: np.ndarray | None = None  # optional seed inject (null battery)
 
     def run(self) -> DerivationResult:
         steps: list[DerivationStep] = []
 
         # D0
-        field = ZetaField.first(self.n_zeros)
+        if self.gammas is not None:
+            field = ZetaField.from_gammas(self.gammas)
+        else:
+            field = ZetaField.first(self.n_zeros)
         steps.append(
             DerivationStep(
                 "D0",

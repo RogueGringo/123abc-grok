@@ -12,3 +12,7 @@ __pycache__/
 !lock_meet.png
 !projection.png
 !evolve.png
+
+data/pdb/
+data/hf/
+

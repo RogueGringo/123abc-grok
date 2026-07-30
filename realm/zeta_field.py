@@ -47,6 +47,15 @@ class ZetaField:
         g = ZETA_ZEROS_IMAG[: max(k, 2)].copy()
         return cls(gammas=g, gaps=np.diff(g))
 
+    @classmethod
+    def from_gammas(cls, gammas: np.ndarray) -> "ZetaField":
+        """Build field from arbitrary positive ordinates (null seeds / inject)."""
+        g = np.asarray(gammas, dtype=float).ravel()
+        g = np.sort(g[g > 0])
+        if g.size < 2:
+            raise ValueError("need at least 2 positive ordinates")
+        return cls(gammas=g, gaps=np.diff(g))
+
     def normalized_modes(self) -> np.ndarray:
         """Map γ_n → (0, 2π] phase modes (geometry-ready, not 'actual zeros')."""
         g = self.gammas
