@@ -10168,7 +10168,7 @@
       "axiom_roles": {
         "G1": "Choose observable ontology: \u03b6 as substrate, not eigenvalue target",
         "G2": "S_\u039b(\u03b8) is the value-warped potential on holonomy",
-        "G3": "Crit(S) = geodesic/Morse loci of preferred monodromies",
+        "G3": "Hyperparam geodesic on ranking geometry; holdout/full-batch guards",
         "1.1": "Seed ordinates as discrete condition:states of the field",
         "2.4": "Projected Crit multimode geometry = operational geometry M_v",
         "4.1": "H0 / holonomy frustration as discrete topological invariants of L",
@@ -10197,7 +10197,9 @@
       "top20_count": 3,
       "n_seeds": 3,
       "n_decoys": 40,
-      "alpha_proj": 1.0
+      "alpha_proj": 1.0,
+      "soft_T": 0.08,
+      "aggregate": "softmin"
     },
     "transfer_holdout_preference": false,
     "null_claim": "RETRACTED",

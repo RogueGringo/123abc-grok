@@ -178,16 +178,20 @@ def dual_score_geometry(
     *,
     alpha_proj: float = 0.85,
     prefer_maxop: bool = True,
+    soft_T: float = 0.08,
+    aggregate: str = "softmin",
 ) -> dict[str, Any]:
     """Joint score: α·projection + (1-α)·operator distance (lower better).
 
-    Projection = CRIT_KABSCH_TOPK. Operator = NN distance in L-feature space
-    at θ_geom vs Crit ensemble. α=1 recovers pure projection ranking.
+    Projection = Crit Kabsch ensemble (softmin / blend). Operator = NN
+    distance in L-feature space at θ_geom vs Crit. α=1 pure projection.
     """
     templates = pack["templates"]
     crit_fp: OperatorFingerprint = pack["operator"]
     N = int(pack["N"])
-    proj = score_geometry_vs_crit(xyz, templates)
+    proj = score_geometry_vs_crit(
+        xyz, templates, soft_T=soft_T, aggregate=aggregate
+    )
     a = float(np.clip(alpha_proj, 0.0, 1.0))
     # skip expensive L eval when pure projection ranking
     if a >= 1.0 - 1e-12:
@@ -203,6 +207,8 @@ def dual_score_geometry(
             "n_templates": proj.get("n_templates"),
             "top_k": proj.get("top_k"),
             "min_dist": proj.get("min_dist"),
+            "soft_T": proj.get("soft_T"),
+            "aggregate": proj.get("aggregate"),
         }
     op = operator_distance_to_crit(
         xyz, crit_fp, N=N, prefer_maxop=prefer_maxop
@@ -222,4 +228,6 @@ def dual_score_geometry(
         "n_templates": proj.get("n_templates"),
         "top_k": proj.get("top_k"),
         "min_dist": proj.get("min_dist"),
+        "soft_T": proj.get("soft_T"),
+        "aggregate": proj.get("aggregate"),
     }

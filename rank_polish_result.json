@@ -1,0 +1,274 @@
+{
+  "best": {
+    "aggregate": "softmin_min",
+    "soft_T": 0.04,
+    "probe_enrichment": 0.8500000000000001,
+    "holdout_enrichment": 0.7214285714285714
+  },
+  "baseline": {
+    "aggregate": "softmin",
+    "soft_T": 0.08,
+    "probe_enrichment": 0.825,
+    "holdout_enrichment": 0.675
+  },
+  "accept_for_defaults": true,
+  "history": [
+    {
+      "aggregate": "softmin",
+      "soft_T": 0.04,
+      "probe_enrichment": 0.8,
+      "n_ok": 4
+    },
+    {
+      "aggregate": "softmin",
+      "soft_T": 0.06,
+      "probe_enrichment": 0.83125,
+      "n_ok": 4
+    },
+    {
+      "aggregate": "softmin",
+      "soft_T": 0.08,
+      "probe_enrichment": 0.7749999999999999,
+      "n_ok": 4
+    },
+    {
+      "aggregate": "softmin",
+      "soft_T": 0.1,
+      "probe_enrichment": 0.78125,
+      "n_ok": 4
+    },
+    {
+      "aggregate": "softmin",
+      "soft_T": 0.14,
+      "probe_enrichment": 0.80625,
+      "n_ok": 4
+    },
+    {
+      "aggregate": "softmin",
+      "soft_T": 0.2,
+      "probe_enrichment": 0.8187500000000001,
+      "n_ok": 4
+    },
+    {
+      "aggregate": "softmin_min",
+      "soft_T": 0.04,
+      "probe_enrichment": 0.8500000000000001,
+      "n_ok": 4
+    },
+    {
+      "aggregate": "softmin_min",
+      "soft_T": 0.06,
+      "probe_enrichment": 0.76875,
+      "n_ok": 4
+    },
+    {
+      "aggregate": "softmin_min",
+      "soft_T": 0.08,
+      "probe_enrichment": 0.8062499999999999,
+      "n_ok": 4
+    },
+    {
+      "aggregate": "softmin_min",
+      "soft_T": 0.1,
+      "probe_enrichment": 0.84375,
+      "n_ok": 4
+    },
+    {
+      "aggregate": "softmin_min",
+      "soft_T": 0.14,
+      "probe_enrichment": 0.7875,
+      "n_ok": 4
+    },
+    {
+      "aggregate": "softmin_min",
+      "soft_T": 0.2,
+      "probe_enrichment": 0.79375,
+      "n_ok": 4
+    },
+    {
+      "aggregate": "topk",
+      "soft_T": 0.08,
+      "probe_enrichment": 0.7875,
+      "n_ok": 4
+    }
+  ],
+  "holdout_rows": [
+    {
+      "pdb": "1IKF",
+      "status": "OK",
+      "n_ca": 11,
+      "chain": "C",
+      "N_scaffold": 11,
+      "native_dist": 0.3488018385171659,
+      "native_proj": 0.3488018385171659,
+      "native_op": 0.0,
+      "native_rank": 4.5,
+      "n_total": 21,
+      "enrichment": 0.825,
+      "enrichment_std": 0.024999999999999967,
+      "top20": true,
+      "method": "CRIT_KABSCH_SOFTMIN_MIN",
+      "n_templates": 6,
+      "n_seeds": 2,
+      "alpha_proj": 1.0,
+      "soft_T": 0.04,
+      "aggregate": "softmin_min",
+      "operator": null
+    },
+    {
+      "pdb": "1JBL",
+      "status": "OK",
+      "n_ca": 14,
+      "chain": "A",
+      "N_scaffold": 14,
+      "native_dist": 0.5362760761441295,
+      "native_proj": 0.5362760761441295,
+      "native_op": 0.0,
+      "native_rank": 9.0,
+      "n_total": 21,
+      "enrichment": 0.6,
+      "enrichment_std": 0.09999999999999998,
+      "top20": false,
+      "method": "CRIT_KABSCH_SOFTMIN_MIN",
+      "n_templates": 6,
+      "n_seeds": 2,
+      "alpha_proj": 1.0,
+      "soft_T": 0.04,
+      "aggregate": "softmin_min",
+      "operator": null
+    },
+    {
+      "pdb": "4K8Y",
+      "status": "OK",
+      "n_ca": 13,
+      "chain": "B",
+      "N_scaffold": 13,
+      "native_dist": 0.5098494485516112,
+      "native_proj": 0.5098494485516112,
+      "native_op": 0.0,
+      "native_rank": 7.0,
+      "n_total": 21,
+      "enrichment": 0.7,
+      "enrichment_std": 0.10000000000000003,
+      "top20": false,
+      "method": "CRIT_KABSCH_SOFTMIN_MIN",
+      "n_templates": 6,
+      "n_seeds": 2,
+      "alpha_proj": 1.0,
+      "soft_T": 0.04,
+      "aggregate": "softmin_min",
+      "operator": null
+    },
+    {
+      "pdb": "5EOC",
+      "status": "OK",
+      "n_ca": 13,
+      "chain": "P",
+      "N_scaffold": 13,
+      "native_dist": 0.5196114735619278,
+      "native_proj": 0.5196114735619278,
+      "native_op": 0.0,
+      "native_rank": 3.5,
+      "n_total": 21,
+      "enrichment": 0.875,
+      "enrichment_std": 0.025000000000000022,
+      "top20": true,
+      "method": "CRIT_KABSCH_SOFTMIN_MIN",
+      "n_templates": 6,
+      "n_seeds": 2,
+      "alpha_proj": 1.0,
+      "soft_T": 0.04,
+      "aggregate": "softmin_min",
+      "operator": null
+    },
+    {
+      "pdb": "3AVB",
+      "status": "OK",
+      "n_ca": 8,
+      "chain": "Y",
+      "N_scaffold": 8,
+      "native_dist": 0.4950662150289826,
+      "native_proj": 0.4950662150289826,
+      "native_op": 0.0,
+      "native_rank": 7.5,
+      "n_total": 21,
+      "enrichment": 0.675,
+      "enrichment_std": 0.024999999999999967,
+      "top20": false,
+      "method": "CRIT_KABSCH_SOFTMIN_MIN",
+      "n_templates": 6,
+      "n_seeds": 2,
+      "alpha_proj": 1.0,
+      "soft_T": 0.04,
+      "aggregate": "softmin_min",
+      "operator": null
+    },
+    {
+      "pdb": "5LSO",
+      "status": "OK",
+      "n_ca": 6,
+      "chain": "C",
+      "N_scaffold": 7,
+      "native_dist": 0.4687820307251489,
+      "native_proj": 0.4687820307251489,
+      "native_op": 0.0,
+      "native_rank": 5.0,
+      "n_total": 21,
+      "enrichment": 0.8,
+      "enrichment_std": 0.04999999999999999,
+      "top20": true,
+      "method": "CRIT_KABSCH_SOFTMIN_MIN",
+      "n_templates": 6,
+      "n_seeds": 2,
+      "alpha_proj": 1.0,
+      "soft_T": 0.04,
+      "aggregate": "softmin_min",
+      "operator": null
+    },
+    {
+      "pdb": "1TET",
+      "status": "OK",
+      "n_ca": 12,
+      "chain": "P",
+      "N_scaffold": 12,
+      "native_dist": 0.5929396443019523,
+      "native_proj": 0.5929396443019523,
+      "native_op": 0.0,
+      "native_rank": 9.5,
+      "n_total": 21,
+      "enrichment": 0.575,
+      "enrichment_std": 0.024999999999999967,
+      "top20": false,
+      "method": "CRIT_KABSCH_SOFTMIN_MIN",
+      "n_templates": 6,
+      "n_seeds": 2,
+      "alpha_proj": 1.0,
+      "soft_T": 0.04,
+      "aggregate": "softmin_min",
+      "operator": null
+    }
+  ],
+  "probe_ids": [
+    "1CSA",
+    "2X2C",
+    "4M6E",
+    "3WNE"
+  ],
+  "holdout_ids": [
+    "1IKF",
+    "1JBL",
+    "4K8Y",
+    "5EOC",
+    "3AVB",
+    "5LSO",
+    "1TET"
+  ],
+  "axioms": [
+    "G3",
+    "5.2",
+    "6.2",
+    "12.3",
+    "19.3"
+  ],
+  "ontology": "rank_hyperparam_polish_not_lambda_eq_gamma"
+}

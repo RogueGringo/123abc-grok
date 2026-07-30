@@ -58,6 +58,8 @@ def rank_one(
     rng: np.random.Generator,
     n_seeds: int = 1,
     alpha_proj: float = 1.0,
+    soft_T: float = 0.08,
+    aggregate: str = "softmin",
 ) -> dict:
     """Native-vs-decoy rank. alpha_proj=1 pure Crit projection; <1 dual L blend."""
     path = fetch_pdb(pdb_id)
@@ -78,7 +80,8 @@ def rank_one(
         knobs, N=N, n_zeros=n_zeros, n_sectors=n_sectors
     )
     a = float(np.clip(alpha_proj, 0.0, 1.0))
-    native = dual_score_geometry(xyz, pack, alpha_proj=a)
+    sc_kw = dict(alpha_proj=a, soft_T=soft_T, aggregate=aggregate)
+    native = dual_score_geometry(xyz, pack, **sc_kw)
     native_dist = float(native["mean_dist"])
     n_seeds = max(1, int(n_seeds))
     seed_metrics = []
@@ -91,7 +94,7 @@ def rank_one(
         decoys += make_ca_decoys(xyz, n_hard, sub, noise=noise * 1.8)
         rows = [{"label": "native", "mean_dist": native_dist}]
         for i, d in enumerate(decoys):
-            sc = dual_score_geometry(d, pack, alpha_proj=a)
+            sc = dual_score_geometry(d, pack, **sc_kw)
             sc["label"] = f"decoy_{i}"
             rows.append(sc)
         ranked = sorted(rows, key=lambda r: r["mean_dist"])
@@ -134,6 +137,8 @@ def rank_one(
         "n_templates": pack["n_sectors"],
         "n_seeds": n_seeds,
         "alpha_proj": a,
+        "soft_T": soft_T,
+        "aggregate": aggregate,
         "operator": pack["operator"].to_dict() if a < 1.0 else None,
     }
 
@@ -158,6 +163,19 @@ def main(argv=None) -> int:
         default=1.0,
         help="1.0=pure Crit projection; <1 blends operator L distance (dual)",
     )
+    p.add_argument(
+        "--soft-T",
+        type=float,
+        default=0.08,
+        help="softmin temperature for Crit ensemble Kabsch",
+    )
+    p.add_argument(
+        "--aggregate",
+        type=str,
+        default="softmin",
+        choices=("softmin", "topk", "min", "softmin_min"),
+        help="Crit template aggregation (softmin_min = geom mean soft×min)",
+    )
     p.add_argument("--null-json", type=Path, default=Path("null_battery_result.json"))
     p.add_argument("--force", action="store_true")
     p.add_argument("--json", type=Path, default=Path("pdb_batch_result.json"))
@@ -176,6 +194,25 @@ def main(argv=None) -> int:
             return 2
 
     knobs = load_knobs(args.knobs)
+    # Prefer ranking_hparams from evolve stage when CLI left at defaults
+    rh = {}
+    try:
+        import json as _json
+
+        raw = _json.loads(Path(args.knobs).read_text(encoding="utf-8"))
+        rh = raw.get("ranking_hparams") or (raw.get("stage") or {}).get(
+            "ranking_hparams"
+        ) or {}
+    except Exception:  # noqa: BLE001
+        rh = {}
+    if rh.get("accepted") and args.soft_T == 0.08 and args.aggregate == "softmin":
+        args.soft_T = float(rh.get("soft_T", args.soft_T))
+        args.aggregate = str(rh.get("aggregate", args.aggregate))
+        logger.info(
+            "using evolve ranking_hparams soft_T=%.3f aggregate=%s",
+            args.soft_T,
+            args.aggregate,
+        )
     ids = [x.strip().upper() for x in args.ids.split(",") if x.strip()]
     rng = np.random.default_rng(11)
     rows = []
@@ -191,6 +228,8 @@ def main(argv=None) -> int:
                 rng,
                 n_seeds=args.n_seeds,
                 alpha_proj=args.alpha_proj,
+                soft_T=args.soft_T,
+                aggregate=args.aggregate,
             )
         except PdbIOError as exc:
             row = {"pdb": pid, "status": "IO_FAIL", "error": str(exc)}
@@ -244,12 +283,14 @@ def main(argv=None) -> int:
             "n_seeds": args.n_seeds,
             "n_decoys": args.n_decoys,
             "alpha_proj": args.alpha_proj,
+            "soft_T": args.soft_T,
+            "aggregate": args.aggregate,
         },
         "knobs": knobs,
         "ontology": "projection_geometry_dual_ready_not_lambda_eq_gamma",
         "note": (
             "Curated cyclic PDB IDs only. Substrate→Crit projection ranking "
-            "(softmin Kabsch). alpha_proj<1 enables L-operator dual blend. "
+            "(softmin / softmin_min Kabsch). alpha_proj<1 enables L dual. "
             "ζ residual preference remains RETRACTED. Multi-seed stability."
         ),
     }

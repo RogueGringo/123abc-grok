@@ -120,6 +120,20 @@
       "code": ["realm/validate/dual.py", "pdb_batch.py"],
       "status": "partial",
       "role": "Operator L vs projection dual; full consistency still research"
+    },
+    {
+      "axiom_id": "19.3",
+      "name": "geodesic_search",
+      "code": ["rank_polish.py", "pdb_batch.py"],
+      "status": "active",
+      "role": "Probe geodesic on soft_T/aggregate; full-batch continuity before commit"
+    },
+    {
+      "axiom_id": "G3",
+      "name": "path_of_least_resistance_ranking",
+      "code": ["rank_polish.py"],
+      "status": "active",
+      "role": "Hyperparam geodesic on ranking geometry; holdout/full-batch guards"
     }
   ],
   "cts_binding": {

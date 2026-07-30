@@ -56,7 +56,7 @@
   "stage": {
     "internal_seal": "EVOLVED_SEAL",
     "R_legacy_seating": 0.004488356551514631,
-    "R_note": "legacy R is Crit seating self-consistency; not ζ evidence (RETRACTED 2026-07-29)",
+    "R_note": "legacy R is Crit seating self-consistency; not \u03b6 evidence (RETRACTED 2026-07-29)",
     "null_battery_zeta_preference": "RETRACTED",
     "residual_fitness": "informative_density_return",
     "probe_enrichment": 0.8083333333333333,
@@ -68,13 +68,28 @@
     "batch_n_seeds": 3,
     "batch_n_decoys": 40,
     "path": "geometry_off_zeta_external_cyclic_ranking",
-    "method": "CRIT_KABSCH_SOFTMIN + multi-seed; dual L×proj instrument ready",
-    "dual": "realm/validate/dual.py + dual_probe.py (substrate→L vs projection)",
+    "method": "CRIT_KABSCH_SOFTMIN T=0.08 + multi-seed; rank_polish geodesic available",
+    "dual": "realm/validate/dual.py + dual_probe.py (substrate\u2192L vs projection)",
     "axiomz": "01-DEVELOPMENT-AXiomZ + realm/axiomz.py CTS + stage_ledger.py",
     "commit_policy": {
       "zeta_preference": false,
       "geometry_ranking_external": true
     },
-    "instrument": "see docs/RETRACTION_residual_instrument.md"
+    "instrument": "see docs/RETRACTION_residual_instrument.md",
+    "ranking_hparams": {
+      "aggregate": "softmin",
+      "soft_T": 0.08,
+      "accepted": true,
+      "confirmed_full_batch": true,
+      "note": "softmin_min T=0.04 won probe polish but regressed full 40x3 batch 76.7->74.1; baseline retained"
+    },
+    "rank_polish": "softmin_min T=0.04 probe-win rejected by full-batch continuity (76.7->74.1)"
+  },
+  "ranking_hparams": {
+    "aggregate": "softmin",
+    "soft_T": 0.08,
+    "accepted": true,
+    "confirmed_full_batch": true,
+    "note": "softmin_min T=0.04 won probe polish but regressed full 40x3 batch 76.7->74.1; baseline retained"
   }
 }

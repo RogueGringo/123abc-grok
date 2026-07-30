@@ -171,6 +171,10 @@ def score_geometry_vs_crit(
     )
     dmin = float(np.min(dists))
     mode = str(aggregate or "softmin").lower().strip()
+    T = max(float(soft_T), 1e-12)
+    m = dmin
+    w = np.exp(-(dists - m) / T)
+    soft = float(np.sum(w * dists) / (np.sum(w) + 1e-15))
     if mode == "min":
         dmean = dmin
         method = "CRIT_KABSCH_MIN"
@@ -180,12 +184,13 @@ def score_geometry_vs_crit(
         k = max(1, min(int(top_k), order.size))
         dmean = float(np.mean(order[:k]))
         method = "CRIT_KABSCH_TOPK"
+    elif mode in ("softmin_min", "blend", "soft_min"):
+        # geometric mean of softmin and hard min — dual-scale Crit match
+        dmean = float(np.sqrt(max(soft, 1e-15) * max(dmin, 1e-15)))
+        method = "CRIT_KABSCH_SOFTMIN_MIN"
+        k = int(dists.size)
     else:
-        # softmin over full Crit ensemble
-        T = max(float(soft_T), 1e-12)
-        m = dmin
-        w = np.exp(-(dists - m) / T)
-        dmean = float(np.sum(w * dists) / (np.sum(w) + 1e-15))
+        dmean = soft
         method = "CRIT_KABSCH_SOFTMIN"
         k = int(dists.size)
     return {
@@ -196,5 +201,5 @@ def score_geometry_vs_crit(
         "n_templates": len(sector_points),
         "top_k": k,
         "aggregate": mode,
-        "soft_T": float(soft_T) if mode == "softmin" else None,
+        "soft_T": float(soft_T) if mode not in ("min", "topk", "top_k", "top-k") else None,
     }
