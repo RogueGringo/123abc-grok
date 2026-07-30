@@ -191,12 +191,14 @@ def defect_report_for_twist(
     d: int = 2,
     prefer_maxop: bool = True,
     chord_weight: float | None = None,
+    residue_weights: np.ndarray | list[float] | None = None,
 ) -> dict[str, Any]:
     """Local-to-global defect inventory for CA ring under holonomy θ.
 
     Score combines MaxOp Dirichlet energy with multi-residue chord strain
     (simplicial filtration hops 2–3) on mid-length backbones. Short rings
     keep pure edge Dirichlet to preserve the confirmed ranking baseline.
+    Optional residue_weights reweight edge residuals (sequence-aware sheaf track).
     """
     n = int(np.asarray(xyz).shape[0])
     fun = CohesiveHomotopyFunctor(N=n, d=d)
@@ -205,6 +207,17 @@ def defect_report_for_twist(
     E, residuals, meta = dirichlet_energy(sec, A, prefer_maxop=prefer_maxop)
     multi = meta.get("multi_scale") or multi_scale_obstruction(sec, A)
     cw = adaptive_chord_weight(n, override=chord_weight)
+    seq_weighted = False
+    if residue_weights is not None:
+        try:
+            from realm.sequence_features import apply_residue_weights_to_edge_residuals
+
+            residuals = apply_residue_weights_to_edge_residuals(residuals, residue_weights)
+            seq_weighted = True
+            # re-scale Dirichlet proxy from weighted residual energy
+            E = float(np.sum(np.asarray(residuals, dtype=float) ** 2))
+        except Exception:  # noqa: BLE001
+            seq_weighted = False
     strain = float(multi.get("combined_strain", float(np.mean(residuals))))
     E_aug = float(E) + cw * float(n) * (strain**2)
     return {
@@ -220,6 +233,7 @@ def defect_report_for_twist(
         "chord_weight": cw,
         "backend": meta.get("backend"),
         "operator_gap": meta.get("spectral_gap"),
+        "sequence_weighted": seq_weighted,
     }
 
 
@@ -232,6 +246,7 @@ def softmin_defect_vs_crit(
     prefer_maxop: bool = True,
     chord_weight: float | None = None,
     sector_weights: np.ndarray | list[float] | None = None,
+    residue_weights: np.ndarray | list[float] | None = None,
 ) -> dict[str, Any]:
     """Softmin multi-scale sheaf defect against Crit monodromies.
 
@@ -239,6 +254,7 @@ def softmin_defect_vs_crit(
     Projection-primary ranking may blend this with Kabsch; alone it is the
     local-to-global obstruction score (sheaf defect track / AQFT local strain).
     Optional sector_weights reweight Crit monodromies (CTS/MaxOp dual).
+    Optional residue_weights reweight edge residuals (sequence sheaf track).
     """
     th = np.asarray(thetas, dtype=float).ravel()
     if th.size == 0:
@@ -247,6 +263,7 @@ def softmin_defect_vs_crit(
     cw = adaptive_chord_weight(n, override=chord_weight)
     energies = []
     profiles = []
+    seq_any = False
     for t in th:
         rep = defect_report_for_twist(
             xyz,
@@ -254,9 +271,11 @@ def softmin_defect_vs_crit(
             d=d,
             prefer_maxop=prefer_maxop,
             chord_weight=cw,
+            residue_weights=residue_weights,
         )
         energies.append(rep["augmented_energy"])
         profiles.append(rep)
+        seq_any = seq_any or bool(rep.get("sequence_weighted"))
     e = np.asarray(energies, dtype=float)
     # energies can be large; softmin on sqrt energy for scale
     s = np.sqrt(np.clip(e, 0.0, None))
@@ -268,7 +287,12 @@ def softmin_defect_vs_crit(
         if sw.size == s.size and float(np.sum(sw)) > 0:
             w = w * np.clip(sw, 1e-6, None)
     soft = float(np.sum(w * s) / (np.sum(w) + 1e-15))
-    method = "SHEAF_DEFECT_MULTISCALE" if cw > 1e-12 else "SHEAF_DEFECT_SOFTMIN"
+    if seq_any:
+        method = "SHEAF_DEFECT_SEQUENCE"
+    elif cw > 1e-12:
+        method = "SHEAF_DEFECT_MULTISCALE"
+    else:
+        method = "SHEAF_DEFECT_SOFTMIN"
     return {
         "mean_dist": soft,
         "min_dist": m,
@@ -278,6 +302,7 @@ def softmin_defect_vs_crit(
         "profiles": profiles,
         "soft_T": T,
         "chord_weight": float(cw),
+        "sequence_weighted": bool(seq_any),
     }
 
 
