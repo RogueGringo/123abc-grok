@@ -59,6 +59,11 @@ def main(argv: list[str] | None = None) -> int:
         help="skip BioPython open checks",
     )
     p.add_argument(
+        "--require-biopython",
+        action="store_true",
+        help="quality gate fails unless BioPython opens PDBs",
+    )
+    p.add_argument(
         "--min-openable-pdbs",
         type=int,
         default=1,
@@ -119,6 +124,7 @@ def main(argv: list[str] | None = None) -> int:
         min_ok_fraction=0.0,
         min_openable_pdbs=int(args.min_openable_pdbs),
         require_verify_ok=True,
+        require_biopython=bool(args.require_biopython),
     )
     report["quality_gate"] = gate
     report["ok"] = bool(report.get("ok")) and bool(gate.get("ok"))

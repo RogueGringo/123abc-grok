@@ -49,6 +49,34 @@ def test_quality_gate_pass_and_fail():
     assert any("ok_fraction" in r for r in g_fail["reasons"])
 
 
+def test_quality_gate_require_biopython():
+    report = {
+        "ok": True,
+        "ontology_remarks": {"ok": True, "n_pdb": 2},
+        "biopython": {"ok": None, "skipped": True},
+    }
+    g = quality_gate(
+        {"n_ok": 1, "n_ids": 1},
+        report,
+        require_biopython=True,
+    )
+    assert g["ok"] is False
+    assert any("biopython_required" in r for r in g["reasons"])
+
+    report_bio = {
+        "ok": True,
+        "ontology_remarks": {"ok": True, "n_pdb": 2},
+        "biopython": {"ok": True, "n_ok": 2},
+    }
+    g2 = quality_gate(
+        {"n_ok": 1, "n_ids": 1},
+        report_bio,
+        require_biopython=True,
+    )
+    assert g2["ok"] is True
+    assert g2["biopython_ok"] is True
+
+
 def test_verify_archive_dir(tmp_path: Path):
     camp = tmp_path / "camp"
     camp.mkdir()

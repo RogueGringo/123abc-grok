@@ -206,8 +206,38 @@ def archive_partner_release(
     (dest / "ARCHIVE.json").write_text(
         json.dumps(meta, indent=2) + "\n", encoding="utf-8"
     )
-    logger.info("archived release → %s files=%d", dest, meta["n_files"])
+    latest = write_latest_pointer(meta, root)
+    meta["latest_pointer"] = str(latest.resolve())
+    logger.info("archived release → %s files=%d latest=%s", dest, meta["n_files"], latest)
     return meta
+
+
+def write_latest_pointer(
+    archive_meta: dict[str, Any],
+    archive_root: Path | str,
+) -> Path:
+    """Write LATEST.json (+ LATEST_<label>.json) under archive_root for ops."""
+    root = Path(archive_root)
+    root.mkdir(parents=True, exist_ok=True)
+    pointer = {
+        "archive_dir": archive_meta.get("archive_dir"),
+        "label": archive_meta.get("label"),
+        "created_utc": archive_meta.get("created_utc"),
+        "zip_sha256": archive_meta.get("zip_sha256"),
+        "quality_gate_ok": archive_meta.get("quality_gate_ok"),
+        "ids": archive_meta.get("ids"),
+        "n_files": archive_meta.get("n_files"),
+        "ontology": "handoff_latest_pointer_not_lambda_eq_gamma",
+        "verify_cli": "python handoff_verify.py --archive <archive_dir>",
+    }
+    dest = root / "LATEST.json"
+    dest.write_text(json.dumps(pointer, indent=2) + "\n", encoding="utf-8")
+    label = archive_meta.get("label") or "handoff"
+    safe = "".join(c if c.isalnum() or c in ("-", "_") else "-" for c in str(label))
+    labeled = root / f"LATEST_{safe}.json"
+    labeled.write_text(json.dumps(pointer, indent=2) + "\n", encoding="utf-8")
+    logger.info("LATEST pointer → %s (also %s)", dest, labeled.name)
+    return dest
 
 
 PARTNER_README = """# Geometric mold handoff package

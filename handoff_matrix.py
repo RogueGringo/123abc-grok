@@ -54,6 +54,11 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("-k", type=int, default=14)
     p.add_argument("--with-enrichment", action="store_true")
     p.add_argument("--no-biopython-check", action="store_true")
+    p.add_argument(
+        "--require-biopython",
+        action="store_true",
+        help="pass through: quality gate requires BioPython open",
+    )
     p.add_argument("--no-archive", action="store_true")
     p.add_argument(
         "--no-verify-archives",
@@ -112,6 +117,8 @@ def main(argv: list[str] | None = None) -> int:
             argv_c.append("--with-enrichment")
         if args.no_biopython_check:
             argv_c.append("--no-biopython-check")
+        if args.require_biopython:
+            argv_c.append("--require-biopython")
         if args.resume:
             argv_c.append("--resume")
         if args.dry_run:

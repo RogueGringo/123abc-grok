@@ -45,6 +45,11 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("-k", type=int, default=14)
     p.add_argument("--with-enrichment", action="store_true")
     p.add_argument("--no-biopython-check", action="store_true")
+    p.add_argument(
+        "--require-biopython",
+        action="store_true",
+        help="quality gate fails unless BioPython opens PDBs (commercial open metric)",
+    )
     p.add_argument("--no-package", action="store_true")
     p.add_argument("--no-verify", action="store_true")
     p.add_argument(
@@ -196,6 +201,7 @@ def main(argv: list[str] | None = None) -> int:
                 report,
                 min_ok_fraction=float(args.min_ok_fraction),
                 min_openable_pdbs=int(args.min_openable_pdbs),
+                require_biopython=bool(args.require_biopython),
             )
             campaign_fail = {
                 "ids": ids,
@@ -229,6 +235,7 @@ def main(argv: list[str] | None = None) -> int:
         min_ok_fraction=float(args.min_ok_fraction),
         min_openable_pdbs=int(args.min_openable_pdbs),
         require_verify_ok=not args.no_verify,
+        require_biopython=bool(args.require_biopython),
     )
     logger.info("quality_gate ok=%s reasons=%s", gate.get("ok"), gate.get("reasons"))
 

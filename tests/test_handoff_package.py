@@ -98,6 +98,15 @@ def test_archive_partner_release(tmp_path: Path):
     assert (dest / "ARCHIVE.json").is_file()
     assert meta["quality_gate_ok"] is True
     assert "not_lambda_eq_gamma" in meta["ontology"]
+    latest = tmp_path / "releases" / "LATEST.json"
+    assert latest.is_file()
+    ptr = latest.read_text(encoding="utf-8")
+    assert "archive_dir" in ptr
+    assert meta.get("latest_pointer")
+    # labeled pointer
+    assert (tmp_path / "releases" / "LATEST_probe-v1.json").is_file() or list(
+        (tmp_path / "releases").glob("LATEST_*.json")
+    )
 
 
 def test_build_partner_package(tmp_path: Path):

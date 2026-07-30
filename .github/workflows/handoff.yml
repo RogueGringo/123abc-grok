@@ -58,3 +58,39 @@ jobs:
           python -c "from realm.validate.length_policy import policy_for; p=policy_for(12,base_beta=0.20); assert abs(p.soft_T-0.036)<1e-12; assert p.seq_mix==0.0; print('dual-gate OK', p.soft_T)"
           python handoff_verify.py --pin-only
           python handoff_matrix.py --dry-run --tokens probe,holdout --out-root /tmp/handoff_matrix_dry
+      - name: BioPython open metric (1CSA commercial smoke)
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python - <<'PY'
+          import importlib.util
+          import json
+          import sys
+          from pathlib import Path
+
+          if importlib.util.find_spec("Bio") is None:
+              print("BioPython not installed; skip require-biopython smoke")
+              sys.exit(0)
+          from handoff_campaign import main
+          from realm.handoff.verify import verify_archive_dir
+
+          rc = main([
+              "--pdb-ids", "1CSA",
+              "--out-dir", "/tmp/handoff_bio",
+              "--package-dir", "/tmp/handoff_bio_pkg",
+              "--top-k", "1",
+              "--require-biopython",
+              "--release-label", "ci-bio",
+              "--archive",
+              "--archive-dir", "/tmp/handoff_releases",
+          ])
+          if rc != 0:
+              raise SystemExit(rc)
+          latest = Path("/tmp/handoff_releases/LATEST.json")
+          assert latest.is_file(), "LATEST.json missing"
+          ptr = json.loads(latest.read_text())
+          print("LATEST", ptr)
+          av = verify_archive_dir(ptr["archive_dir"])
+          print("archive_verify", av.get("ok"), av.get("n_checked"))
+          raise SystemExit(0 if av.get("ok") else 3)
+          PY

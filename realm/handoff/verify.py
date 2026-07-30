@@ -191,11 +191,15 @@ def quality_gate(
     min_ok_fraction: float = 1.0,
     min_openable_pdbs: int = 1,
     require_verify_ok: bool = True,
+    require_biopython: bool = False,
 ) -> dict[str, Any]:
     """Commercial release gate: pin + openable molds + export success rate.
 
     Does **not** re-rank or chase enrichment. Openable PDBs / manifest are the
     success metric; enrichment stamp is informational only.
+
+    require_biopython: when True, BioPython must open PDBs (ok is True).
+    Skipped/unavailable BioPython fails the gate in that mode.
     """
     reasons: list[str] = []
     pin = verify_dual_gate_pin()
@@ -223,6 +227,7 @@ def quality_gate(
 
     n_pdb = 0
     n_remark_ok = False
+    bio_status: Any = None
     if verify_report:
         if require_verify_ok and verify_report.get("ok") is not True:
             reasons.append("verify_report_not_ok")
@@ -234,8 +239,14 @@ def quality_gate(
         if not n_remark_ok and n_pdb > 0:
             reasons.append("ontology_remarks_incomplete")
         bio = verify_report.get("biopython") or {}
-        if bio.get("ok") is False:
+        bio_status = bio.get("ok")
+        if bio_status is False:
             reasons.append("biopython_open_failed")
+        elif require_biopython and bio_status is not True:
+            reasons.append(
+                f"biopython_required but status={bio_status!r} "
+                f"(install BioPython or drop --require-biopython)"
+            )
 
     ok = len(reasons) == 0
     return {
@@ -244,6 +255,8 @@ def quality_gate(
         "pin": pin,
         "export": {"n_ok": n_ok, "n_ids": n_ids, "ok_fraction": ok_fraction},
         "n_pdb": n_pdb,
+        "biopython_ok": bio_status,
+        "require_biopython": bool(require_biopython),
         "min_ok_fraction": float(min_ok_fraction),
         "min_openable_pdbs": int(min_openable_pdbs),
         "ontology": "handoff_quality_gate_not_lambda_eq_gamma",
