@@ -240,9 +240,9 @@ Lists each mold: paths, source, scores, physics status, decorate status.
 
 | Test | Assert |
 |------|--------|
-| `test_write_ca_roundtrip` | parse back CA, max abs error < 1e-6 |
+| `test_write_ca_roundtrip` | parse back CA, max abs error < 1e-3 (PDB 0.001 Å format) |
 | `test_write_backbone_atom_names` | residues contain N,CA,C,O |
-| `test_remark_ontology` | REMARK contains `not_lambda_eq_gamma` |
+| `test_remark_ontology` | REMARK contains full token `substrate_crit_projection_not_lambda_eq_gamma` (and `not_lambda_eq_gamma`) |
 | `test_handoff_proposal_smoke` | top-k files exist; index valid JSON |
 | `test_decorate_null_skip` | Null adapter returns SKIP |
 | `test_physics_geometry` | self-check runs on bb |
