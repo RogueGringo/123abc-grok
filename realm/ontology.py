@@ -24,13 +24,21 @@ ONTOLOGY = {
     "zeta_role": "substrate_seed_field_not_physical_eigenvalues",
     "never": ["lambda_eq_gamma", "residual_seating_as_zeta_preference"],
     "layers": {
-        "substrate": "ZetaField / make_seed → SpectralAction S_Λ(θ)",
-        "dynamics": "Crit(S) preferred holonomies θ*",
-        "projection": "Crit multimode/planar C_N ⊂ R³ → Kabsch softmin ranking",
-        "operator": "MaxOp CellularSheaf connection Laplacian L(A(θ))",
+        "substrate": "arithmetic base / ζ ordinates → SpectralAction S_Λ(θ) (generative seed)",
+        "dynamics": "Witten–Morse: Crit(S) selects preferred holonomies θ*",
+        "operator": "cellular sheaf over C_N; L=δ*δ connection Laplacian (MaxOp); fibers R^d",
+        "monodromy": "SO(2) restriction map on cut edge carries holonomy θ",
+        "projection": "Crit embeds → 3D cyclic geometry → Kabsch softmin ranking",
+        "aqft_proxy": "local observables {gap,frustration,logZ} on Crit cycle net",
     },
     "external_goal": "cyclic_native_vs_decoy_enrichment_under_crit_projection",
+    "fold_protocol": "substrate→Crit(S)→MaxOp L net→mold bank→projection ranking",
     "axioms_primary": ["G1", "G2", "G3", "1.1", "2.4", "4.1", "5.2", "6.2", "12.3"],
+    "math_refs_informal": [
+        "Witten 1982 Supersymmetry and Morse Theory (Morse deformation analogy)",
+        "cellular sheaves / connection Laplacian (discrete geometric analysis)",
+        "Haag–Kastler local nets (combinatorial proxy only on Crit cycle)",
+    ],
 }
 
 

@@ -95,7 +95,9 @@
     "ontology": "substrate_projection_operator_dual",
     "zeta_role": "substrate_seed_field_not_physical_eigenvalues",
     "external_goal": "cyclic_native_vs_decoy_enrichment_under_crit_projection",
-    "ontology_note": "\u03b6=substrate seed only; operational goal=Crit\u2192geometry projection (+ MaxOp L dual). Never \u03bb=\u03b3."
+    "ontology_note": "\u03b6=substrate seed only; operational goal=Crit\u2192geometry projection (+ MaxOp L dual). Never \u03bb=\u03b3.",
+    "fold_protocol": "substrate\u2192Crit(S)\u2192MaxOp L net\u2192mold bank\u2192projection ranking",
+    "math_framing": "cellular_sheaf_L + Witten_Morse_Crit(S) + geometry_projection"
   },
   "ranking_hparams": {
     "aggregate": "softmin",

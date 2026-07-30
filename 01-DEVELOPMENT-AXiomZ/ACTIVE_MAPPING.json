@@ -1,9 +1,10 @@
 {
   "framework": "Jones Axiomatic Framework v2.0 / AXiomZ",
-  "date_indexed": "2026-07-29",
-  "project": "123abc-grok zeta-kinematic dual path",
+  "date_indexed": "2026-07-30",
+  "project": "123abc-grok fold protocol — substrate Crit projection",
   "selection_note": "G1: ζ is substrate seed only; operational goal=Crit→geometry projection; MaxOp L is dual — never λ=γ",
   "operational_goal": "native_vs_decoy enrichment under substrate-derived Crit molds (projection)",
+  "fold_protocol": "fold_protocol.py + realm/fold_protocol.py + realm/aqft_local.py",
   "retracted": {
     "claim": "ζ preference via legacy residual R under frozen knobs",
     "axioms_violated_if_claimed": ["6.1", "12.2", "12.3", "G1"],
