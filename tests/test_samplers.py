@@ -116,13 +116,40 @@ def test_shape_positive_and_reproducible(fn):
 # --- the legacy sampler is kept, and kept honest ----------------------------
 
 
-def test_legacy_sampler_is_retained_and_documented_broken():
-    """Published artifacts used this; it must stay reproducible AND labelled."""
+def test_legacy_name_now_delegates_to_the_correct_sampler():
+    """`_sample_gue_spacings` is repaired, not merely retained.
+
+    Two branches fixed the original defect independently. main replaced the
+    mixed-proposal loop with pure rejection (retry Exp(1), envelope c=2.5); this
+    branch replaced it with inverse-CDF. The merge keeps the name and routes it to
+    inverse-CDF, because the rejection envelope is provably violated - see
+    test_rejection_envelope_would_have_been_violated below.
+
+    Consequence: the `goe`/`goe_legacy` arms no longer reproduce the pre-repair
+    published draws. That costs nothing, because those arms were never
+    reproducible anyway - the runs that produced fair_fight_result.json seeded
+    spectra with `abs(hash(kind))`, and Python randomizes str hashing per process.
+    """
     s = _sample_gue_spacings(50_000, np.random.default_rng(0))
-    # It matches neither surmise - that is the whole point of replacing it.
-    assert stats.ks_1samp(s, cdf_gue).pvalue < 0.01
-    assert stats.ks_1samp(s, cdf_goe).pvalue < 0.01
-    assert s.mean() < 0.97  # measured ~0.922, vs 1.0 for either surmise
+    assert stats.ks_1samp(s, cdf_gue).pvalue > 0.05
+    assert s.mean() == pytest.approx(1.0, abs=8e-3)
+
+
+def test_rejection_envelope_would_have_been_violated():
+    """Why inverse-CDF wins the merge: 2.5*exp(-s) does not dominate p_GUE(s).
+
+    Measured violation on s in [1.0355, 1.1738], peak ratio 1.0101. A rejection
+    sampler with a violated envelope is biased by about that margin in that band.
+    Inverse-CDF has no envelope, so the failure mode does not exist.
+    """
+    s = np.linspace(1e-6, 10.0, 2_000_001)
+    p = (32 / np.pi**2) * s**2 * np.exp(-4 * s**2 / np.pi)
+    envelope = 2.5 * np.exp(-s)
+    violated = s[p > envelope]
+    assert violated.size > 0
+    assert violated.min() == pytest.approx(1.0355, abs=1e-3)
+    assert violated.max() == pytest.approx(1.1738, abs=1e-3)
+    assert (p / envelope).max() == pytest.approx(1.0101, abs=1e-3)
 
 
 # --- make_seed must never fabricate ordinates -------------------------------

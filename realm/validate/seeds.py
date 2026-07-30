@@ -58,50 +58,47 @@ def sample_goe_spacings(n: int, rng: np.random.Generator) -> np.ndarray:
     return _inverse_cdf_sample(cdf_goe, n, rng)
 
 
+def _gue_surmise_pdf(s: np.ndarray | float) -> np.ndarray | float:
+    """GUE Wigner surmise p(s) = (32/π²) s² exp(−4s²/π), unit mean."""
+    x = np.asarray(s, dtype=float)
+    return (32.0 / (np.pi**2)) * (x**2) * np.exp(-4.0 * (x**2) / np.pi)
+
+
 def _sample_gue_spacings(n: int, rng: np.random.Generator) -> np.ndarray:
-    """DEPRECATED — BROKEN. Retained only to reproduce published artifacts.
+    """β=2 (GUE) spacings. Delegates to the inverse-CDF sampler.
 
-    Measured against 200,000 draws: matches neither surmise (KS D=0.085 vs GUE,
-    0.118 vs GOE, both p≈0), sample mean 0.922 (should be 1), variance 0.135
-    (GUE: 0.178). The exponential-proposal branch below is sound — the envelope
-    2.5·e^(−s) does dominate p(s), which peaks at 0.772 near s=√(π/8)≈0.627 —
-    but on *rejection* it falls through to a second `|N(0.8, 0.4)|` proposal with
-    its own accept test instead of retrying. Mixing two proposals that way does
-    not sample the target density.
+    Two independent repairs of this function converged from different branches.
+    Both correctly identified the original defect — a rejection loop that fell
+    through to a second `|N(0.8, 0.4)|` proposal instead of retrying, which
+    sampled neither surmise (KS D=0.085 vs GUE, 0.118 vs GOE, both p≈0 at
+    n=200k; mean 0.922, variance 0.135 vs GUE's 0.178).
 
-    Use `sample_gue_spacings` (inverse-CDF) for anything new. This function backs
-    the `goe_legacy` arm so `null_battery_result.json` and
-    `fair_fight_result.json` remain reproducible.
+    The pure-rejection repair (retry the same Exp(1) proposal, envelope c=2.5) is
+    *nearly* right, but the envelope does not actually dominate everywhere:
+    measured, p(s) > 2.5·e^(−s) on s ∈ [1.0355, 1.1738], peak ratio 1.0101. A
+    violated envelope biases the accepted sample by roughly that margin in that
+    band. Inverse-CDF sampling is used instead because it has no envelope to
+    violate and no branch that can silently change the target density.
     """
-    out = np.empty(n, dtype=float)
-    # mode near s~0.8; envelope C * exp(-s) works poorly — use gamma-ish proposal
-    i = 0
-    # p_max roughly at s=sqrt(pi/8) ≈ 0.626; p≈0.61
-    p_peak = 0.65
-    while i < n:
-        s = rng.exponential(scale=1.0)  # heavy tail ok
-        # acceptance ratio vs exponential(1): p(s)/ (c e^{-s})
-        p = (32.0 / (np.pi**2)) * (s**2) * np.exp(-4.0 * (s**2) / np.pi)
-        c = 2.5  # envelope constant
-        if rng.random() * c * np.exp(-s) < p and s > 1e-9:
-            out[i] = s
-            i += 1
-            continue
-        # fallback: truncated normal-ish positive
-        s2 = abs(rng.normal(0.8, 0.4))
-        p2 = (32.0 / (np.pi**2)) * (s2**2) * np.exp(-4.0 * (s2**2) / np.pi)
-        if rng.random() * p_peak < p2:
-            out[i] = max(s2, 1e-6)
-            i += 1
-    return out
+    return _inverse_cdf_sample(cdf_gue, n, rng)
+
+
+# Back-compat name from main. NOTE: main's `_sample_goe_spacings` was an alias for
+# the GUE sampler (the arm was misnamed, the density was always β=2). The true β=1
+# sampler is `sample_goe_spacings` — no leading underscore. Kept distinct on purpose.
+_sample_goe_spacings = _sample_gue_spacings
 
 
 def make_seed(kind: str, k: int, rng: np.random.Generator) -> np.ndarray:
     """Return k increasing positive ordinates for spectral action seed.
 
-    kinds: zeta | scramble | goe | poisson
+    kinds: zeta | scramble | gue | poisson | arith
+    alias: goe → gue (historical misname; the density was always β=2)
     """
     k = max(int(k), 2)
+    kind = str(kind).lower().strip()
+    if kind == "goe":
+        kind = "gue"
     if k > ZETA_ZEROS_IMAG.size:
         # Never fabricate ordinates. The old mean-gap extrapolation here silently
         # substituted invented values for real zeros, which would have made any
@@ -133,8 +130,16 @@ def make_seed(kind: str, k: int, rng: np.random.Generator) -> np.ndarray:
         rng.shuffle(gaps)
         return np.concatenate([[g0], g0 + np.cumsum(gaps)])
 
-    if kind == "goe":
+    if kind == "arith":
+        # Constant-gap progression on the same [g0, g0+span] window as ζ.
+        # The cheapest falsifier: 13 identical gaps, so every ordering is the same
+        # object. It beat ζ under equal budget (F 0.002040 vs 0.004421).
+        return g0 + (span / (k - 1)) * np.arange(k, dtype=float)
+
+    if kind == "gue":
         s = _sample_gue_spacings(k - 1, rng)
+    elif kind == "goe_true":
+        s = sample_goe_spacings(k - 1, rng)
     elif kind == "poisson":
         s = rng.exponential(1.0, size=k - 1)
     else:

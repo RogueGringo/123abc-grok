@@ -60,8 +60,9 @@ ARM_SEED_ID: dict[str, int] = {
     "goe_legacy": 12,
 }
 
-# Arms that do not sample a defensible spacing distribution. Excluded from any
-# claim; retained so published artifacts stay reproducible.
+# Historical misnames for the β=2 density, kept as aliases of `gue` so existing
+# call sites keep working. Not excluded from claims any more — the underlying
+# sampler is repaired — but new work should name `gue` or `goe_true` explicitly.
 DEPRECATED = frozenset({"goe", "goe_legacy"})
 
 
@@ -144,8 +145,9 @@ def make_adversarial_seed(
         return _span_match(gaps, g0, span)
 
     if kind in ("goe", "goe_legacy"):
-        # Broken sampler — matches neither surmise. Reproducibility only; see
-        # seeds._sample_gue_spacings and DEPRECATED.
+        # Historical misnames for the β=2 density. `_sample_gue_spacings` is now
+        # repaired (inverse-CDF), so these are aliases of `gue`, not a broken path.
+        # Prefer `gue` in new work; prefer `goe_true` for a genuine β=1 null.
         return _span_match(_sample_gue_spacings(n_gaps, rng), g0, span)
 
     if kind == "gue":

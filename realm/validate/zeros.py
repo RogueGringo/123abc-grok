@@ -150,3 +150,40 @@ def window(start: int, k: int, **kw: Any) -> np.ndarray:
     if start < 1:
         raise ValueError("start is 1-indexed")
     return real_zeros(start + int(k) - 1, **kw)[start - 1 :].copy()
+
+
+# --- compatibility with the API that landed on main -------------------------
+#
+# `main` grew an independent implementation of the same idea (PR #11 lineage).
+# Both are kept: the names below are main's, delegating to the verified path
+# above so there is one source of ordinates rather than two that can drift.
+
+
+def riemann_zeros_imag(n: int) -> np.ndarray:
+    """First `n` positive imaginary parts of non-trivial zeros (main's API name).
+
+    Delegates to `real_zeros`, which additionally verifies the table three ways
+    and caches it to disk.
+    """
+    if int(n) < 1:
+        raise ValueError("n >= 1")
+    if int(n) == 1:
+        # real_zeros requires >= 2 (a single ordinate has no gaps to check).
+        return real_zeros(2)[:1].copy()
+    return real_zeros(int(n))
+
+
+def zeros_window(start: int, count: int) -> np.ndarray:
+    """1-based inclusive start, `count` consecutive ordinates (main's API name)."""
+    start, count = int(start), int(count)
+    if start < 1 or count < 2:
+        raise ValueError("need start>=1 and count>=2")
+    return window(start, count)
+
+
+def verify_seed_table(atol: float = 1e-9) -> dict[str, Any]:
+    """Cross-check the hardcoded `ZETA_ZEROS_IMAG` against mpmath (main's API name)."""
+    n = int(ZETA_ZEROS_IMAG.size)
+    computed = real_zeros(n)
+    err = float(np.max(np.abs(computed - ZETA_ZEROS_IMAG[:n])))
+    return {"n": n, "max_abs_err": err, "ok": err <= atol, "atol": atol}

@@ -87,3 +87,144 @@ def score_geometry_on_mold(
         "method": "FALLBACK_THETA_PROXY",
         "basin": basin,
     }
+
+
+def _kabsch_rmsd_fixed(P: np.ndarray, Q: np.ndarray) -> float:
+    """RMSD after optimal rotation (Kabsch); same length, already scaled/centered optional."""
+    P = np.asarray(P, float)
+    Q = np.asarray(Q, float)
+    if P.shape[0] < 3 or P.shape != Q.shape:
+        return 1e9
+    P = P - P.mean(axis=0)
+    Q = Q - Q.mean(axis=0)
+    sp = np.sqrt(np.mean(np.sum(P**2, axis=1))) + 1e-15
+    sq = np.sqrt(np.mean(np.sum(Q**2, axis=1))) + 1e-15
+    P, Q = P / sp, Q / sq
+    H = P.T @ Q
+    U, _, Vt = np.linalg.svd(H)
+    R = Vt.T @ U.T
+    if np.linalg.det(R) < 0:
+        Vt = Vt.copy()
+        Vt[-1, :] *= -1
+        R = Vt.T @ U.T
+    P_aligned = P @ R
+    return float(np.sqrt(np.mean(np.sum((P_aligned - Q) ** 2, axis=1))))
+
+
+def _resample_ring(xyz: np.ndarray, n: int) -> np.ndarray:
+    """Resample closed CA ring to n vertices along index (cyclic lerp)."""
+    xyz = np.asarray(xyz, float)
+    if xyz.shape[0] == n:
+        return xyz.copy()
+    # close the loop for interpolation
+    closed = np.vstack([xyz, xyz[0]])
+    t_src = np.linspace(0.0, 1.0, closed.shape[0])
+    t_dst = np.linspace(0.0, 1.0, n, endpoint=False)
+    out = np.column_stack([np.interp(t_dst, t_src, closed[:, i]) for i in range(3)])
+    return out
+
+
+def _kabsch_rmsd(P: np.ndarray, Q: np.ndarray, cyclic: bool = True) -> float:
+    """RMSD after Kabsch; optional best cyclic start index on P."""
+    P = np.asarray(P, float)
+    Q = np.asarray(Q, float)
+    n = min(P.shape[0], Q.shape[0])
+    if n < 3:
+        return 1e9
+    P = _resample_ring(P, n)
+    Q = _resample_ring(Q, n)
+    if not cyclic or n > 24:
+        return _kabsch_rmsd_fixed(P, Q)
+    best = 1e9
+    for s in range(n):
+        best = min(best, _kabsch_rmsd_fixed(np.roll(P, s, axis=0), Q))
+        # reverse orientation
+        best = min(best, _kabsch_rmsd_fixed(np.roll(P[::-1], s, axis=0), Q))
+    return float(best)
+
+
+def score_geometry_vs_crit(
+    xyz: np.ndarray,
+    sector_points: list[np.ndarray],
+    top_k: int = 3,
+    aggregate: str = "softmin",
+    soft_T: float = 0.04,
+    sector_weights: np.ndarray | list[float] | None = None,
+) -> dict[str, Any]:
+    """Cyclic Kabsch distance to Crit sector ensemble (projection side).
+
+    aggregate
+      softmin — temperature-weighted mean over all sector distances (default;
+                multi-valley sheaf; more stable than hard min / top-k alone)
+      softmin_persist — softmin reweighted by CTS basin-persistence weights
+      topk    — mean of the *top_k* nearest templates
+      min     — hard nearest template only
+
+    sector_weights
+      optional per-template positive weights (e.g. H0 basin persistence).
+      Used when aggregate is softmin / softmin_persist.
+    """
+    if not sector_points:
+        return {
+            "mean_dist": 1e9,
+            "method": "CRIT_KABSCH_SOFTMIN",
+            "in_basin": False,
+            "n_templates": 0,
+        }
+    dists = np.asarray(
+        [_kabsch_rmsd(xyz, sp, cyclic=True) for sp in sector_points],
+        dtype=float,
+    )
+    dmin = float(np.min(dists))
+    mode = str(aggregate or "softmin").lower().strip()
+    T = max(float(soft_T), 1e-12)
+    m = dmin
+    w = np.exp(-(dists - m) / T)
+    sw = None
+    if sector_weights is not None and mode in (
+        "softmin",
+        "softmin_persist",
+        "persist",
+        "cts",
+        "softmin_min",
+        "blend",
+        "soft_min",
+    ):
+        sw = np.asarray(sector_weights, dtype=float).ravel()
+        if sw.size == dists.size and np.all(np.isfinite(sw)) and float(np.sum(sw)) > 0:
+            sw = np.clip(sw, 1e-6, None)
+            w = w * sw
+    soft = float(np.sum(w * dists) / (np.sum(w) + 1e-15))
+    if mode == "min":
+        dmean = dmin
+        method = "CRIT_KABSCH_MIN"
+        k = 1
+    elif mode in ("topk", "top_k", "top-k"):
+        order = np.sort(dists)
+        k = max(1, min(int(top_k), order.size))
+        dmean = float(np.mean(order[:k]))
+        method = "CRIT_KABSCH_TOPK"
+    elif mode in ("softmin_min", "blend", "soft_min"):
+        # geometric mean of softmin and hard min — dual-scale Crit match
+        dmean = float(np.sqrt(max(soft, 1e-15) * max(dmin, 1e-15)))
+        method = "CRIT_KABSCH_SOFTMIN_MIN"
+        k = int(dists.size)
+    elif mode in ("softmin_persist", "persist", "cts"):
+        dmean = soft
+        method = "CRIT_KABSCH_SOFTMIN_PERSIST"
+        k = int(dists.size)
+    else:
+        dmean = soft
+        method = "CRIT_KABSCH_SOFTMIN"
+        k = int(dists.size)
+    return {
+        "mean_dist": dmean,
+        "min_dist": dmin,
+        "method": method,
+        "in_basin": dmean < 0.35,
+        "n_templates": len(sector_points),
+        "top_k": k,
+        "aggregate": mode,
+        "soft_T": float(soft_T) if mode not in ("min", "topk", "top_k", "top-k") else None,
+        "weighted": bool(sw is not None),
+    }
