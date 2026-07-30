@@ -42,6 +42,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     p.add_argument("--json", type=str, default=None)
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument(
+        "--g5-span",
+        action="store_true",
+        help="Anchor omega_span to window-1 g[-1]/g[0] (G5 window-invariant ratio)",
+    )
+    p.add_argument("--omega-span", type=float, default=None, help="Explicit omega_span override")
     p.add_argument("-v", action="store_true")
     args = p.parse_args(argv)
     logging.basicConfig(level=logging.DEBUG if args.v else logging.INFO)
@@ -66,6 +72,8 @@ def main(argv: list[str] | None = None) -> int:
             n_zeros=int(args.n_zeros),
             N=int(args.N),
             n_sectors=int(args.sectors),
+            use_g5_span=bool(args.g5_span),
+            omega_span=args.omega_span,
         )
         summary = {k: v for k, v in out.items() if k not in ("windows", "component_matrix")}
         summary["window_summary"] = [
@@ -74,6 +82,7 @@ def main(argv: list[str] | None = None) -> int:
                 "disjoint": w["disjoint"],
                 "is_degenerate": w["is_degenerate"],
                 "reasons": w["degeneracy"].get("reasons"),
+                "omega_ratio": w.get("omega_ratio"),
                 "corr_penalty": w["components"].get("corr_penalty"),
                 "density_return_l1": w["components"].get("density_return_l1"),
                 "stationarity": w["components"].get("stationarity"),
@@ -83,14 +92,19 @@ def main(argv: list[str] | None = None) -> int:
         ]
         summary["component_matrix"] = out["component_matrix"]
         dest.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+        g5 = out.get("g5") or {}
         logger.info(
-            "Stage6 W=%s dof_ratio=%.3f pass_dof=%s guard_clear=%s/%s stage6_pass=%s → %s",
+            "Stage6 W=%s dof_ratio=%.3f pass_dof=%s guard_clear=%s/%s stage6_pass=%s "
+            "g5_span=%s g5_pass=%s rel_spread=%s → %s",
             out["W"],
             out["dof_ratio"],
             out["pass_dof"],
             out["n_windows_guard_clear"],
             out["W"],
             out["stage6_pass"],
+            out.get("omega_span"),
+            g5.get("pass_within_5pct"),
+            g5.get("rel_spread"),
             dest,
         )
         return 0 if out["pass_dof"] else 2
@@ -129,6 +143,9 @@ def main(argv: list[str] | None = None) -> int:
         n_sectors=int(args.sectors),
         component_key=str(args.component),
         rng_seed=int(args.seed),
+        # Stages 7–8 default to G5 span (cross-window work requires it)
+        use_g5_span=True if args.omega_span is None else False,
+        omega_span=args.omega_span,
     )
     dest.write_text(json.dumps(out, indent=2) + "\n", encoding="utf-8")
     cp = out["component_persistence"]

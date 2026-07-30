@@ -2,7 +2,12 @@
 
 **Date:** 2026-07-30
 **Status:** Sub-spec I implemented (PR #2). Sub-spec II **Stages 6–8 implemented**
-(`window_filtration.py`, `cross_window.py`). Stage 9 (powered tournament) open.
+(`window_filtration.py`, `cross_window.py`); **G5 `omega_span` wired** through baseline
+filtration (`--g5-span`). Stage 9 open.
+
+**Measured (champion, W=7):** G5 rel_spread → 0 with anchor span≈4.304; Stage 8
+persistence still fails (lifespan 1–2 < 4). Under G5, independent-baseline guard
+clears only 4/7 windows (stricter than legacy).
 **Gate condition met:** the equal-budget table is public (PR #2, `fair_fight_result.json`),
 which was the precondition for re-opening residual design.
 **Supersedes for selection purposes:** `2026-07-30-validation-ladder-design.md` (retracted)

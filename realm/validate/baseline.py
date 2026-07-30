@@ -69,11 +69,21 @@ KNOB_KEYS = (
     "w3_mult",
 )
 
+# Opt-in G5 span (Stage 2). Not a free search knob in published artifacts —
+# when set, every window gets the same frequency *ratio*.
+G5_KEYS = ("omega_span",)
+
 
 def _clean_knobs(knobs: dict[str, Any]) -> dict[str, float]:
-    """Knob subset the Keymaker accepts, without any injected gammas."""
+    """Knob subset the Keymaker accepts, without any injected gammas.
+
+    Includes optional ``omega_span`` (Axiom G5 window-invariant frequencies).
+    """
     out: dict[str, float] = {}
     for k in KNOB_KEYS:
+        if k in knobs and knobs[k] is not None:
+            out[k] = float(knobs[k])
+    for k in G5_KEYS:
         if k in knobs and knobs[k] is not None:
             out[k] = float(knobs[k])
     return out

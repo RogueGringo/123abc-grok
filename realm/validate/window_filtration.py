@@ -21,7 +21,7 @@ from typing import Any
 
 import numpy as np
 
-from realm.validate.baseline import DEAD_TERMS, KNOB_KEYS, score_with_independent_baseline
+from realm.validate.baseline import DEAD_TERMS, G5_KEYS, KNOB_KEYS, score_with_independent_baseline
 from realm.validate.zeros import real_zeros
 
 # Live + revived diagnostic terms counted as constraint scalars per window.
@@ -93,6 +93,30 @@ def contiguous_windows(
     return windows
 
 
+def anchor_omega_span(zeros: np.ndarray, *, n_zeros: int = 14) -> float:
+    """Legacy window-1 frequency ratio g[-1]/g[0] — Stage 2 algebraic anchor.
+
+    Setting ``omega_span`` to this value on *any* window reproduces the published
+    window-1 omega shape exactly (see tests/test_omega_span.py).
+    """
+    g = np.asarray(zeros, dtype=float).ravel()[: int(n_zeros)]
+    if g.size < 2:
+        raise ValueError("need ≥2 ordinates to anchor omega_span")
+    return float(g[-1] / (g[0] + 1e-15))
+
+
+def _knobs_for_forge(knobs: dict[str, Any]) -> dict[str, float]:
+    """Production knobs + optional G5 span for Keymaker.forge."""
+    out: dict[str, float] = {}
+    for k in KNOB_KEYS:
+        if k in knobs and knobs[k] is not None:
+            out[k] = float(knobs[k])
+    for k in G5_KEYS:
+        if k in knobs and knobs[k] is not None:
+            out[k] = float(knobs[k])
+    return out
+
+
 def score_window_filtration(
     knobs: dict[str, Any],
     *,
@@ -102,6 +126,7 @@ def score_window_filtration(
     n_sectors: int = 6,
     n_zeros_table: int | None = None,
     omega_span: float | None = None,
+    use_g5_span: bool = False,
 ) -> dict[str, Any]:
     """Stage 6: multi-window independent-baseline component vectors.
 
@@ -116,43 +141,56 @@ def score_window_filtration(
         Ordinates per window (k).
     n_zeros_table
         Total ζ ordinates to load (default: enough for W key blocks + one lock).
+    use_g5_span
+        If True and ``omega_span`` is None, set span to the Stage 2 anchor
+        ``g[-1]/g[0]`` of window 1 (legacy-reproducing, window-invariant ratio).
     """
     kn = dict(knobs)
-    if omega_span is not None:
-        kn = {**kn, "omega_span": float(omega_span)}
-    # Keymaker.forge may accept omega_span via knobs if derive supports it —
-    # baseline._forge passes **knobs,gammas= so only KNOB_KEYS are cleaned.
-    # omega_span is applied only if present in knobs and Keymaker accepts it.
     W = int(n_windows)
     k = int(n_zeros)
     table_n = int(n_zeros_table) if n_zeros_table is not None else max(k * (W + 1), k * 2)
     zeros = real_zeros(table_n)
+
+    span_used: float | None
+    if omega_span is not None:
+        span_used = float(omega_span)
+        kn = {**kn, "omega_span": span_used}
+    elif use_g5_span or kn.get("omega_span") is not None:
+        if kn.get("omega_span") is not None:
+            span_used = float(kn["omega_span"])
+        else:
+            span_used = anchor_omega_span(zeros, n_zeros=k)
+            kn = {**kn, "omega_span": span_used}
+    else:
+        span_used = None
+
     blocks = contiguous_windows(zeros, n_zeros=k, n_windows=W)
 
+    # G5 diagnostic: frequency ratio of derived omega under shared knobs
+    omega_ratios: list[float] = []
     window_rows: list[dict[str, Any]] = []
     for b in blocks:
-        kn_forge = {kk: kn[kk] for kk in KNOB_KEYS if kk in kn}
-        # optional span: pass only if Keymaker supports via forge kwargs
-        if "omega_span" in kn and kn["omega_span"] is not None:
-            kn_forge = {**kn_forge, "omega_span": float(kn["omega_span"])}
-        try:
-            row = score_with_independent_baseline(
-                knobs=kn_forge,
-                key_gammas=b["key_gammas"],
-                lock_gammas=b["lock_gammas"],
-                N=int(N),
-                n_sectors=int(n_sectors),
-            )
-        except TypeError:
-            # Keymaker without omega_span kw
-            kn_forge.pop("omega_span", None)
-            row = score_with_independent_baseline(
-                knobs=kn_forge,
-                key_gammas=b["key_gammas"],
-                lock_gammas=b["lock_gammas"],
-                N=int(N),
-                n_sectors=int(n_sectors),
-            )
+        kn_forge = _knobs_for_forge(kn)
+        row = score_with_independent_baseline(
+            knobs=kn_forge,
+            key_gammas=b["key_gammas"],
+            lock_gammas=b["lock_gammas"],
+            N=int(N),
+            n_sectors=int(n_sectors),
+        )
+        # measure omega ratio on the key block under the same knobs
+        from realm.derive import SpectralAction
+        from realm.zeta_field import ZetaField
+
+        sa = SpectralAction.from_field(
+            ZetaField.from_gammas(b["key_gammas"]),
+            omega_scale=float(kn_forge.get("omega_scale", 1.0)),
+            omega_span=span_used,
+        )
+        om = np.asarray(sa.omega, dtype=float).ravel()
+        ratio = float(om[-1] / (om[0] + 1e-15)) if om.size >= 2 else float("nan")
+        omega_ratios.append(ratio)
+
         deg = row.get("degeneracy") or {}
         comps = row.get("components") or {}
         window_rows.append(
@@ -164,6 +202,7 @@ def score_window_filtration(
                 "components": comps,
                 "degeneracy": deg,
                 "is_degenerate": bool(deg.get("is_degenerate", True)),
+                "omega_ratio": ratio,
                 "ontology": row.get("ontology"),
             }
         )
@@ -207,6 +246,19 @@ def score_window_filtration(
                 "spread_ratio": float(np.max(col) / (np.min(col) + 1e-15)) if col.size else None,
             }
 
+    # G5 pass: omega ratios agree across windows within 5% (design Stage 2)
+    ratios = np.asarray(omega_ratios, dtype=float)
+    ratios = ratios[np.isfinite(ratios)]
+    if ratios.size >= 2:
+        rmin, rmax = float(np.min(ratios)), float(np.max(ratios))
+        # relative spread of (min,max) about mid
+        mid = 0.5 * (rmin + rmax)
+        rel_spread = float((rmax - rmin) / (mid + 1e-15))
+        g5_pass = bool(rel_spread <= 0.05)
+    else:
+        rmin = rmax = rel_spread = float("nan")
+        g5_pass = False
+
     return {
         "stage": 6,
         "stage_name": "frequency_window_filtration",
@@ -224,6 +276,15 @@ def score_window_filtration(
         "n_windows_disjoint": int(n_disjoint),
         "pass_guard_all": pass_guard_all,
         "stage6_pass": stage6_pass,
+        "omega_span": span_used,
+        "use_g5_span": bool(span_used is not None),
+        "g5": {
+            "omega_ratio_min": rmin,
+            "omega_ratio_max": rmax,
+            "rel_spread": rel_spread,
+            "pass_within_5pct": g5_pass,
+            "axiom": "G5 scale_free_structure",
+        },
         "windows": window_rows,
         "component_matrix": mat.tolist(),
         "cross_window_live": cross,
@@ -231,8 +292,8 @@ def score_window_filtration(
         "ontology": "window_filtration_independent_baseline_not_lambda_eq_gamma",
         "note": (
             "Sub-spec II Stage 6. Shared knobs across W windows; "
-            "independent lock baseline per window. Does not modify dual-gate "
-            "LengthPolicy. Never λ=γ."
+            "independent lock baseline per window. Optional G5 omega_span. "
+            "Does not modify dual-gate LengthPolicy. Never λ=γ."
         ),
     }
 

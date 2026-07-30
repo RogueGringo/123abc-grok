@@ -285,6 +285,8 @@ def compare_arms_filtration(
     component_key: str = "density_return_l1",
     lower_is_better: bool = True,
     rng_seed: int = 0,
+    use_g5_span: bool = True,
+    omega_span: float | None = None,
 ) -> dict[str, Any]:
     """Stage 7+8 joint: residual components per window for two arms + persistence.
 
@@ -292,22 +294,42 @@ def compare_arms_filtration(
     knobs — the spectrum is ζ). Arm ``gue`` re-scores the *same knobs* on GUE
     ordinate windows (span-matched length via make_seed per window pair).
 
+    Default ``use_g5_span=True`` anchors omega_span to window-1 ζ ratio so both
+    arms share a window-invariant frequency ratio (Axiom G5).
+
     For a fair Stage 7 spectrum-rigidity comparison, also emits rigidity
     filtrations for both arms.
     """
-    from realm.validate.baseline import KNOB_KEYS, score_with_independent_baseline
-    from realm.validate.window_filtration import contiguous_windows
+    from realm.validate.baseline import score_with_independent_baseline
+    from realm.validate.window_filtration import (
+        _knobs_for_forge,
+        anchor_omega_span,
+        contiguous_windows,
+    )
+    from realm.validate.zeros import real_zeros as _rz
 
     W = int(n_windows)
     k = int(n_zeros)
     table_n = max(k * (W + 1), 2 * k)
     rng = np.random.default_rng(int(rng_seed))
 
-    # Arm A (ζ): full Stage 6 path
+    kn = dict(knobs)
+    if omega_span is not None:
+        kn["omega_span"] = float(omega_span)
+    elif use_g5_span and kn.get("omega_span") is None:
+        kn["omega_span"] = anchor_omega_span(_rz(k), n_zeros=k)
+
+    # Arm A (ζ): full Stage 6 path under G5 span when requested
     if arm_a != "zeta":
         raise ValueError("compare_arms_filtration currently requires arm_a='zeta'")
     filt_a = score_window_filtration(
-        knobs, n_windows=W, n_zeros=k, N=N, n_sectors=n_sectors
+        kn,
+        n_windows=W,
+        n_zeros=k,
+        N=N,
+        n_sectors=n_sectors,
+        use_g5_span=use_g5_span,
+        omega_span=kn.get("omega_span"),
     )
     series_a = []
     for w in filt_a["windows"]:
@@ -316,7 +338,7 @@ def compare_arms_filtration(
     # Arm B: GUE (or other) windows with independent baseline, same knobs
     g_b = make_seed("gue" if arm_b == "gue" else arm_b, table_n, rng)
     blocks_b = contiguous_windows(g_b, n_zeros=k, n_windows=W)
-    kn_forge = {kk: knobs[kk] for kk in KNOB_KEYS if kk in knobs}
+    kn_forge = _knobs_for_forge(kn)
     series_b = []
     windows_b = []
     for b in blocks_b:
@@ -378,11 +400,16 @@ def compare_arms_filtration(
             "stage6_pass": filt_a["stage6_pass"],
             "dof_ratio": filt_a["dof_ratio"],
             "n_windows_guard_clear": filt_a["n_windows_guard_clear"],
+            "g5": filt_a.get("g5"),
+            "omega_span": filt_a.get("omega_span"),
         },
         "windows_b_guard_clear": sum(1 for w in windows_b if not w["is_degenerate"]),
+        "use_g5_span": bool(use_g5_span or kn.get("omega_span") is not None),
+        "omega_span": kn.get("omega_span"),
         "ontology": "cross_window_persistence_not_lambda_eq_gamma",
         "note": (
             "Sub-spec II Stages 7–8. Component advantage + spectral rigidity "
-            "persistence across windows. Dual-gate LengthPolicy untouched. Never λ=γ."
+            "persistence across windows under optional G5 omega_span. "
+            "Dual-gate LengthPolicy untouched. Never λ=γ."
         ),
     }
