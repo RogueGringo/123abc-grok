@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import inspect
+import logging
 from typing import Any
 
 import numpy as np
@@ -9,6 +11,11 @@ import numpy as np
 from realm.handoff.types import MoldRecord
 from realm.validate.dual import forge_crit_geometry
 from realm.validate.length_policy import mid_length_omega_bank, sectors_for_ca_length
+
+logger = logging.getLogger(__name__)
+
+# Sentinel when Kabsch scoring fails — keeps mold out of top ranks without silent index scores.
+_SCORE_FAIL = 1e9
 
 
 def generate_crit_ensemble(
@@ -135,23 +142,54 @@ def merge_and_rank(
 
 
 def _load_native_ca(path: str | Any, *, lo: int = 6, hi: int = 40):
-    """Load native CA (+ optional resnames) from cached PDB path."""
+    """Load native CA (+ optional resnames) from cached PDB path.
+
+    This branch's ``load_ca_cyclic_band`` returns ``(xyz, chain)`` only.
+    If a future pdb_io adds ``with_resnames``, use it via signature probe
+    (no TypeError control-flow). Sequence-mold weights stay dormant until then.
+    """
     from pathlib import Path as _Path
 
     from realm.validate.pdb_io import load_ca_cyclic_band
 
     p = _Path(path)
-    try:
+    sig = inspect.signature(load_ca_cyclic_band)
+    if "with_resnames" in sig.parameters:
         loaded = load_ca_cyclic_band(p, lo=lo, hi=hi, with_resnames=True)
-    except TypeError:
-        # Older pdb_io: (xyz, chain) only
-        xyz, chain = load_ca_cyclic_band(p, lo=lo, hi=hi)
+        if isinstance(loaded, tuple) and len(loaded) == 3:
+            xyz, resnames, chain = loaded
+            return xyz, resnames, chain
+        xyz, chain = loaded  # type: ignore[misc]
         return xyz, None, chain
-    if isinstance(loaded, tuple) and len(loaded) == 3:
-        xyz, resnames, chain = loaded
-        return xyz, resnames, chain
-    xyz, chain = loaded  # type: ignore[misc]
+    # Current API: (xyz, chain) — no residue names available
+    xyz, chain = load_ca_cyclic_band(p, lo=lo, hi=hi)
     return xyz, None, chain
+
+
+def _kabsch_rank_vs_native(
+    native_xyz: np.ndarray,
+    mold_xyz: np.ndarray,
+    *,
+    soft_T: float,
+    label: str,
+) -> float:
+    """Kabsch softmin distance of mold to native; lower is better. Sentinel on failure."""
+    from realm.validate.decoys import score_geometry_vs_crit
+
+    try:
+        return float(
+            score_geometry_vs_crit(
+                native_xyz, [mold_xyz], soft_T=float(soft_T)
+            )["mean_dist"]
+        )
+    except Exception as exc:  # noqa: BLE001 — keep failure visible, do not use index scores
+        logger.warning(
+            "score_geometry_vs_crit failed for %s: %s; using rank_score=%g",
+            label,
+            exc,
+            _SCORE_FAIL,
+        )
+        return float(_SCORE_FAIL)
 
 
 def generate_structure_ensemble(
@@ -165,7 +203,6 @@ def generate_structure_ensemble(
     defect_beta: float = 0.20,
 ) -> list[MoldRecord]:
     """Structure mode: self_fit_dense mold pack vs native CA; export pack templates."""
-    from realm.validate.decoys import score_geometry_vs_crit
     from realm.validate.length_policy import policy_for
     from realm.validate.mold_bank import forge_mold_pack
     from realm.validate.pdb_io import fetch_pdb
@@ -190,7 +227,12 @@ def generate_structure_ensemble(
             mold_rw = sequence_residue_weights(
                 resnames, mix=float(pol.seq_mold_mix)
             )
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "sequence_residue_weights failed for %s: %s; continuing without mold_rw",
+                pdb_id,
+                exc,
+            )
             mold_rw = None
 
     _mm, pack, fit_diag, _h = forge_mold_pack(
@@ -217,12 +259,9 @@ def generate_structure_ensemble(
         if arr.shape[0] < 3 or arr.shape[1] < 3:
             continue
         # Kabsch softmin of native vs this Crit template — lower = better native fit
-        try:
-            rank_score = float(
-                score_geometry_vs_crit(xyz, [arr], soft_T=score_T)["mean_dist"]
-            )
-        except Exception:  # noqa: BLE001
-            rank_score = float(si)
+        rank_score = _kabsch_rank_vs_native(
+            xyz, arr, soft_T=score_T, label=f"crit_sec{si}"
+        )
         molds.append(
             MoldRecord(
                 source="crit",
@@ -241,5 +280,24 @@ def generate_structure_ensemble(
             )
         )
     if include_coutsias:
-        molds.extend(generate_coutsias_ensemble(N=n_ca, n_starts=10, max_roots=4))
+        # Re-score Coutsias on the same Kabsch-vs-native scale as Crit so merge_and_rank
+        # can interleave sources fairly (spectral action kept in meta).
+        for cm in generate_coutsias_ensemble(N=n_ca, n_starts=10, max_roots=4):
+            spectral = float(cm.rank_score)
+            meta = dict(cm.meta or {})
+            meta["spectral_action"] = spectral
+            meta["pdb_id"] = pdb_id.upper()
+            meta["n_ca_native"] = n_ca
+            arr = np.asarray(cm.xyz, float)[:, :3]
+            if arr.shape[0] < 3:
+                continue
+            cm.rank_score = _kabsch_rank_vs_native(
+                xyz,
+                arr,
+                soft_T=score_T,
+                label=f"coutsias_bank{meta.get('bank_index', '?')}",
+            )
+            cm.xyz = arr
+            cm.meta = meta
+            molds.append(cm)
     return merge_and_rank(molds, top_k=top_k)
