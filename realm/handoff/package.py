@@ -279,6 +279,22 @@ def archive_partner_release(
         zname = Path(zip_src).name
         _copy_named(zip_src, zname)
 
+    # Integrity attestation (checksum seal; not a cryptographic signature)
+    att_path = write_attestation_json(
+        dest,
+        label=safe,
+        zip_sha256=pkg.get("zip_sha256"),
+        ids=list(campaign.get("ids") or []),
+        quality_gate_ok=(campaign.get("quality_gate") or {}).get("ok"),
+    )
+    copied.append(
+        {
+            "name": "ATTESTATION.json",
+            "source": str(att_path.resolve()),
+            "sha256": _sha256_file(att_path),
+        }
+    )
+
     meta = {
         "archive_dir": str(dest.resolve()),
         "created_utc": stamp,
@@ -288,6 +304,7 @@ def archive_partner_release(
         "ids": list(campaign.get("ids") or []),
         "quality_gate_ok": (campaign.get("quality_gate") or {}).get("ok"),
         "zip_sha256": pkg.get("zip_sha256"),
+        "attestation": str(att_path.resolve()),
         "ontology": "handoff_archive_not_lambda_eq_gamma",
         "note": "Immutable partner drop: openable PDBs + pin; not enrichment chase.",
     }
@@ -318,6 +335,99 @@ def archive_partner_release(
         catalog,
     )
     return meta
+
+
+def write_attestation_json(
+    archive_dir: Path | str,
+    *,
+    label: str | None = None,
+    zip_sha256: str | None = None,
+    ids: list[str] | None = None,
+    quality_gate_ok: bool | None = None,
+) -> Path:
+    """Write ATTESTATION.json: SHA256 seal over partner drop artifacts + pin.
+
+    Not a cryptographic signature — integrity attestation for transfer.
+    Does not re-rank. Never lambda=gamma.
+    """
+    root = Path(archive_dir)
+    root.mkdir(parents=True, exist_ok=True)
+    # pin snapshot (live policy; must match locked production)
+    try:
+        from realm.validate.length_policy import policy_for
+
+        pol = policy_for(12, base_beta=0.20)
+        pin = {
+            "soft_T": float(pol.soft_T),
+            "seq_mix": float(pol.seq_mix),
+            "face_weight": float(pol.face_weight),
+            "expected_soft_T": 0.036,
+            "ok": abs(float(pol.soft_T) - 0.036) < 1e-12 and float(pol.seq_mix) == 0.0,
+        }
+    except Exception as exc:  # noqa: BLE001
+        pin = {"ok": False, "error": str(exc)}
+
+    watch = [
+        "RELEASE.md",
+        "ACCEPTANCE.json",
+        "SUMMARY.md",
+        "campaign_report.json",
+        "verify_report.json",
+    ]
+    digests: dict[str, str] = {}
+    for name in watch:
+        p = root / name
+        if p.is_file():
+            digests[name] = _sha256_file(p)
+    for p in sorted(root.glob("*.zip")):
+        digests[p.name] = _sha256_file(p)
+
+    acceptance = None
+    acc_path = root / "ACCEPTANCE.json"
+    if acc_path.is_file():
+        try:
+            acceptance = json.loads(acc_path.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001
+            acceptance = None
+
+    body = {
+        "label": label or "handoff",
+        "created_utc": datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"),
+        "pin": pin,
+        "ids": list(ids or []),
+        "quality_gate_ok": quality_gate_ok,
+        "zip_sha256": zip_sha256,
+        "digests": digests,
+        "acceptance": {
+            "accepted": (acceptance or {}).get("accepted"),
+            "n_pdb": ((acceptance or {}).get("criteria") or {})
+            .get("openable_pdbs", {})
+            .get("n_pdb"),
+        },
+        "ontology": "handoff_attestation_not_lambda_eq_gamma",
+        "note": (
+            "SHA256 seal over release artifacts + dual-gate pin snapshot. "
+            "Not a digital signature. Verify with verify_attestation()."
+        ),
+    }
+    # canonical payload digest (stable key order via json dumps sort_keys)
+    payload = json.dumps(
+        {
+            "pin": body["pin"],
+            "digests": body["digests"],
+            "zip_sha256": body["zip_sha256"],
+            "acceptance": body["acceptance"],
+            "ids": body["ids"],
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    body["payload_sha256"] = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+    dest = root / "ATTESTATION.json"
+    dest.write_text(json.dumps(body, indent=2) + "\n", encoding="utf-8")
+    logger.info("ATTESTATION.json payload_sha256=%s → %s", body["payload_sha256"][:16], dest)
+    return dest
 
 
 def write_latest_pointer(
@@ -449,6 +559,7 @@ Ontology: **Crit projection molds** (ζ substrate scaffolding only).
 | `SUMMARY.md` | Human-readable campaign summary (export batch root) |
 | `RELEASE.md` | Partner release notes (pin, openable PDB count, zip SHA) when campaign copied it |
 | `ACCEPTANCE.json` | Machine-readable accept/reject: pin + openable PDBs + gate (not enrichment) |
+| `ATTESTATION.json` | SHA256 seal over artifacts + pin snapshot (not a digital signature) |
 | `batch_index.json` / `index.json` | Machine-readable index + LengthPolicy snapshot |
 | `SHA256SUMS.txt` | Checksums of packaged files |
 

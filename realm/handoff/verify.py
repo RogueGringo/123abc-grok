@@ -332,6 +332,10 @@ def verify_archive_dir(archive_dir: Path | str) -> dict[str, Any]:
     if not has_zip and not any(p.suffix.lower() == ".zip" for p in root.iterdir() if p.is_file()):
         bad.append("no_zip_in_archive")
 
+    att = verify_attestation(root) if (root / "ATTESTATION.json").is_file() else None
+    if att is not None and att.get("ok") is False:
+        bad.append("attestation_failed")
+
     ok = (
         pin.get("ok") is True
         and len(bad) == 0
@@ -349,6 +353,79 @@ def verify_archive_dir(archive_dir: Path | str) -> dict[str, Any]:
         "quality_gate_ok": meta.get("quality_gate_ok"),
         "ids": meta.get("ids"),
         "zip_sha256": meta.get("zip_sha256"),
+        "attestation": att,
         "ontology": "handoff_archive_verify_not_lambda_eq_gamma",
         "note": "Integrity of dated partner drop; not enrichment score-chase.",
+    }
+
+
+def verify_attestation(archive_dir: Path | str) -> dict[str, Any]:
+    """Verify ATTESTATION.json digests and dual-gate pin snapshot."""
+    root = Path(archive_dir)
+    path = root / "ATTESTATION.json"
+    pin = verify_dual_gate_pin()
+    if not path.is_file():
+        return {
+            "ok": None,
+            "skipped": True,
+            "error": "no ATTESTATION.json",
+            "pin": pin,
+            "ontology": "handoff_attestation_verify_not_lambda_eq_gamma",
+        }
+    try:
+        body = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "ok": False,
+            "error": f"invalid_json: {exc}",
+            "pin": pin,
+            "ontology": "handoff_attestation_verify_not_lambda_eq_gamma",
+        }
+
+    bad: list[str] = []
+    digests = body.get("digests") or {}
+    for name, expect in digests.items():
+        p = root / name
+        if not p.is_file():
+            bad.append(f"missing:{name}")
+            continue
+        got = _sha256_file(p)
+        if got != expect:
+            bad.append(f"mismatch:{name}")
+
+    apin = body.get("pin") or {}
+    if apin.get("ok") is not True:
+        bad.append("attestation_pin_not_ok")
+    if pin.get("ok") is not True:
+        bad.append("live_pin_not_ok")
+    if abs(float(apin.get("soft_T", -1)) - 0.036) > 1e-9:
+        bad.append("attestation_soft_T_drift")
+
+    # recompute payload_sha256
+    payload = json.dumps(
+        {
+            "pin": body.get("pin"),
+            "digests": body.get("digests"),
+            "zip_sha256": body.get("zip_sha256"),
+            "acceptance": body.get("acceptance"),
+            "ids": body.get("ids"),
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    got_payload = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    expect_payload = body.get("payload_sha256")
+    if expect_payload and got_payload != expect_payload:
+        bad.append("payload_sha256_mismatch")
+
+    return {
+        "ok": len(bad) == 0,
+        "n_digests": len(digests),
+        "n_bad": len(bad),
+        "bad": bad[:20],
+        "payload_sha256": expect_payload,
+        "acceptance": body.get("acceptance"),
+        "pin": pin,
+        "ontology": "handoff_attestation_verify_not_lambda_eq_gamma",
+        "note": "Checksum seal only; not a cryptographic signature.",
     }

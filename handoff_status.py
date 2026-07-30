@@ -45,8 +45,24 @@ def build_status(
 
     drops = scan_release_drops(releases_dir) if releases_dir.is_dir() else []
     archive_verify = None
-    if verify_latest and latest and latest.get("archive_dir"):
-        archive_verify = verify_archive_dir(latest["archive_dir"])
+    acceptance = None
+    attestation = None
+    if latest and latest.get("archive_dir"):
+        adir = Path(latest["archive_dir"])
+        acc_path = adir / "ACCEPTANCE.json"
+        if acc_path.is_file():
+            try:
+                acceptance = json.loads(acc_path.read_text(encoding="utf-8"))
+            except Exception as exc:  # noqa: BLE001
+                acceptance = {"error": str(exc)}
+        att_path = adir / "ATTESTATION.json"
+        if att_path.is_file():
+            try:
+                attestation = json.loads(att_path.read_text(encoding="utf-8"))
+            except Exception as exc:  # noqa: BLE001
+                attestation = {"error": str(exc)}
+        if verify_latest:
+            archive_verify = verify_archive_dir(adir)
 
     matrix = None
     if matrix_report and Path(matrix_report).is_file():
@@ -60,6 +76,8 @@ def build_status(
         ok = False
     if matrix is not None and matrix.get("ok") is False:
         ok = False
+    if isinstance(acceptance, dict) and acceptance.get("accepted") is False:
+        ok = False
 
     return {
         "ok": ok,
@@ -67,6 +85,32 @@ def build_status(
         "releases_dir": str(releases_dir.resolve()) if releases_dir.exists() else str(releases_dir),
         "n_drops": len(drops),
         "latest": latest,
+        "acceptance": (
+            {
+                "accepted": acceptance.get("accepted"),
+                "n_pdb": (acceptance.get("criteria") or {})
+                .get("openable_pdbs", {})
+                .get("n_pdb"),
+                "label": acceptance.get("label"),
+                "path": str(
+                    Path(latest["archive_dir"]) / "ACCEPTANCE.json"
+                )
+                if latest and latest.get("archive_dir")
+                else None,
+            }
+            if isinstance(acceptance, dict) and "error" not in acceptance
+            else acceptance
+        ),
+        "attestation": (
+            {
+                "payload_sha256": attestation.get("payload_sha256"),
+                "n_digests": len(attestation.get("digests") or {}),
+                "acceptance": attestation.get("acceptance"),
+                "pin_ok": (attestation.get("pin") or {}).get("ok"),
+            }
+            if isinstance(attestation, dict) and "error" not in attestation
+            else attestation
+        ),
         "archive_verify": archive_verify,
         "catalog_index": str(catalog_path.resolve()) if catalog_path else None,
         "drops_head": drops[:8],
@@ -164,6 +208,19 @@ def main(argv: list[str] | None = None) -> int:
             status["archive_verify"].get("n_checked"),
         )
 
+    if status.get("acceptance"):
+        logger.info(
+            "latest acceptance accepted=%s n_pdb=%s",
+            (status.get("acceptance") or {}).get("accepted"),
+            (status.get("acceptance") or {}).get("n_pdb"),
+        )
+    if status.get("attestation"):
+        logger.info(
+            "latest attestation digests=%s payload=%s",
+            (status.get("attestation") or {}).get("n_digests"),
+            ((status.get("attestation") or {}).get("payload_sha256") or "")[:16],
+        )
+
     # human one-liner to stdout for scripting
     print(
         json.dumps(
@@ -172,6 +229,8 @@ def main(argv: list[str] | None = None) -> int:
                 "soft_T": pin.get("soft_T"),
                 "n_drops": status.get("n_drops"),
                 "latest_label": (status.get("latest") or {}).get("label"),
+                "accepted": (status.get("acceptance") or {}).get("accepted"),
+                "n_pdb": (status.get("acceptance") or {}).get("n_pdb"),
                 "report": str(out.resolve()),
             }
         )
