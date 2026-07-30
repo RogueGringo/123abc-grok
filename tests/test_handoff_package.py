@@ -24,7 +24,16 @@ def test_dual_gate_still_locked():
 def test_write_release_md(tmp_path: Path):
     campaign = {
         "ids": ["1CSA"],
-        "export": {"n_ok": 1, "n_ids": 1, "summary_md": "SUMMARY.md"},
+        "export": {
+            "n_ok": 1,
+            "n_ids": 1,
+            "summary_md": "SUMMARY.md",
+            "enrichment_aggregate": {
+                "n_with_enrichment": 1,
+                "mean_enrichment": 0.12,
+                "top20_count": 0,
+            },
+        },
         "package": {
             "package_dir": str(tmp_path / "pkg"),
             "zip_path": str(tmp_path / "p.zip"),
@@ -52,6 +61,8 @@ def test_write_release_md(tmp_path: Path):
     assert "1CSA" in text
     assert "Quality gate" in text
     assert "handoff_verify" in text
+    assert "informational only" in text.lower()
+    assert "0.12" in text
 
 
 def test_archive_partner_release(tmp_path: Path):

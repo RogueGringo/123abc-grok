@@ -74,22 +74,41 @@ def write_release_md(
         f"- SUMMARY: `{exp.get('summary_md')}`",
         f"- has_summary_md: {pkg.get('has_summary_md')}",
         "",
-        "## IDs",
-        "",
-        ", ".join(str(i) for i in (campaign.get("ids") or [])) or "(none)",
-        "",
-        "## Ontology",
-        "",
-        "Crit projection molds only. **Never** lambda=gamma / RH claims.",
-        "LengthPolicy production numbers were not modified by this release.",
-        "",
-        "Verify:",
-        "",
-        "```bash",
-        "python handoff_verify.py <package_dir> --require-sha256",
-        "```",
-        "",
     ]
+    # Informational enrichment stamp only -- never a release success metric
+    agg = exp.get("enrichment_aggregate") or {}
+    if agg.get("n_with_enrichment"):
+        lines.extend(
+            [
+                "## Enrichment stamp (informational only)",
+                "",
+                f"- n_with_enrichment: {agg.get('n_with_enrichment')}",
+                f"- mean_enrichment: {agg.get('mean_enrichment')}",
+                f"- top20_count: {agg.get('top20_count')}",
+                "",
+                "Not used for quality_gate / partner acceptance.",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "## IDs",
+            "",
+            ", ".join(str(i) for i in (campaign.get("ids") or [])) or "(none)",
+            "",
+            "## Ontology",
+            "",
+            "Crit projection molds only. **Never** lambda=gamma / RH claims.",
+            "LengthPolicy production numbers were not modified by this release.",
+            "",
+            "Verify:",
+            "",
+            "```bash",
+            "python handoff_verify.py <package_dir> --require-sha256",
+            "```",
+            "",
+        ]
+    )
     dest.write_text("\n".join(lines), encoding="utf-8")
     logger.info("RELEASE notes → %s", dest)
     return dest
