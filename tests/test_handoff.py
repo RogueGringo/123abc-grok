@@ -64,3 +64,23 @@ def test_physics_geometry_on_bb(tmp_path: Path):
 def test_select_adapter_null():
     a = select_adapter("null")
     assert a.name == "null"
+
+
+def test_generate_crit_merge_rank_ordered():
+    pytest.importorskip("json")
+    from pathlib import Path
+    import json
+    from realm.handoff.generate import generate_crit_ensemble, merge_and_rank
+
+    p = Path("evolve_result.json")
+    if not p.is_file():
+        pytest.skip("need evolve_result.json")
+    kn = json.loads(p.read_text(encoding="utf-8"))["best_knobs"]
+    molds = generate_crit_ensemble(kn, N=8, n_zeros=14, prefer_maxop=False)
+    assert len(molds) >= 1
+    ranked = merge_and_rank(molds, top_k=3)
+    assert len(ranked) <= 3
+    scores = [m.rank_score for m in ranked]
+    assert scores == sorted(scores)
+    assert all(m.source == "crit" for m in ranked)
+    assert all(m.xyz.shape[1] >= 3 for m in ranked)
