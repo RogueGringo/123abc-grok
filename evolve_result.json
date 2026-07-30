@@ -105,7 +105,13 @@
       "sheaf_defects": "realm/sheaf_defects.py multi-residue chord + Dirichlet L",
       "witten_morse": "mid-band harmonic envelope on SpectralAction",
       "projection": "Kabsch softmin primary + defect beta=0.20 blend",
-      "fold_protocol": "defect_beta wired through rank_enrichment / substrate table"
+      "fold_protocol": "defect_beta wired through rank_enrichment / substrate table",
+      "adaptive_ns": "evolve_ns.py dual-fitness natural selection (probe env; holdout report-only)"
+    },
+    "adaptive_ns_last": {
+      "accepted": false,
+      "note": "compact 8x5 IR-focus loop: fast-probe gains failed multi-seed dual gate; sealed elite retained",
+      "cli": "python evolve_ns.py --internal-gens 0 --n-pop 8 --epochs 5 --write-evolve"
     }
   },
   "ranking_hparams": {
