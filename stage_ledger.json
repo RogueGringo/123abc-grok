@@ -10170,7 +10170,7 @@
         "G2": "S_\u039b(\u03b8) is the value-warped potential on holonomy",
         "G3": "Hyperparam geodesic on ranking geometry; holdout/full-batch guards",
         "1.1": "Seed ordinates as discrete condition:states of the field",
-        "2.4": "Projected Crit multimode geometry = operational geometry M_v",
+        "2.4": "Projected Crit multimode geometry = operational geometry M_v; adaptive sector count by ring length",
         "4.1": "H0 / holonomy frustration as discrete topological invariants of L",
         "4.2": "Filtration of S(\u03b8) on S1 reveals multi-scale Crit structure",
         "4.3": "Long-lived Crit wells + multi-seed ranking stability = signal",
@@ -10188,13 +10188,13 @@
   },
   "artifacts": {
     "batch": {
-      "n_ok": 11,
-      "n_total_ids": 11,
-      "mean_enrichment": 0.7818181818181817,
-      "mean_enrichment_std": 0.045454573591970554,
+      "n_ok": 12,
+      "n_total_ids": 12,
+      "mean_enrichment": 0.7909722222222221,
+      "mean_enrichment_std": 0.04946968279606315,
       "probe_mean_enrichment": 0.8104166666666667,
-      "holdout_mean_enrichment": 0.7654761904761906,
-      "top20_count": 4,
+      "holdout_mean_enrichment": 0.78125,
+      "top20_count": 6,
       "n_seeds": 3,
       "n_decoys": 40,
       "alpha_proj": 1.0,
@@ -10260,7 +10260,7 @@
     {
       "name": "external_ranking_signal",
       "ok": true,
-      "detail": "batch mean_enrichment=78.2% (projection path)",
+      "detail": "batch mean_enrichment=79.1% (projection path)",
       "axioms": [
         "2.4",
         "5.2",

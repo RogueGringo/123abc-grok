@@ -60,15 +60,15 @@
     "null_battery_zeta_preference": "RETRACTED",
     "residual_fitness": "informative_density_return",
     "probe_enrichment": 0.8104166666666667,
-    "holdout_enrichment": 0.7654761904761906,
-    "batch_mean_enrichment": 0.7818181818181817,
-    "batch_mean_enrichment_std": 0.045454573591970554,
-    "batch_top20": 4,
-    "batch_n_ok": 11,
+    "holdout_enrichment": 0.78125,
+    "batch_mean_enrichment": 0.7909722222222221,
+    "batch_mean_enrichment_std": 0.04946968279606315,
+    "batch_top20": 6,
+    "batch_n_ok": 12,
     "batch_n_seeds": 3,
     "batch_n_decoys": 40,
     "path": "geometry_off_zeta_external_cyclic_ranking",
-    "method": "CRIT_KABSCH_SOFTMIN + adaptive sectors (4/6/8) + multi-seed",
+    "method": "CRIT_KABSCH_SOFTMIN + adaptive sectors (4 if CA<=8 else 6) + multi-seed",
     "dual": "realm/validate/dual.py + dual_probe.py (substrate\u2192L vs projection)",
     "axiomz": "01-DEVELOPMENT-AXiomZ + realm/axiomz.py CTS + stage_ledger.py",
     "commit_policy": {
@@ -81,18 +81,21 @@
       "soft_T": 0.08,
       "accepted": true,
       "confirmed_full_batch": true,
-      "note": "adaptive sectors 4/6/8 confirmed 40x3: mean 78.2% hold 76.5%",
-      "sectors_mode": "adaptive"
+      "note": "cap-6 adaptive + 3AV9 expansion; 12 IDs mean 79.1% hold 78.1% top20=6",
+      "sectors_mode": "adaptive",
+      "sectors_rule": "n<=8 -> 4 else 6"
     },
     "rank_polish": "softmin_min T=0.04 probe-win rejected by full-batch continuity (76.7->74.1)",
-    "sectors_mode": "adaptive"
+    "sectors_mode": "adaptive_cap6",
+    "batch_n_ids": 12
   },
   "ranking_hparams": {
     "aggregate": "softmin",
     "soft_T": 0.08,
     "accepted": true,
     "confirmed_full_batch": true,
-    "note": "adaptive sectors 4/6/8 confirmed 40x3: mean 78.2% hold 76.5%",
-    "sectors_mode": "adaptive"
+    "note": "cap-6 adaptive + 3AV9 expansion; 12 IDs mean 79.1% hold 78.1% top20=6",
+    "sectors_mode": "adaptive",
+    "sectors_rule": "n<=8 -> 4 else 6"
   }
 }

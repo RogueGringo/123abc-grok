@@ -27,7 +27,8 @@ def test_sectors_for_ca_length_adaptive():
     assert sectors_for_ca_length(6, "adaptive") == 4
     assert sectors_for_ca_length(8, "adaptive") == 4
     assert sectors_for_ca_length(10, "adaptive") == 6
-    assert sectors_for_ca_length(14, "adaptive") == 8
+    assert sectors_for_ca_length(14, "adaptive") == 6  # cap-6 (not 8)
+    assert sectors_for_ca_length(26, "adaptive") == 6
     assert sectors_for_ca_length(11, "fixed", default=6) == 6
 
 

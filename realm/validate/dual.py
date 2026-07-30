@@ -141,8 +141,10 @@ def operator_distance_to_crit(
 def sectors_for_ca_length(n_ca: int, mode: str = "fixed", default: int = 6) -> int:
     """Choose Crit sector count from ring length (projection mold capacity).
 
-    adaptive: short rings use fewer valleys (cleaner softmin); long rings use more.
-      n_ca ≤ 8 → 4,  n_ca ≥ 12 → 8,  else 6
+    adaptive (default production): short rings use fewer valleys so softmin
+    is not diluted by grid-filled surplus sectors.
+      n_ca ≤ 8 → 4,  else → 6
+    (Long rings previously tried 8 valleys; full-batch 40×3 preferred cap-6.)
     fixed: always ``default``
     """
     mode = str(mode or "fixed").lower().strip()
@@ -150,8 +152,6 @@ def sectors_for_ca_length(n_ca: int, mode: str = "fixed", default: int = 6) -> i
         n = int(n_ca)
         if n <= 8:
             return 4
-        if n >= 12:
-            return 8
         return 6
     return max(2, int(default))
 

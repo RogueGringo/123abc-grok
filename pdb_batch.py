@@ -43,13 +43,14 @@ DEFAULT_CYCLIC_IDS = [
     "1JBL",
     "5EOC",
     "3AVB",
+    "3AV9",  # expanded short cyclic holdout
     "5LSO",
     "1TET",
 ]
 
 # Default joint-polish train probe (never sole success metric)
 PROBE_IDS = ["1CSA", "2X2C", "4M6E", "3WNE"]
-HOLDOUT_IDS = ["1IKF", "1JBL", "4K8Y", "5EOC", "3AVB", "5LSO", "1TET"]
+HOLDOUT_IDS = ["1IKF", "1JBL", "4K8Y", "5EOC", "3AVB", "3AV9", "5LSO", "1TET"]
 
 
 def rank_one(
@@ -163,7 +164,7 @@ def main(argv=None) -> int:
         type=str,
         default="adaptive",
         choices=("fixed", "adaptive"),
-        help="adaptive: 4/6/8 sectors by CA length (default); fixed: --sectors",
+        help="adaptive: 4 if CA≤8 else 6 (default); fixed: --sectors",
     )
     p.add_argument("--noise", type=float, default=0.45)
     p.add_argument(
