@@ -55,8 +55,10 @@
   "mean_enrichment_holdout": 0.7261904761904762,
   "stage": {
     "internal_seal": "EVOLVED_SEAL",
-    "R": 0.004488356551514631,
-    "null_battery": "PASS",
+    "R_legacy_seating": 0.004488356551514631,
+    "R_note": "legacy R is Crit seating self-consistency; not ζ evidence (RETRACTED 2026-07-29)",
+    "null_battery_zeta_preference": "RETRACTED",
+    "residual_fitness": "informative_density_return",
     "probe_enrichment": 0.8125,
     "holdout_enrichment": 0.7297619047619047,
     "batch_mean_enrichment": 0.7598484848484848,
@@ -66,6 +68,7 @@
     "batch_n_seeds": 3,
     "batch_n_decoys": 40,
     "path": "geometry_off_zeta_external_cyclic_ranking",
-    "method": "CRIT_KABSCH_TOPK (k=3) + multi-seed + joint_polish holdout"
+    "method": "CRIT_KABSCH_TOPK (k=3) + multi-seed + joint_polish holdout",
+    "instrument": "see docs/RETRACTION_residual_instrument.md"
   }
 }

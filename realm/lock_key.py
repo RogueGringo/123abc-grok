@@ -1,12 +1,18 @@
 """Master Lock meets the Keymaker — fixed-point consistency of the derivation.
 
-Error R is the gradient: each component points at a concrete fix
-(stationarity, coverage, corr(S,λ), pin align / density-scaled return map).
+Residual design (post-falsification, 2026-07-29)
+------------------------------------------------
+Legacy R summed stationarity / crit_coverage / pin_align / theta_ladder into
+the fitness. Those terms are **zero by construction** whenever the sector pool
+is taken from Crit minima and the lock reports the same minima (≈70% of weight
+when n_minima ≥ n_sectors). That made R a seating self-consistency score, not
+a ζ discriminator.
 
-Keymaker knobs (global search):
-  Λ, ω-scale, weight_power, tier_split, low_boost, w1/w2/w3_mult
+**Informative fitness** (default): only the non-tautological density-return
+term. Stationarity, coverage, pin, ladder, and |corr(S,λ)| remain *diagnostics*.
+corr is cheap over 6 points with 8 knobs — never sole evidence.
 
-Never tests λ = γ identity — only structural lock–key agreement.
+Never tests λ = γ identity — ontology unchanged.
 """
 
 from __future__ import annotations
@@ -94,13 +100,14 @@ class KeyState:
 
 @dataclass
 class ResidualBreakdown:
-    shape_l1: float  # stationarity
+    shape_l1: float  # stationarity (diagnostic when fitness=informative)
     corr_penalty: float
     crit_coverage: float
-    return_map_err: float
-    total: float
+    return_map_err: float  # legacy composite (pin+ladder+dens)
+    total: float  # active fitness (see fitness_mode)
     weights: dict[str, float]
     diagnostics: dict[str, float] | None = None
+    fitness_mode: str = "informative"
 
     def to_dict(self) -> dict[str, Any]:
         d = {
@@ -110,6 +117,7 @@ class ResidualBreakdown:
             "return_map_err": self.return_map_err,
             "total": self.total,
             "weights": self.weights,
+            "fitness_mode": self.fitness_mode,
         }
         if self.diagnostics:
             d["diagnostics"] = self.diagnostics
@@ -254,20 +262,42 @@ def theta_ladder_l1(key: KeyState, lock: LockState) -> float:
     return _shape_l1(np.diff(kt), np.diff(lt))
 
 
+def _lock_key_coincidence(key: KeyState, lock: LockState) -> float:
+    """Circular Hausdorff distance between key θ and lock minima (0 = same set)."""
+    kt = np.asarray(key.thetas, float).ravel()
+    lt = np.asarray(lock.minima_theta, float).ravel()
+    if kt.size == 0 or lt.size == 0:
+        return 1.0
+    d_k = [min(_circular_dist(float(t), float(m)) for m in lt) for t in kt]
+    d_m = [min(_circular_dist(float(m), float(t)) for t in kt) for m in lt]
+    return float(max(max(d_k), max(d_m)))
+
+
 def residual(
     lock: LockState,
     key: KeyState,
     action: SpectralAction | None = None,
     weights: dict[str, float] | None = None,
+    fitness: str = "informative",
 ) -> ResidualBreakdown:
-    w = weights or {
-        "shape": 0.30,  # stationarity
-        "corr": 0.25,
-        "coverage": 0.25,
-        "return": 0.20,
+    """Lock–key residual.
+
+    Parameters
+    ----------
+    fitness :
+        ``"informative"`` (default) — ``total`` = density-return only.
+        Tautological Crit-coincidence terms are diagnostics only.
+        ``"legacy"`` — pre-falsification weighted sum (self-seating score;
+        retained for transfer / equal-budget comparison tables only).
+    """
+    w_legacy = weights or {
+        "shape": 0.30,  # stationarity — tautological when keys ⊆ Crit min
+        "corr": 0.25,  # |corr| over n_sectors points, n_knobs free params
+        "coverage": 0.25,  # tautological when keys ⊆ Crit min
+        "return": 0.20,  # mix of tautological pin/ladder + dens_return
     }
 
-    # 1) stationarity
+    # 1) stationarity (keys at Crit → ~0 by construction)
     if action is not None and key.thetas.size:
         dS = np.array([float(action.dS(t)) for t in key.thetas], dtype=float)
         probe = np.linspace(0.1, 2 * np.pi - 0.1, 64)
@@ -276,17 +306,17 @@ def residual(
     else:
         stationarity = 1.0
 
-    # 2) corr
+    # 2) |corr(S, λ)| penalty — cheap over few points; diagnostic + legacy only
     corr_pen = _corr_term(key.S_at, key.spectral_gaps)
 
-    # 3) coverage
+    # 3) coverage (minima covered by keys → ~0 when keys drawn from minima)
     if lock.minima_theta.size == 0 or key.thetas.size == 0:
         coverage = 1.0
     else:
         dists = [min(_circular_dist(m, t) for t in key.thetas) for m in lock.minima_theta]
         coverage = float(np.mean(dists) / np.pi)
 
-    # 4) pin align + density-scaled return (average of both)
+    # 4) pin / ladder / density-return
     if lock.minima_theta.size == 0 or key.thetas.size == 0:
         pin = 1.0
     else:
@@ -296,27 +326,71 @@ def residual(
 
     dens_ret = density_return_error(key, lock)
     ladder = theta_ladder_l1(key, lock)
-    # Return error: pin seating + θ-ladder vs valley ladder + density map
     return_err = 0.4 * pin + 0.35 * ladder + 0.25 * dens_ret
 
-    total = (
-        w["shape"] * stationarity
-        + w["corr"] * corr_pen
-        + w["coverage"] * coverage
-        + w["return"] * return_err
+    legacy_total = (
+        w_legacy["shape"] * stationarity
+        + w_legacy["corr"] * corr_pen
+        + w_legacy["coverage"] * coverage
+        + w_legacy["return"] * return_err
     )
+
+    # Informative: only the non-degenerate density-return term.
+    # Do not re-smuggle pin/ladder/stationarity/coverage into total.
+    informative_total = float(dens_ret)
+
+    mode = str(fitness or "informative").lower().strip()
+    if mode not in ("informative", "legacy"):
+        raise ValueError(f"unknown residual fitness mode: {fitness!r}")
+    total = legacy_total if mode == "legacy" else informative_total
+
+    coincidence = _lock_key_coincidence(key, lock)
+    n_min = int(lock.minima_theta.size)
+    n_key = int(key.thetas.size)
+    # weight of terms that vanish under full Crit-min coincidence
+    taut_weight = (
+        w_legacy["shape"]
+        + w_legacy["coverage"]
+        + w_legacy["return"] * (0.4 + 0.35)  # pin + ladder shares of return
+    )
+
     return ResidualBreakdown(
         shape_l1=stationarity,
         corr_penalty=corr_pen,
         crit_coverage=coverage,
         return_map_err=return_err,
         total=float(total),
-        weights=w,
+        weights=(
+            {"density_return": 1.0}
+            if mode == "informative"
+            else dict(w_legacy)
+        ),
+        fitness_mode=mode,
         diagnostics={
             "pin_align": pin,
             "theta_ladder_l1": ladder,
             "density_return_l1": dens_ret,
             "corr_S_lambda": 1.0 - corr_pen,
+            "legacy_total": float(legacy_total),
+            "informative_total": float(informative_total),
+            "lock_key_coincidence": coincidence,
+            "n_minima": float(n_min),
+            "n_keys": float(n_key),
+            "tautological_weight_legacy": float(taut_weight),
+            # keys drawn from Crit minima → each key coincides with some minimum
+            "degenerate_seating": float(
+                1.0
+                if (
+                    n_key > 0
+                    and n_min >= n_key
+                    and all(
+                        min(_circular_dist(float(t), float(m)) for m in lock.minima_theta)
+                        < 1e-9
+                        for t in key.thetas
+                    )
+                )
+                else 0.0
+            ),
         },
     )
 

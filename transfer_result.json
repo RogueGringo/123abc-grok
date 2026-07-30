@@ -1,0 +1,225 @@
+{
+  "protocol": "pre_registered_window_transfer",
+  "windows": {
+    "train_g1_14": [
+      1,
+      14
+    ],
+    "hold_g15_28": [
+      15,
+      14
+    ],
+    "hold_g29_42": [
+      29,
+      14
+    ]
+  },
+  "knob_transfer": "preserve_Lambda_over_g_last",
+  "seed_table_verify": {
+    "n": 15,
+    "max_abs_err": 9.976446335713263e-10,
+    "ok": true,
+    "atol": 1e-09
+  },
+  "rows": [
+    {
+      "window": "train_g1_14",
+      "n_zeros": 14,
+      "gamma_range": [
+        14.134725141734695,
+        60.83177852460981
+      ],
+      "zeta": {
+        "R": 0.08798125250116497,
+        "R_legacy": 0.004488356548407005,
+        "R_informative": 0.08798125250116497,
+        "occupancy": 1.0,
+        "F": 0.08798125250116497,
+        "diagnostics": {
+          "pin_align": 0.0,
+          "theta_ladder_l1": 0.0,
+          "density_return_l1": 0.08798125250116497,
+          "corr_S_lambda": 0.9996428243067106,
+          "legacy_total": 0.004488356548407005,
+          "informative_total": 0.08798125250116497,
+          "lock_key_coincidence": 0.0,
+          "n_minima": 6.0,
+          "n_keys": 6.0,
+          "tautological_weight_legacy": 0.7000000000000001,
+          "degenerate_seating": 1.0
+        }
+      },
+      "controls": {
+        "scramble": {
+          "R": 0.11146405168190461,
+          "R_legacy": 0.17069154060565445,
+          "R_informative": 0.11146405168190461,
+          "occupancy": 1.0,
+          "F": 0.11146405168190461
+        },
+        "gue": {
+          "R": 0.14877516815118355,
+          "R_legacy": 0.143070416977496,
+          "R_informative": 0.14877516815118355,
+          "occupancy": 1.0,
+          "F": 0.14877516815118355
+        },
+        "poisson": {
+          "R": 0.17561678076696238,
+          "R_legacy": 0.22945946139672088,
+          "R_informative": 0.17561678076696238,
+          "occupancy": 1.0,
+          "F": 0.2256167807669624
+        },
+        "arith": {
+          "R": 0.11177495404183686,
+          "R_legacy": 0.05635518841102625,
+          "R_informative": 0.11177495404183686,
+          "occupancy": 1.0,
+          "F": 0.11177495404183686
+        }
+      },
+      "advantage_legacy": 12.555862664481873,
+      "advantage_informative": 1.2669068524618776,
+      "best_null_legacy": 0.05635518841102625,
+      "best_null_informative": 0.11146405168190461
+    },
+    {
+      "window": "hold_g15_28",
+      "n_zeros": 14,
+      "gamma_range": [
+        65.1125440480816,
+        95.87063422824531
+      ],
+      "zeta": {
+        "R": 0.14853880017689003,
+        "R_legacy": 0.13568141481818166,
+        "R_informative": 0.14853880017689003,
+        "occupancy": 0.75,
+        "F": 0.4443721335102233,
+        "diagnostics": {
+          "pin_align": 0.11345300578229532,
+          "theta_ladder_l1": 0.037687361191332536,
+          "density_return_l1": 0.14853880017689003,
+          "corr_S_lambda": 0.5338395237465737,
+          "legacy_total": 0.13568141481818166,
+          "informative_total": 0.14853880017689003,
+          "lock_key_coincidence": 1.4888888271167684,
+          "n_minima": 2.0,
+          "n_keys": 4.0,
+          "tautological_weight_legacy": 0.7000000000000001,
+          "degenerate_seating": 0.0
+        }
+      },
+      "controls": {
+        "scramble": {
+          "R": 0.12863071500367793,
+          "R_legacy": 0.13139245324370905,
+          "R_informative": 0.12863071500367793,
+          "occupancy": 0.75,
+          "F": 0.42446404833701123
+        },
+        "gue": {
+          "R": 0.20763303037163292,
+          "R_legacy": 0.1396026619957407,
+          "R_informative": 0.20763303037163292,
+          "occupancy": 0.75,
+          "F": 0.5034663637049662
+        },
+        "poisson": {
+          "R": 0.1328000551281182,
+          "R_legacy": 0.10462152745533666,
+          "R_informative": 0.1328000551281182,
+          "occupancy": 0.75,
+          "F": 0.4286333884614515
+        },
+        "arith": {
+          "R": 0.34263897096642026,
+          "R_legacy": 0.14582149037816328,
+          "R_informative": 0.34263897096642026,
+          "occupancy": 0.75,
+          "F": 0.6384723042997535
+        }
+      },
+      "advantage_legacy": 0.7710822266670314,
+      "advantage_informative": 0.8659738388252483,
+      "best_null_legacy": 0.10462152745533666,
+      "best_null_informative": 0.12863071500367793
+    },
+    {
+      "window": "hold_g29_42",
+      "n_zeros": 14,
+      "gamma_range": [
+        98.83119421819369,
+        127.5166838795965
+      ],
+      "zeta": {
+        "R": 0.10451216309905313,
+        "R_legacy": 0.025281120060358445,
+        "R_informative": 0.10451216309905313,
+        "occupancy": 0.3333333333333333,
+        "F": 0.6545121630990531,
+        "diagnostics": {
+          "pin_align": 0.17453536764639954,
+          "theta_ladder_l1": 0.0,
+          "density_return_l1": 0.10451216309905313,
+          "corr_S_lambda": 0.9756292700254012,
+          "legacy_total": 0.025281120060358445,
+          "informative_total": 0.10451216309905313,
+          "lock_key_coincidence": 1.648528540585016,
+          "n_minima": 1.0,
+          "n_keys": 3.0,
+          "tautological_weight_legacy": 0.7000000000000001,
+          "degenerate_seating": 0.0
+        }
+      },
+      "controls": {
+        "scramble": {
+          "R": 0.11691039235161563,
+          "R_legacy": 0.023415332349310234,
+          "R_informative": 0.11691039235161563,
+          "occupancy": 0.3333333333333333,
+          "F": 0.6669103923516156
+        },
+        "gue": {
+          "R": 0.10670956359943574,
+          "R_legacy": 0.025306998341570238,
+          "R_informative": 0.10670956359943574,
+          "occupancy": 0.3333333333333333,
+          "F": 0.6567095635994358
+        },
+        "poisson": {
+          "R": 0.06801120166843172,
+          "R_legacy": 0.022853827095922416,
+          "R_informative": 0.06801120166843172,
+          "occupancy": 0.3333333333333333,
+          "F": 0.6180112016684318
+        },
+        "arith": {
+          "R": 0.320021899254471,
+          "R_legacy": 0.036231897138251735,
+          "R_informative": 0.320021899254471,
+          "occupancy": 0.3333333333333333,
+          "F": 0.870021899254471
+        }
+      },
+      "advantage_legacy": 0.903987918310546,
+      "advantage_informative": 0.6507491535121417,
+      "best_null_legacy": 0.022853827095922416,
+      "best_null_informative": 0.06801120166843172
+    }
+  ],
+  "knobs_train": {
+    "Lambda": 148.24406176702522,
+    "omega_scale": 1.6266382846572585,
+    "weight_power": 2.4654712820414497,
+    "tier_split": 0.6045125635214004,
+    "low_boost": 0.5654344981351259,
+    "w1_mult": 0.9104975120540054,
+    "w2_mult": 1.100020119888288,
+    "w3_mult": 0.804552377339691
+  },
+  "zeta_preference_on_holdout": false,
+  "ontology": "not_lambda_eq_gamma",
+  "note": "Train margin without holdout survival is seating, not \u03b6 structure. Legacy R is known-degenerate; informative R is density-return only."
+}

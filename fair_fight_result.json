@@ -1,0 +1,119 @@
+{
+  "summary": {
+    "zeta": {
+      "n": 1,
+      "best_F": 0.06353074793441399,
+      "mean_F": 0.06353074793441399,
+      "median_F": 0.06353074793441399
+    },
+    "arith": {
+      "n": 1,
+      "best_F": 0.033043605143589096,
+      "mean_F": 0.033043605143589096,
+      "median_F": 0.033043605143589096
+    }
+  },
+  "runs_this_invocation": [
+    {
+      "kind": "zeta",
+      "instance": 0,
+      "best_F": 0.06353074793441399,
+      "best_R": 0.06353074793441399,
+      "best_found_at_eval": 1428,
+      "n_evals": 1437,
+      "polish_gain": 0.01347556865126881,
+      "occupancy": 1.0,
+      "knobs": {
+        "Lambda": 146.56087050825573,
+        "omega_scale": 2.3943593240074468,
+        "weight_power": 1.8530987727707404,
+        "tier_split": 0.2974525437451302,
+        "low_boost": 1.4873340695250736,
+        "w1_mult": 0.8106924332746659,
+        "w2_mult": 0.9231114066926266,
+        "w3_mult": 0.9358600185579612
+      },
+      "diagnostics": {
+        "pin_align": 0.04880937858247376,
+        "theta_ladder_l1": 0.23962488261908232,
+        "density_return_l1": 0.06353074793441399,
+        "corr_S_lambda": 0.35945870381095835,
+        "legacy_total": 0.20839504280515891,
+        "informative_total": 0.06353074793441399,
+        "lock_key_coincidence": 1.1658923009724462,
+        "n_minima": 9.0,
+        "n_keys": 6.0,
+        "tautological_weight_legacy": 0.7000000000000001,
+        "degenerate_seating": 1.0
+      },
+      "fitness": "informative",
+      "budget": {
+        "de_iter": 2,
+        "popsize": 4,
+        "approx_de_evals": 64
+      },
+      "g_last": 60.8317785246,
+      "n_zeros": 14
+    },
+    {
+      "kind": "arith",
+      "instance": 0,
+      "best_F": 0.033043605143589096,
+      "best_R": 0.033043605143589096,
+      "best_found_at_eval": 468,
+      "n_evals": 591,
+      "polish_gain": 0.01093665575267723,
+      "occupancy": 1.0,
+      "knobs": {
+        "Lambda": 230.71150596014752,
+        "omega_scale": 1.818641539522762,
+        "weight_power": 1.2249001680451852,
+        "tier_split": 0.4947869831533841,
+        "low_boost": 1.497030655672709,
+        "w1_mult": 1.2,
+        "w2_mult": 0.9603233423798763,
+        "w3_mult": 1.1837463625464868
+      },
+      "diagnostics": {
+        "pin_align": 0.01897099308297205,
+        "theta_ladder_l1": 0.1272196515892699,
+        "density_return_l1": 0.033043605143589096,
+        "corr_S_lambda": 0.9380963069650307,
+        "legacy_total": 0.037036655115295726,
+        "informative_total": 0.033043605143589096,
+        "lock_key_coincidence": 0.834387855010749,
+        "n_minima": 7.0,
+        "n_keys": 6.0,
+        "tautological_weight_legacy": 0.7000000000000001,
+        "degenerate_seating": 1.0
+      },
+      "fitness": "informative",
+      "budget": {
+        "de_iter": 2,
+        "popsize": 4,
+        "approx_de_evals": 64
+      },
+      "g_last": 60.8317785246,
+      "n_zeros": 14
+    }
+  ],
+  "n_runs_total": 2,
+  "config": {
+    "N": 13,
+    "k": 14,
+    "sectors": 6,
+    "de_iter": 2,
+    "popsize": 4,
+    "fitness": "informative",
+    "arms": [
+      "zeta",
+      "arith"
+    ],
+    "warm_start": false,
+    "atol": 0.0,
+    "tol": 0.0
+  },
+  "table_seed": 14.1347251417,
+  "ontology": "equal_budget_not_lambda_eq_gamma",
+  "note": "\u03b6 preference only if \u03b6 best_F beats arith and random-matrix arms at matched budget with informative residual + holdout transfer."
+}
