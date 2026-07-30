@@ -19,7 +19,11 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from handoff_campaign import main as campaign_main
-from realm.handoff.verify import verify_archive_dir, verify_dual_gate_pin
+from realm.handoff.verify import (
+    accept_partner_drop,
+    verify_archive_dir,
+    verify_dual_gate_pin,
+)
 
 logger = logging.getLogger("handoff_matrix")
 
@@ -29,7 +33,7 @@ DEFAULT_TOKENS = ("probe", "holdout")
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
-        description="Dual-gate handoff matrix: probe + holdout campaigns + archive verify"
+        description="Dual-gate handoff matrix: probe + holdout + partner accept rollup"
     )
     p.add_argument(
         "--tokens",
@@ -64,6 +68,11 @@ def main(argv: list[str] | None = None) -> int:
         "--no-verify-archives",
         action="store_true",
         help="skip ARCHIVE.json integrity check after each token",
+    )
+    p.add_argument(
+        "--no-accept",
+        action="store_true",
+        help="skip partner accept_partner_drop on each archive",
     )
     p.add_argument("--resume", action="store_true")
     p.add_argument("--dry-run", action="store_true")
@@ -164,35 +173,91 @@ def main(argv: list[str] | None = None) -> int:
                 if not av.get("ok"):
                     overall_ok = False
                     logger.error("archive verify failed for %s: %s", tok, av.get("bad"))
-        row["ok"] = bool(row.get("quality_gate", True)) and row.get(
-            "archive_verify", True
-        ) is not False
+            if (
+                not args.no_accept
+                and not args.no_archive
+                and arch.get("archive_dir")
+            ):
+                acc = accept_partner_drop(
+                    arch["archive_dir"],
+                    require_acceptance=True,
+                    require_attestation=True,
+                )
+                row["partner_accept"] = acc.get("ok")
+                row["partner_n_pdb"] = acc.get("n_pdb")
+                row["partner_reasons"] = acc.get("reasons") or []
+                # write per-drop ACCEPT_REPORT via accept API result
+                ap = Path(arch["archive_dir"]) / "ACCEPT_REPORT.json"
+                ap.write_text(json.dumps(acc, indent=2) + "\n", encoding="utf-8")
+                if not acc.get("ok"):
+                    overall_ok = False
+                    logger.error(
+                        "partner accept failed for %s: %s", tok, acc.get("reasons")
+                    )
+        row["ok"] = (
+            bool(row.get("quality_gate", True))
+            and row.get("archive_verify", True) is not False
+            and row.get("partner_accept", True) is not False
+        )
         if not row["ok"]:
             overall_ok = False
         rows.append(row)
+
+    n_pdb_total = sum(int(r.get("partner_n_pdb") or r.get("n_pdb") or 0) for r in rows)
+    n_accept = sum(1 for r in rows if r.get("partner_accept") is True)
+    if args.dry_run:
+        acceptance_ok = overall_ok
+        n_accept = len(rows)
+    elif args.no_accept or args.no_archive:
+        acceptance_ok = overall_ok
+    else:
+        acceptance_ok = overall_ok and n_accept == len(rows) and len(rows) > 0
+    acceptance = {
+        "ok": acceptance_ok,
+        "n_tokens": len(tokens),
+        "n_accepted": n_accept,
+        "n_pdb_total": n_pdb_total,
+        "tokens": {
+            r.get("token"): {
+                "accepted": r.get("partner_accept"),
+                "n_pdb": r.get("partner_n_pdb") or r.get("n_pdb"),
+                "archive_dir": r.get("archive_dir"),
+                "reasons": r.get("partner_reasons") or [],
+            }
+            for r in rows
+            if r.get("token")
+        },
+        "ontology": "handoff_matrix_acceptance_not_lambda_eq_gamma",
+        "note": "All matrix tokens must partner-accept; openable PDBs + pin; not enrichment.",
+    }
 
     matrix = {
         "tokens": tokens,
         "pin": pin,
         "rows": rows,
-        "ok": overall_ok,
+        "acceptance": acceptance,
+        "ok": overall_ok and acceptance_ok,
         "ontology": "handoff_matrix_not_lambda_eq_gamma",
         "note": "probe+holdout commercial pair; openable PDBs + pin; not enrichment chase.",
     }
     matrix_path = out_root / "matrix_report.json"
     matrix_path.write_text(json.dumps(matrix, indent=2) + "\n", encoding="utf-8")
-    logger.info("matrix ok=%s → %s", overall_ok, matrix_path)
+    acc_path = out_root / "matrix_acceptance.json"
+    acc_path.write_text(json.dumps(acceptance, indent=2) + "\n", encoding="utf-8")
+    logger.info("matrix ok=%s acceptance=%s → %s", matrix["ok"], acceptance.get("ok"), matrix_path)
+    logger.info("matrix_acceptance → %s n_accepted=%s n_pdb_total=%s", acc_path, n_accept, n_pdb_total)
     for r in rows:
         logger.info(
-            "  %s ok=%s n_ok=%s/%s n_pdb=%s archive=%s",
+            "  %s ok=%s n_ok=%s/%s n_pdb=%s archive=%s accept=%s",
             r.get("token"),
             r.get("ok"),
             r.get("n_ok"),
             r.get("n_ids"),
             r.get("n_pdb"),
             r.get("archive_verify"),
+            r.get("partner_accept"),
         )
-    return 0 if overall_ok else 1
+    return 0 if matrix["ok"] else 1
 
 
 if __name__ == "__main__":

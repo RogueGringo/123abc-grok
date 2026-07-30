@@ -39,6 +39,12 @@ def main(argv: list[str] | None = None) -> int:
         help="accept LATEST drop under --releases (default out/releases)",
     )
     p.add_argument(
+        "--from-matrix",
+        type=Path,
+        default=None,
+        help="accept every archive_dir in matrix_report.json; write matrix_acceptance.json",
+    )
+    p.add_argument(
         "--releases",
         type=Path,
         default=Path("out/releases"),
@@ -74,6 +80,14 @@ def main(argv: list[str] | None = None) -> int:
         format="%(asctime)s - %(levelname)s - %(message)s",
     )
 
+    if args.from_matrix is not None:
+        return _accept_from_matrix(
+            Path(args.from_matrix),
+            require_acceptance=not bool(args.allow_missing_acceptance),
+            require_attestation=True,
+            report_path=args.report,
+        )
+
     root = args.root
     if args.latest:
         latest = Path(args.releases) / "LATEST.json"
@@ -87,7 +101,7 @@ def main(argv: list[str] | None = None) -> int:
             args.require_attestation = True
         logger.info("accepting LATEST → %s", root)
     if root is None:
-        p.error("root required unless --latest")
+        p.error("root required unless --latest or --from-matrix")
 
     root = Path(root)
     if not root.is_dir():
@@ -132,6 +146,94 @@ def main(argv: list[str] | None = None) -> int:
         )
     )
     return 0 if report.get("ok") else 3
+
+
+def _accept_from_matrix(
+    matrix_report: Path,
+    *,
+    require_acceptance: bool,
+    require_attestation: bool,
+    report_path: Path | None,
+) -> int:
+    if not matrix_report.is_file():
+        logger.error("matrix report missing: %s", matrix_report)
+        return 2
+    matrix = json.loads(matrix_report.read_text(encoding="utf-8"))
+    rows = matrix.get("rows") or []
+    tokens: dict[str, dict] = {}
+    n_accept = 0
+    n_pdb_total = 0
+    overall = True
+    for r in rows:
+        tok = r.get("token") or "unknown"
+        adir = r.get("archive_dir")
+        if not adir or not Path(adir).is_dir():
+            tokens[tok] = {
+                "accepted": False,
+                "reasons": ["missing_archive_dir"],
+                "archive_dir": adir,
+            }
+            overall = False
+            continue
+        acc = accept_partner_drop(
+            adir,
+            require_acceptance=require_acceptance,
+            require_attestation=require_attestation,
+        )
+        (Path(adir) / "ACCEPT_REPORT.json").write_text(
+            json.dumps(acc, indent=2) + "\n", encoding="utf-8"
+        )
+        tokens[tok] = {
+            "accepted": acc.get("ok"),
+            "n_pdb": acc.get("n_pdb"),
+            "archive_dir": adir,
+            "reasons": acc.get("reasons") or [],
+        }
+        if acc.get("ok"):
+            n_accept += 1
+            n_pdb_total += int(acc.get("n_pdb") or 0)
+        else:
+            overall = False
+    acceptance = {
+        "ok": overall and n_accept == len(rows) and len(rows) > 0,
+        "n_tokens": len(rows),
+        "n_accepted": n_accept,
+        "n_pdb_total": n_pdb_total,
+        "tokens": tokens,
+        "ontology": "handoff_matrix_acceptance_not_lambda_eq_gamma",
+        "note": "Re-accept from matrix_report; openable PDBs + pin; not enrichment.",
+    }
+    out = (
+        Path(report_path)
+        if report_path
+        else matrix_report.parent / "matrix_acceptance.json"
+    )
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(acceptance, indent=2) + "\n", encoding="utf-8")
+    # refresh matrix_report acceptance block if present
+    matrix["acceptance"] = acceptance
+    matrix["ok"] = bool(matrix.get("ok")) and acceptance["ok"]
+    matrix_report.write_text(json.dumps(matrix, indent=2) + "\n", encoding="utf-8")
+    logger.info(
+        "matrix accept ok=%s n_accepted=%s/%s n_pdb_total=%s → %s",
+        acceptance["ok"],
+        n_accept,
+        len(rows),
+        n_pdb_total,
+        out,
+    )
+    print(
+        json.dumps(
+            {
+                "ok": acceptance["ok"],
+                "n_accepted": n_accept,
+                "n_tokens": len(rows),
+                "n_pdb_total": n_pdb_total,
+                "report": str(out.resolve()),
+            }
+        )
+    )
+    return 0 if acceptance["ok"] else 3
 
 
 if __name__ == "__main__":

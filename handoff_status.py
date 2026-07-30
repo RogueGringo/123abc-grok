@@ -78,6 +78,20 @@ def build_status(
         ok = False
     if isinstance(acceptance, dict) and acceptance.get("accepted") is False:
         ok = False
+    matrix_acceptance = None
+    if isinstance(matrix, dict) and matrix.get("acceptance"):
+        matrix_acceptance = matrix.get("acceptance")
+        if matrix_acceptance.get("ok") is False:
+            ok = False
+    elif matrix_report:
+        ma_path = Path(matrix_report).parent / "matrix_acceptance.json"
+        if ma_path.is_file():
+            try:
+                matrix_acceptance = json.loads(ma_path.read_text(encoding="utf-8"))
+                if matrix_acceptance.get("ok") is False:
+                    ok = False
+            except Exception as exc:  # noqa: BLE001
+                matrix_acceptance = {"error": str(exc)}
 
     return {
         "ok": ok,
@@ -119,11 +133,13 @@ def build_status(
                 "ok": matrix.get("ok") if isinstance(matrix, dict) else None,
                 "tokens": matrix.get("tokens") if isinstance(matrix, dict) else None,
                 "rows": matrix.get("rows") if isinstance(matrix, dict) else None,
+                "acceptance": matrix_acceptance,
                 "path": str(Path(matrix_report).resolve()) if matrix_report else None,
             }
             if matrix is not None
             else None
         ),
+        "matrix_acceptance": matrix_acceptance,
         "ontology": "handoff_status_not_lambda_eq_gamma",
         "note": "Ops view only; acceptance metric is openable PDBs + pin.",
     }
@@ -200,6 +216,14 @@ def main(argv: list[str] | None = None) -> int:
             "matrix ok=%s tokens=%s",
             status["matrix"].get("ok"),
             status["matrix"].get("tokens"),
+        )
+    if status.get("matrix_acceptance"):
+        ma = status["matrix_acceptance"] or {}
+        logger.info(
+            "matrix_acceptance ok=%s n_accepted=%s n_pdb_total=%s",
+            ma.get("ok"),
+            ma.get("n_accepted"),
+            ma.get("n_pdb_total"),
         )
     if status.get("archive_verify"):
         logger.info(
