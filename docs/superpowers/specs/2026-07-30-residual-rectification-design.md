@@ -1,8 +1,8 @@
 # Residual Rectification — Design Spec
 
 **Date:** 2026-07-30
-**Status:** Sub-spec I implemented (PR #2). Sub-spec II **Stage 6 implemented**
-(`realm/validate/window_filtration.py`, CLI `window_filtration.py`). Stages 7–9 open.
+**Status:** Sub-spec I implemented (PR #2). Sub-spec II **Stages 6–8 implemented**
+(`window_filtration.py`, `cross_window.py`). Stage 9 (powered tournament) open.
 **Gate condition met:** the equal-budget table is public (PR #2, `fair_fight_result.json`),
 which was the precondition for re-opening residual design.
 **Supersedes for selection purposes:** `2026-07-30-validation-ladder-design.md` (retracted)

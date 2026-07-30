@@ -1,0 +1,388 @@
+"""Sub-spec II Stages 7–8 — cross-window rigidity + persistence (Axioms 8.2, 4.3).
+
+Stage 7: long-range statistics on each window's ordinate block (and on the
+component matrix across the filtration). Candidates for the fitness carrier:
+number variance Σ²(L), spectral rigidity Δ₃(L), pair correlation at L>1.
+
+Stage 8: persistence of an arm's *advantage* across window index — birth/death
+barcode; pass if max consecutive lifespan ≥ ceil(W/2).
+
+Does not modify dual-gate LengthPolicy. Never λ=γ.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+import numpy as np
+
+from realm.validate.seeds import make_seed, sample_gue_spacings
+from realm.validate.window_filtration import (
+    COMPONENT_SCALAR_KEYS,
+    load_champion_knobs,
+    score_window_filtration,
+)
+from realm.validate.zeros import real_zeros
+
+
+# ---------------------------------------------------------------------------
+# Unfolding + spectral statistics (Stage 7)
+# ---------------------------------------------------------------------------
+
+
+def unfold_ordinates(g: np.ndarray) -> np.ndarray:
+    """Map ordinates to unit-mean nearest-neighbour spacings (local mean gap)."""
+    g = np.asarray(g, dtype=float).ravel()
+    if g.size < 3:
+        return np.zeros(0, dtype=float)
+    d = np.diff(g)
+    # local mean via 3-point smooth of gaps; fallback global mean
+    if d.size >= 3:
+        ker = np.array([1.0, 2.0, 1.0]) / 4.0
+        pad = np.pad(d, (1, 1), mode="edge")
+        local = np.convolve(pad, ker, mode="valid")
+        s = d / (local + 1e-15)
+    else:
+        s = d / (float(np.mean(d)) + 1e-15)
+    return s
+
+
+def number_variance(spacings: np.ndarray, L: float) -> float:
+    """Number variance Σ²(L) from unit-mean spacings (interval length L in mean units).
+
+    Monte-Carlo style: tile a long unfolded staircase from spacings and measure
+    variance of count in windows of length L.
+    """
+    s = np.asarray(spacings, dtype=float).ravel()
+    s = s[np.isfinite(s) & (s > 0)]
+    if s.size < 4 or L <= 0:
+        return float("nan")
+    # unfolded positions
+    x = np.concatenate([[0.0], np.cumsum(s)])
+    total = float(x[-1])
+    if total < 2 * L:
+        return float("nan")
+    # sample many intervals
+    n_samp = min(200, max(20, int(total / L) - 1))
+    rng = np.random.default_rng(0)
+    starts = rng.uniform(0.0, total - L, size=n_samp)
+    counts = np.searchsorted(x, starts + L) - np.searchsorted(x, starts)
+    return float(np.var(counts.astype(float)))
+
+
+def spectral_rigidity_delta3(spacings: np.ndarray, L: float) -> float:
+    """Spectral rigidity Δ₃(L) via least-squares fit of staircase on [a, a+L].
+
+    Dyson–Mehta: min over A,B of (1/L) ∫_a^{a+L} (N(x) − A − Bx)² dx.
+    Approximated by discrete LS on unfolded positions.
+    """
+    s = np.asarray(spacings, dtype=float).ravel()
+    s = s[np.isfinite(s) & (s > 0)]
+    if s.size < 6 or L <= 0:
+        return float("nan")
+    x = np.concatenate([[0.0], np.cumsum(s)])
+    n_count = np.arange(x.size, dtype=float)
+    total = float(x[-1])
+    if total < L + 1e-9:
+        return float("nan")
+    # one central interval for stability
+    a = max(0.0, 0.5 * (total - L))
+    b = a + L
+    mask = (x >= a) & (x <= b)
+    if int(np.sum(mask)) < 4:
+        return float("nan")
+    xx = x[mask] - a
+    nn = n_count[mask]
+    # fit nn ≈ A + B xx
+    A = np.column_stack([np.ones_like(xx), xx])
+    coef, _, _, _ = np.linalg.lstsq(A, nn, rcond=None)
+    resid = nn - (coef[0] + coef[1] * xx)
+    return float(np.mean(resid**2))
+
+
+def pair_correlation(spacings: np.ndarray, L: float, *, n_bins: int = 20) -> float:
+    """Integrated pair correlation excess at separation ~L (L>1 mean spacings).
+
+    Returns mean of g2(r) − 1 over r ∈ [L, L+0.5] estimated from all pairs of
+    unfolded positions (cheap O(n²) on window size k~14).
+    """
+    s = np.asarray(spacings, dtype=float).ravel()
+    s = s[np.isfinite(s) & (s > 0)]
+    if s.size < 4 or L <= 1.0:
+        return float("nan")
+    x = np.concatenate([[0.0], np.cumsum(s)])
+    diffs = []
+    for i in range(x.size):
+        for j in range(i + 1, x.size):
+            diffs.append(float(x[j] - x[i]))
+    d = np.asarray(diffs, dtype=float)
+    lo, hi = float(L), float(L) + 0.5
+    in_bin = d[(d >= lo) & (d < hi)]
+    # expected density of pairs in [lo,hi] for Poisson: ~ length * density
+    # normalize by total pairs / mean range
+    if d.size == 0:
+        return float("nan")
+    dens = float(in_bin.size) / (0.5 * max(d.size, 1))
+    # crude Poisson baseline ~ 1 for unit density pair measure; return dens-1
+    return float(dens - 1.0)
+
+
+def rigidity_report_for_block(gammas: np.ndarray, *, L_values: tuple[float, ...] = (2.0, 5.0, 10.0)) -> dict[str, Any]:
+    """Stage 7 statistics for one ordinate block."""
+    g = np.asarray(gammas, dtype=float).ravel()
+    s = unfold_ordinates(g)
+    out: dict[str, Any] = {
+        "n_ordinates": int(g.size),
+        "n_spacings": int(s.size),
+        "mean_spacing_raw": float(np.mean(np.diff(g))) if g.size > 1 else float("nan"),
+        "unfolded_mean": float(np.mean(s)) if s.size else float("nan"),
+        "number_variance": {},
+        "delta3": {},
+        "pair_corr_excess": {},
+    }
+    for L in L_values:
+        out["number_variance"][str(L)] = number_variance(s, L)
+        out["delta3"][str(L)] = spectral_rigidity_delta3(s, L)
+        if L > 1.0:
+            out["pair_corr_excess"][str(L)] = pair_correlation(s, L)
+    # scalar carrier: mean Δ₃ at L=5 (long-range; GUE expects ~log L / π²)
+    d5 = out["delta3"].get("5.0", float("nan"))
+    nv5 = out["number_variance"].get("5.0", float("nan"))
+    out["carrier"] = {
+        "delta3_L5": d5,
+        "number_variance_L5": nv5,
+        # lower Δ₃ relative to Poisson (~L/15) is "more rigid"
+        "rigidity_score": float(d5) if np.isfinite(d5) else float("nan"),
+    }
+    return out
+
+
+def score_rigidity_filtration(
+    *,
+    n_windows: int = 7,
+    n_zeros: int = 14,
+    n_zeros_table: int | None = None,
+    arm: str = "zeta",
+    rng_seed: int = 0,
+) -> dict[str, Any]:
+    """Stage 7: rigidity stats on each window of an arm's spectrum (shared block layout).
+
+    For ``arm='zeta'`` uses verified real zeros. For ``gue`` / other seeds, draws
+    one spectrum via ``make_seed`` (or GUE spacings → cumulative) and windows it.
+    """
+    W = int(n_windows)
+    k = int(n_zeros)
+    table_n = int(n_zeros_table) if n_zeros_table is not None else max(k * (W + 1), 2 * k)
+    rng = np.random.default_rng(int(rng_seed))
+
+    if arm == "zeta":
+        g = real_zeros(table_n)
+        source = "real_zeros_verified"
+    elif arm in ("gue", "goe", "goe_true", "poisson", "scramble", "arith"):
+        try:
+            g = make_seed(arm if arm != "gue" else "gue", table_n, rng)
+            source = f"make_seed:{arm}"
+        except Exception:
+            # build from GUE spacings if kind name differs
+            sp = sample_gue_spacings(table_n - 1, rng)
+            g = np.concatenate([[14.1347], 14.1347 + np.cumsum(sp * 1.0)])
+            source = "sample_gue_spacings_fallback"
+    else:
+        raise ValueError(f"unknown arm {arm!r}")
+
+    rows = []
+    carriers = []
+    for i in range(W):
+        block = g[i * k : (i + 1) * k]
+        if block.size < k:
+            break
+        rep = rigidity_report_for_block(block)
+        rows.append({"index": i, "rigidity": rep})
+        carriers.append(rep["carrier"]["rigidity_score"])
+
+    carr = np.asarray(carriers, dtype=float)
+    finite = carr[np.isfinite(carr)]
+    return {
+        "stage": 7,
+        "stage_name": "cross_window_rigidity",
+        "arm": arm,
+        "source": source,
+        "W": len(rows),
+        "n_zeros": k,
+        "windows": rows,
+        "carrier_series": carriers,
+        "carrier_mean": float(np.mean(finite)) if finite.size else float("nan"),
+        "carrier_std": float(np.std(finite)) if finite.size else float("nan"),
+        "ontology": "spectral_rigidity_not_lambda_eq_gamma",
+        "note": (
+            "Sub-spec II Stage 7. Long-range stats on ordinate windows only — "
+            "no dual-gate LengthPolicy change. Never λ=γ."
+        ),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Stage 8 — persistence of advantage
+# ---------------------------------------------------------------------------
+
+
+def advantage_series(
+    series_a: np.ndarray | list[float],
+    series_b: np.ndarray | list[float],
+    *,
+    lower_is_better: bool = True,
+) -> np.ndarray:
+    """Boolean mask: True where arm A beats arm B at that window."""
+    a = np.asarray(series_a, dtype=float).ravel()
+    b = np.asarray(series_b, dtype=float).ravel()
+    n = min(a.size, b.size)
+    a, b = a[:n], b[:n]
+    if lower_is_better:
+        return np.isfinite(a) & np.isfinite(b) & (a < b)
+    return np.isfinite(a) & np.isfinite(b) & (a > b)
+
+
+def persistence_barcode(wins: np.ndarray | list[bool]) -> dict[str, Any]:
+    """Birth/death intervals of consecutive True runs; max lifespan.
+
+    Stage 8 pass: max_lifespan ≥ ceil(W/2).
+    """
+    w = np.asarray(wins, dtype=bool).ravel()
+    W = int(w.size)
+    intervals: list[dict[str, int]] = []
+    i = 0
+    while i < W:
+        if not w[i]:
+            i += 1
+            continue
+        birth = i
+        while i < W and w[i]:
+            i += 1
+        death = i  # exclusive
+        intervals.append({"birth": birth, "death": death, "lifespan": death - birth})
+    max_life = max((iv["lifespan"] for iv in intervals), default=0)
+    threshold = int(np.ceil(W / 2.0)) if W else 0
+    return {
+        "W": W,
+        "intervals": intervals,
+        "max_lifespan": int(max_life),
+        "threshold_ceil_W_over_2": threshold,
+        "stage8_pass": bool(max_life >= threshold and W > 0),
+        "n_true": int(np.sum(w)),
+        "wins": w.astype(bool).tolist(),
+    }
+
+
+def compare_arms_filtration(
+    knobs: dict[str, Any],
+    *,
+    arm_a: str = "zeta",
+    arm_b: str = "gue",
+    n_windows: int = 7,
+    n_zeros: int = 14,
+    N: int = 13,
+    n_sectors: int = 6,
+    component_key: str = "density_return_l1",
+    lower_is_better: bool = True,
+    rng_seed: int = 0,
+) -> dict[str, Any]:
+    """Stage 7+8 joint: residual components per window for two arms + persistence.
+
+    Arm ``zeta`` uses real zeros windows (via score_window_filtration on champion
+    knobs — the spectrum is ζ). Arm ``gue`` re-scores the *same knobs* on GUE
+    ordinate windows (span-matched length via make_seed per window pair).
+
+    For a fair Stage 7 spectrum-rigidity comparison, also emits rigidity
+    filtrations for both arms.
+    """
+    from realm.validate.baseline import KNOB_KEYS, score_with_independent_baseline
+    from realm.validate.window_filtration import contiguous_windows
+
+    W = int(n_windows)
+    k = int(n_zeros)
+    table_n = max(k * (W + 1), 2 * k)
+    rng = np.random.default_rng(int(rng_seed))
+
+    # Arm A (ζ): full Stage 6 path
+    if arm_a != "zeta":
+        raise ValueError("compare_arms_filtration currently requires arm_a='zeta'")
+    filt_a = score_window_filtration(
+        knobs, n_windows=W, n_zeros=k, N=N, n_sectors=n_sectors
+    )
+    series_a = []
+    for w in filt_a["windows"]:
+        series_a.append(float(w["components"].get(component_key, np.nan)))
+
+    # Arm B: GUE (or other) windows with independent baseline, same knobs
+    g_b = make_seed("gue" if arm_b == "gue" else arm_b, table_n, rng)
+    blocks_b = contiguous_windows(g_b, n_zeros=k, n_windows=W)
+    kn_forge = {kk: knobs[kk] for kk in KNOB_KEYS if kk in knobs}
+    series_b = []
+    windows_b = []
+    for b in blocks_b:
+        row = score_with_independent_baseline(
+            knobs=kn_forge,
+            key_gammas=b["key_gammas"],
+            lock_gammas=b["lock_gammas"],
+            N=int(N),
+            n_sectors=int(n_sectors),
+        )
+        c = row["components"]
+        series_b.append(float(c.get(component_key, np.nan)))
+        windows_b.append(
+            {
+                "index": b["index"],
+                "components": c,
+                "degeneracy": row.get("degeneracy"),
+                "is_degenerate": bool((row.get("degeneracy") or {}).get("is_degenerate", True)),
+            }
+        )
+
+    wins = advantage_series(series_a, series_b, lower_is_better=lower_is_better)
+    barcode = persistence_barcode(wins)
+
+    # Stage 7 rigidity on raw spectra (windowed)
+    rig_a = score_rigidity_filtration(
+        n_windows=W, n_zeros=k, n_zeros_table=table_n, arm="zeta", rng_seed=rng_seed
+    )
+    rig_b = score_rigidity_filtration(
+        n_windows=W, n_zeros=k, n_zeros_table=table_n, arm=arm_b, rng_seed=rng_seed + 1
+    )
+    # advantage on rigidity (lower Δ₃ often more rigid — treat lower as better)
+    rig_wins = advantage_series(
+        rig_a["carrier_series"], rig_b["carrier_series"], lower_is_better=True
+    )
+    rig_barcode = persistence_barcode(rig_wins)
+
+    return {
+        "stage": "7+8",
+        "stage_name": "rigidity_and_persistence",
+        "arm_a": arm_a,
+        "arm_b": arm_b,
+        "component_key": component_key,
+        "lower_is_better": lower_is_better,
+        "W": W,
+        "series_a": series_a,
+        "series_b": series_b,
+        "component_persistence": barcode,
+        "rigidity_a": {
+            "carrier_mean": rig_a["carrier_mean"],
+            "carrier_series": rig_a["carrier_series"],
+        },
+        "rigidity_b": {
+            "carrier_mean": rig_b["carrier_mean"],
+            "carrier_series": rig_b["carrier_series"],
+        },
+        "rigidity_persistence": rig_barcode,
+        "stage6_a": {
+            "stage6_pass": filt_a["stage6_pass"],
+            "dof_ratio": filt_a["dof_ratio"],
+            "n_windows_guard_clear": filt_a["n_windows_guard_clear"],
+        },
+        "windows_b_guard_clear": sum(1 for w in windows_b if not w["is_degenerate"]),
+        "ontology": "cross_window_persistence_not_lambda_eq_gamma",
+        "note": (
+            "Sub-spec II Stages 7–8. Component advantage + spectral rigidity "
+            "persistence across windows. Dual-gate LengthPolicy untouched. Never λ=γ."
+        ),
+    }
