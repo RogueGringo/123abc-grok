@@ -38,8 +38,16 @@ def test_seq_mix_policy():
 
 
 def test_load_resnames_and_sequence_defect():
+    from pathlib import Path
+
+    import pytest
+
+    pdb_path = Path("data/pdb/1CSA.pdb")
+    if not pdb_path.is_file():
+        pytest.skip("data/pdb/1CSA.pdb not present (gitignored RCSB cache)")
+
     xyz, names, ch = load_ca_cyclic_band(
-        "data/pdb/1CSA.pdb", lo=6, hi=40, with_resnames=True
+        str(pdb_path), lo=6, hi=40, with_resnames=True
     )
     assert xyz.shape[0] == len(names)
     assert all(isinstance(n, str) and n for n in names)

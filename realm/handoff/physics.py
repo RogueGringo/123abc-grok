@@ -51,7 +51,6 @@ class GeometrySelfCheck:
         b = np.asarray(bonds, dtype=float)
         mean_b = float(np.mean(b))
         std_b = float(np.std(b))
-        closure = float(np.linalg.norm(ca[0] - ca[-1]))  # same as last bond for cycle
         notes: list[str] = []
         status = "OK"
         if abs(mean_b - self.ideal_ca) > 0.8:
@@ -67,7 +66,7 @@ class GeometrySelfCheck:
                 "n_ca": n,
                 "ca_bond_mean": mean_b,
                 "ca_bond_std": std_b,
-                "closure_bond": float(b[-1]),
+                "closure_bond": float(b[-1]),  # last cyclic CA–CA bond
                 "ideal_ca": self.ideal_ca,
             },
             notes=notes,

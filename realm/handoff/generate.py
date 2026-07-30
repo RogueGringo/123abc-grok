@@ -53,10 +53,9 @@ def generate_crit_ensemble(
             gap = float(op.mean_gap) if op is not None else None
             for si, pts in enumerate(templates):
                 xyz = np.asarray(pts, dtype=float)[:, :3]
-                if xyz.shape[0] != N:
-                    # resample length mismatch: skip
-                    if xyz.shape[0] < 3:
-                        continue
+                # Length mismatch or degenerate: skip (keep requested N only)
+                if xyz.shape[0] != N or xyz.shape[0] < 3:
+                    continue
                 tw = float(thetas[si]) if si < thetas.size else None
                 # rank_score: prefer sharper MaxOp gap + lower |S| proxy via frustration
                 fr = float(op.mean_frustration) if op is not None else 0.0
@@ -64,7 +63,7 @@ def generate_crit_ensemble(
                 molds.append(
                     MoldRecord(
                         source="crit",
-                        N=int(xyz.shape[0]),
+                        N=int(N),
                         xyz=xyz,
                         rank_score=score,
                         method=f"crit_mm{int(mm)}_om{os:.3g}_sec{si}",

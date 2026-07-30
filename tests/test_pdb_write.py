@@ -67,8 +67,21 @@ def test_write_mold_pair(tmp_path: Path):
 
 def test_remark_ontology_literal():
     from realm.validate.pdb_write import build_remarks
+
     lines = build_remarks(source="crit", N=11, rank_score=0.5, method="test")
     joined = "\n".join(lines)
     assert "not_lambda_eq_gamma" in joined
+    assert "substrate_crit_projection_not_lambda_eq_gamma" in joined
+    assert any(
+        "ONTOLOGY substrate_crit_projection_not_lambda_eq_gamma" in line
+        for line in lines
+    )
     assert any(line.startswith("REMARK") for line in lines)
     assert "SOURCE crit" in joined
+
+
+def test_soft_T_n12_production_pin():
+    """Lock dual-gate soft_T for n=12 without changing production numbers."""
+    from realm.validate.length_policy import policy_for
+
+    assert abs(policy_for(12).soft_T - 0.036) < 1e-12

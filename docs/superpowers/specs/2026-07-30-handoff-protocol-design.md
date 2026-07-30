@@ -133,7 +133,7 @@ REMARK   8 MAXOP_GAP <float optional>
 ```
 
 ### 4.5 Round-trip validation
-- `parse_ca_trace(write_ca_pdb(...))` RMSD to input CA < 1e-6 (after centering/align if writer centers — prefer **no** silent reordering)
+- `parse_ca_trace(write_ca_pdb(...))` max |Δ| < 1e-3 (PDB 0.001 Å fixed-width format; no silent reordering)
 - Writer does **not** reorder residues
 
 ---

@@ -48,10 +48,20 @@ class PolyAlaStubAdapter:
                 None, self.name, "ERROR", note=f"missing backbone {bb}"
             )
         text = bb.read_text(encoding="utf-8")
-        # Append CB near each CA (naive offset along z of residue)
+        # Rewrite existing residue names to ALA, then append CB stubs
         ca = parse_ca_trace(text)
-        out_lines = [ln for ln in text.splitlines() if not ln.startswith("END")]
-        serial = sum(1 for ln in out_lines if ln.startswith("ATOM")) + 1
+        out_lines: list[str] = []
+        for ln in text.splitlines():
+            if ln.startswith("END"):
+                continue
+            if ln.startswith("ATOM") or ln.startswith("HETATM"):
+                # PDB columns 18-20 are resname; force ALA for consistent poly-ALA
+                if len(ln) >= 20:
+                    ln = ln[:17] + "ALA" + ln[20:]
+                else:
+                    ln = (ln + " " * 20)[:17] + "ALA"
+            out_lines.append(ln)
+        serial = sum(1 for ln in out_lines if ln.startswith("ATOM") or ln.startswith("HETATM")) + 1
         for i, p in enumerate(ca):
             x, y, z = float(p[0]), float(p[1]), float(p[2]) + 1.5
             resseq = i + 1
@@ -69,7 +79,7 @@ class PolyAlaStubAdapter:
             path_decorated=out_path,
             adapter=self.name,
             status="OK",
-            note="poly-ALA CB stubs only (not full sidechain packing)",
+            note="poly-ALA resnames + CB stubs only (not full sidechain packing)",
         )
 
 
