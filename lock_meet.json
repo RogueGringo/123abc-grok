@@ -1,19 +1,22 @@
 {
   "locked": true,
-  "R": 0.040976323875154846,
+  "R": 0.0045321647898132885,
   "knobs": {
-    "Lambda": 172.4102011338721,
-    "omega_scale": 1.5650629464696166,
-    "weight_power": 1.3515832159488352,
-    "tier_split": 0.586740876019942,
-    "low_boost": 0.7525136753616448
+    "Lambda": 168.78695073249213,
+    "omega_scale": 1.6269932038392327,
+    "weight_power": 2.0112793282732184,
+    "tier_split": 0.5874425095110438,
+    "low_boost": 0.6438012014911153,
+    "w1_mult": 0.9399563144790238,
+    "w2_mult": 1.0548999514537594,
+    "w3_mult": 0.881677493967387
   },
   "breakdown": {
-    "stationarity": 4.730426991405277e-13,
-    "corr_penalty": 0.003654365369801349,
+    "stationarity": 1.7040783360156375e-13,
+    "corr_penalty": 8.982184976846774e-05,
     "crit_coverage": 0.0,
-    "return_map_err": 0.20031366266281295,
-    "total": 0.040976323875154846,
+    "return_map_err": 0.022548546636600247,
+    "total": 0.0045321647898132885,
     "weights": {
       "shape": 0.3,
       "corr": 0.25,
@@ -23,17 +26,26 @@
     "diagnostics": {
       "pin_align": 0.0,
       "theta_ladder_l1": 0.0,
-      "density_return_l1": 0.8012546506512518,
-      "corr_S_lambda": 0.9963456346301987
+      "density_return_l1": 0.09019418654640099,
+      "corr_S_lambda": 0.9999101781502315
     }
   },
   "thetas": [
-    5.636020853871168,
-    1.0988252715662228,
-    4.712341646660547,
-    2.0372720004729135,
-    3.795580728491117,
-    2.9394140996434026
+    5.428204437766438,
+    1.05188828901337,
+    4.53503806615296,
+    1.968654786998486,
+    3.6304187378441326,
+    2.8423392304588657
   ],
-  "search_method": "multi_gen_DE_LBFGS_fitness"
+  "search_method": "parallel_8D_IR_micro_DE_LBFGS",
+  "occupancy": 1.0,
+  "n_keys": 6,
+  "n_valleys": 6,
+  "compute": {
+    "workers": 5,
+    "cpu_count": 8,
+    "ram_avail_gb": 8.099786752,
+    "notes": "cpu=8 avail_ram=8.1GB \u2192 workers=5 (auto=6, by_cpu=7, by_ram=7)"
+  }
 }

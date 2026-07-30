@@ -4,7 +4,7 @@ Error R is the gradient: each component points at a concrete fix
 (stationarity, coverage, corr(S,λ), pin align / density-scaled return map).
 
 Keymaker knobs (global search):
-  Λ, ω-scale, weight_power, tier_split, low_boost
+  Λ, ω-scale, weight_power, tier_split, low_boost, w1/w2/w3_mult
 
 Never tests λ = γ identity — only structural lock–key agreement.
 """
@@ -143,38 +143,106 @@ def build_key(result: DerivationResult) -> KeyState:
     )
 
 
+def _quantile_align(a: np.ndarray, b: np.ndarray, n: int = 8) -> tuple[np.ndarray, np.ndarray]:
+    """Mean-normalize and sample matching quantiles (scale-free shape compare)."""
+    a = _norm_gaps(np.asarray(a, float).ravel())
+    b = _norm_gaps(np.asarray(b, float).ravel())
+    if a.size == 0 or b.size == 0:
+        return np.zeros(0), np.zeros(0)
+    n = int(max(3, min(n, a.size + 2, b.size + 2)))
+    q = np.linspace(0.05, 0.95, n)
+    return np.quantile(a, q), np.quantile(b, q)
+
+
+def _cum_ladder(x: np.ndarray, n: int = 8) -> np.ndarray:
+    """Unit cumulative ladder of mean-normalized spacings."""
+    x = _norm_gaps(np.asarray(x, float).ravel())
+    if x.size == 0:
+        return np.zeros(0)
+    c = np.cumsum(x)
+    c = c / (c[-1] + 1e-15)
+    grid = np.linspace(0.0, 1.0, n)
+    return np.interp(grid, np.linspace(0.0, 1.0, c.size), c)
+
+
 def return_map_phases_density(
     key: KeyState,
     lock: LockState,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Evolved return map: density-unfold λ-gaps, compare to density-unfold seed gaps.
+    """Density-scaled return: sheaf λ-spacings vs seed gaps (both unfolded).
 
-    Also returns ordered key thetas vs ordered lock minima as a secondary
-    geometric return (pin ladder) — blended in residual().
+    Not λ=γ identity — only shape agreement of successive spacing measures
+    after Riemann–von Mangoldt density scaling. Quantile-aligned for unequal
+    sequence lengths (sectors vs zeros).
     """
     g = np.sort(key.spectral_gaps)
     if g.size < 2 or lock.gammas.size < 2:
         return np.zeros(0), np.zeros(0)
 
     dlam = np.diff(g)
+    # Density-scale λ-spacings at rank-matched ordinates
     ranks = np.linspace(0, 1, len(dlam) + 2)[1:-1]
     T = np.interp(ranks, np.linspace(0, 1, lock.gammas.size), lock.gammas)
     rho = np.array([mean_spacing_density(float(t)) for t in T], dtype=float)
-    # Soften density contrast so map is stable at low T
     rho = np.clip(rho, 0.05 * np.mean(rho), None)
-    dt = dlam / (rho + 1e-15)
-    phases = _norm_gaps(dt)
+    phases = dlam / (rho + 1e-15)
 
     sg = lock.seed_gaps
     if sg.size == 0:
-        ref = np.zeros(0)
-    else:
-        T2 = 0.5 * (lock.gammas[:-1] + lock.gammas[1:])
-        m = min(sg.size, T2.size)
-        rho2 = np.array([mean_spacing_density(float(t)) for t in T2[:m]], dtype=float)
-        rho2 = np.clip(rho2, 0.05 * np.mean(rho2), None)
-        ref = _norm_gaps(sg[:m] / (rho2 + 1e-15))
+        return _norm_gaps(phases), np.zeros(0)
+    T2 = 0.5 * (lock.gammas[:-1] + lock.gammas[1:])
+    m = min(sg.size, T2.size)
+    rho2 = np.array([mean_spacing_density(float(t)) for t in T2[:m]], dtype=float)
+    rho2 = np.clip(rho2, 0.05 * np.mean(rho2), None)
+    ref = sg[:m] / (rho2 + 1e-15)
     return phases, ref
+
+
+def _soft_ecdf_l1(a: np.ndarray, b: np.ndarray, n_grid: int = 48) -> float:
+    """Smoothed CDF L1 on shared support (softer than hard quantiles for L-BFGS)."""
+    a = _norm_gaps(np.asarray(a, float).ravel())
+    b = _norm_gaps(np.asarray(b, float).ravel())
+    if a.size == 0 or b.size == 0:
+        return 1.0
+    lo = float(min(a.min(), b.min()))
+    hi = float(max(a.max(), b.max()))
+    if hi - lo < 1e-15:
+        return 0.0
+    grid = np.linspace(lo, hi, n_grid)
+    # Linear-interpolated ECDF (piecewise-linear → smoother than pure step)
+    sa, sb = np.sort(a), np.sort(b)
+    ca = np.linspace(0.0, 1.0, sa.size)
+    cb = np.linspace(0.0, 1.0, sb.size)
+    ea = np.interp(grid, sa, ca, left=0.0, right=1.0)
+    eb = np.interp(grid, sb, cb, left=0.0, right=1.0)
+    return float(np.mean(np.abs(ea - eb)))
+
+
+def density_return_error(key: KeyState, lock: LockState) -> float:
+    """Composite density-return residual in [0, 2].
+
+    Blends soft-ECDF L1, quantile Wasserstein-L1, cumulative-ladder L1, and
+    fluctuation RMS — all scale-free. Soft ECDF gives L-BFGS a smoother
+    gradient than pure sorted quantiles; not λ ≈ γ.
+    """
+    phases, ref = return_map_phases_density(key, lock)
+    if phases.size == 0 or ref.size == 0:
+        return 1.0
+    soft = _soft_ecdf_l1(phases, ref)
+    qa, qb = _quantile_align(phases, ref, n=max(5, min(phases.size, ref.size, 10)))
+    if qa.size == 0:
+        return float(np.clip(soft, 0.0, 2.0))
+    w1 = float(np.mean(np.abs(qa - qb)))
+    n = qa.size
+    ca = _cum_ladder(phases, n=n)
+    cb = _cum_ladder(ref, n=n)
+    cum = float(np.mean(np.abs(ca - cb))) if ca.size and cb.size else 1.0
+    fa = float(np.std(_norm_gaps(phases)))
+    fb = float(np.std(_norm_gaps(ref)))
+    fluc = abs(fa - fb) / (fa + fb + 1e-15)
+    return float(
+        np.clip(0.30 * soft + 0.25 * w1 + 0.30 * cum + 0.15 * fluc, 0.0, 2.0)
+    )
 
 
 def theta_ladder_l1(key: KeyState, lock: LockState) -> float:
@@ -226,8 +294,7 @@ def residual(
         d2 = [min(_circular_dist(m, t) for t in key.thetas) for m in lock.minima_theta]
         pin = float((np.mean(d1) + np.mean(d2)) / 2.0 / np.pi)
 
-    ret_phases, ret_ref = return_map_phases_density(key, lock)
-    dens_ret = _shape_l1(ret_phases, ret_ref) if ret_phases.size and ret_ref.size else 0.0
+    dens_ret = density_return_error(key, lock)
     ladder = theta_ladder_l1(key, lock)
     # Return error: pin seating + θ-ladder vs valley ladder + density map
     return_err = 0.4 * pin + 0.35 * ladder + 0.25 * dens_ret
@@ -325,6 +392,9 @@ class Keymaker:
             weight_power=float(knobs.get("weight_power", 1.0)),
             tier_split=float(knobs.get("tier_split", 0.45)),
             low_boost=float(knobs.get("low_boost", 1.0)),
+            w1_mult=float(knobs.get("w1_mult", 1.0)),
+            w2_mult=float(knobs.get("w2_mult", 1.0)),
+            w3_mult=float(knobs.get("w3_mult", 1.0)),
         ).run()
 
 
@@ -337,13 +407,16 @@ class MasterLockProtocol:
     n_sectors: int = 6
     threshold: float = 0.18
     max_iter: int = 40
-    # knob vector: [Λ_scale, ω_scale, weight_power, tier_split, low_boost]
+    # knob vector: [Λ_scale, ω_scale, weight_power, tier_split, low_boost, w1, w2, w3]
     bounds: tuple = (
         (0.4, 4.5),   # Λ / g[-1]
         (0.4, 2.8),   # omega_scale
         (0.4, 2.8),   # weight_power
         (0.15, 0.75), # tier_split
         (0.6, 3.5),   # low_boost
+        (0.8, 1.2),   # w1_mult
+        (0.8, 1.2),   # w2_mult
+        (0.8, 1.2),   # w3_mult
     )
 
     def meet(self) -> MeetResult:
@@ -361,6 +434,9 @@ class MasterLockProtocol:
                 "weight_power": float(v[2]),
                 "tier_split": float(v[3]),
                 "low_boost": float(v[4]),
+                "w1_mult": float(v[5]) if len(v) > 5 else 1.0,
+                "w2_mult": float(v[6]) if len(v) > 6 else 1.0,
+                "w3_mult": float(v[7]) if len(v) > 7 else 1.0,
             }
 
         def evaluate(v: np.ndarray) -> float:
@@ -378,13 +454,17 @@ class MasterLockProtocol:
                 best = (res.total, kn, der, res, lock, key)
             history.append({**kn, "R": res.total, "breakdown": res.to_dict()})
             logger.info(
-                "Keymaker Λ=%.1f ωs=%.3f wp=%.3f tier=%.2f boost=%.2f → R=%.4f "
+                "Keymaker Λ=%.1f ωs=%.3f wp=%.3f tier=%.2f boost=%.2f "
+                "w=(%.2f,%.2f,%.2f) → R=%.4f "
                 "(stat=%.3f corr=%.3f cov=%.3f ret=%.3f)",
                 kn["Lambda"],
                 kn["omega_scale"],
                 kn["weight_power"],
                 kn["tier_split"],
                 kn["low_boost"],
+                kn.get("w1_mult", 1.0),
+                kn.get("w2_mult", 1.0),
+                kn.get("w3_mult", 1.0),
                 res.total,
                 res.shape_l1,
                 res.corr_penalty,
@@ -450,6 +530,9 @@ class MasterLockProtocol:
                             kn["weight_power"],
                             kn["tier_split"],
                             kn["low_boost"],
+                            kn.get("w1_mult", 1.0),
+                            kn.get("w2_mult", 1.0),
+                            kn.get("w3_mult", 1.0),
                         ]
                     )
                 )

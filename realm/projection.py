@@ -176,6 +176,9 @@ def build_moduli_landscape(
     weight_power: float = 1.0,
     tier_split: float = 0.45,
     low_boost: float = 1.0,
+    w1_mult: float = 1.0,
+    w2_mult: float = 1.0,
+    w3_mult: float = 1.0,
     action: SpectralAction | None = None,
     critical: list | None = None,
 ) -> ModuliLandscape:
@@ -190,6 +193,9 @@ def build_moduli_landscape(
             weight_power=weight_power,
             tier_split=tier_split,
             low_boost=low_boost,
+            w1_mult=w1_mult,
+            w2_mult=w2_mult,
+            w3_mult=w3_mult,
         )
     crit = critical if critical is not None else critical_holonomies(action, max_crit=24)
     valleys = [c for c in crit if c["kind"] == "minimum"]

@@ -88,6 +88,9 @@ class SpectralAction:
         weight_power: float = 1.0,
         tier_split: float = 0.45,
         low_boost: float = 1.0,
+        w1_mult: float = 1.0,
+        w2_mult: float = 1.0,
+        w3_mult: float = 1.0,
     ) -> "SpectralAction":
         """Build action; knobs tune cutoff, frequencies, and multi-scale weights.
 
@@ -97,6 +100,13 @@ class SpectralAction:
         factor ``low_boost``, so the spectral action can emphasize the IR
         scaffolding that dominates projected 3D geometry while still keeping
         UV zeros in the sum. Then apply heat kernel and power reshape.
+
+        IR micro-tuning (w1_mult, w2_mult, w3_mult)
+        -------------------------------------------
+        Scalar multipliers on the first three zeta modes (bounded ~0.8–1.2 in
+        search). Local control of lowest-frequency Fourier content — shifts
+        Crit(θ) angular placement enough to sculpt λ-gap quantiles without
+        breaking the global lock–key seating.
         """
         g = field.gammas
         Lambda = float(Lambda if Lambda is not None else 2.0 * g[-1])
@@ -108,6 +118,14 @@ class SpectralAction:
         tier = np.ones(k, dtype=float)
         tier[:n_low] *= float(max(low_boost, 1e-6))
         weights = weights * tier
+        # Per-mode IR micro-tuning on lowest three harmonics
+        ir = np.array(
+            [float(w1_mult), float(w2_mult), float(w3_mult)],
+            dtype=float,
+        )
+        ir = np.clip(ir, 1e-6, None)
+        n_ir = min(3, k)
+        weights[:n_ir] *= ir[:n_ir]
         weights = weights / (np.sum(weights) + 1e-15)
         return cls(omega=omega, weights=weights, cutoff_Lambda=Lambda)
 
@@ -290,6 +308,9 @@ class Deriver:
     weight_power: float = 1.0
     tier_split: float = 0.45
     low_boost: float = 1.0
+    w1_mult: float = 1.0
+    w2_mult: float = 1.0
+    w3_mult: float = 1.0
 
     def run(self) -> DerivationResult:
         steps: list[DerivationStep] = []
@@ -331,6 +352,9 @@ class Deriver:
             weight_power=self.weight_power,
             tier_split=self.tier_split,
             low_boost=self.low_boost,
+            w1_mult=self.w1_mult,
+            w2_mult=self.w2_mult,
+            w3_mult=self.w3_mult,
         )
         th_grid = np.linspace(0, 2 * np.pi, 361)
         steps.append(
