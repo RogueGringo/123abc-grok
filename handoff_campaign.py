@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from realm.handoff.package import build_partner_package
+from realm.handoff.package import build_partner_package, write_release_md
 from realm.handoff.pipeline import export_structure_batch, resolve_pdb_id_list
 from realm.handoff.verify import quality_gate, verify_dual_gate_pin, verify_handoff_tree
 from realm.validate.report import load_knobs
@@ -69,6 +69,17 @@ def main(argv: list[str] | None = None) -> int:
         "--skip-preflight",
         action="store_true",
         help="skip dual-gate pin preflight (not recommended)",
+    )
+    p.add_argument(
+        "--release-label",
+        type=str,
+        default=None,
+        help="label for RELEASE.md (default: pdb-ids token + timestamp intent)",
+    )
+    p.add_argument(
+        "--no-release",
+        action="store_true",
+        help="skip writing RELEASE.md next to campaign_report.json",
     )
     p.add_argument("-v", action="store_true")
     args = p.parse_args(argv)
@@ -187,8 +198,11 @@ def main(argv: list[str] | None = None) -> int:
                 "quality_gate": gate_early,
                 "ontology": "handoff_campaign_not_lambda_eq_gamma",
             }
-            (Path(args.out_dir) / "campaign_report.json").write_text(
-                json.dumps(campaign_fail, indent=2) + "\n", encoding="utf-8"
+            _write_campaign_artifacts(
+                Path(args.out_dir),
+                campaign_fail,
+                release_label=args.release_label or f"fail-{args.pdb_ids}",
+                write_release=not args.no_release,
             )
             return 3
 
@@ -217,12 +231,43 @@ def main(argv: list[str] | None = None) -> int:
         "quality_gate": gate,
         "ontology": "handoff_campaign_not_lambda_eq_gamma",
     }
-    (Path(args.out_dir) / "campaign_report.json").write_text(
-        json.dumps(campaign, indent=2) + "\n", encoding="utf-8"
+    _write_campaign_artifacts(
+        Path(args.out_dir),
+        campaign,
+        release_label=args.release_label or str(args.pdb_ids),
+        write_release=not args.no_release,
     )
     if not gate.get("ok"):
         return 5
     return 0
+
+
+def _write_campaign_artifacts(
+    out_dir: Path,
+    campaign: dict,
+    *,
+    release_label: str,
+    write_release: bool,
+) -> None:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    report_path = out_dir / "campaign_report.json"
+    report_path.write_text(json.dumps(campaign, indent=2) + "\n", encoding="utf-8")
+    if write_release:
+        rel = write_release_md(
+            campaign,
+            out_dir / "RELEASE.md",
+            label=release_label,
+        )
+        campaign["release_md"] = str(rel.resolve())
+        # re-stamp report with release path
+        report_path.write_text(json.dumps(campaign, indent=2) + "\n", encoding="utf-8")
+        # copy into partner package dir if present (sidecar; does not re-zip)
+        pkg = campaign.get("package") or {}
+        pkg_dir = pkg.get("package_dir")
+        if pkg_dir and Path(pkg_dir).is_dir():
+            dest = Path(pkg_dir) / "RELEASE.md"
+            dest.write_text(rel.read_text(encoding="utf-8"), encoding="utf-8")
+            logger.info("RELEASE.md copied into package dir %s", dest)
 
 
 if __name__ == "__main__":

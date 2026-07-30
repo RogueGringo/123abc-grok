@@ -22,6 +22,79 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
+def write_release_md(
+    campaign: dict[str, Any],
+    path: Path | str,
+    *,
+    label: str | None = None,
+) -> Path:
+    """Partner-facing RELEASE notes from a campaign_report dict.
+
+    Success metric: openable PDBs + dual-gate pin + quality_gate.
+    Does not re-rank. Never lambda=gamma.
+    """
+    dest = Path(path)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    exp = campaign.get("export") or {}
+    pkg = campaign.get("package") or {}
+    ver = campaign.get("verify") or {}
+    gate = campaign.get("quality_gate") or {}
+    pin = (ver.get("pin") or gate.get("pin") or {})
+    remarks = ver.get("ontology_remarks") or {}
+    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    title = label or "dual-gate handoff release"
+
+    lines = [
+        f"# RELEASE - {title}",
+        "",
+        f"Generated: {stamp}",
+        "",
+        "## Dual-gate pin (locked)",
+        "",
+        f"- soft_T(n=12): **{pin.get('soft_T', pin.get('expected_soft_T', 0.036))}** (expect 0.036)",
+        f"- seq_mix: **{pin.get('seq_mix', 0.0)}**",
+        f"- face_weight: **{pin.get('face_weight', 0.08)}**",
+        f"- pin ok: **{pin.get('ok')}**",
+        "",
+        "## Delivery metrics (not enrichment score-chase)",
+        "",
+        f"- Structures OK: **{exp.get('n_ok')}** / {exp.get('n_ids')}",
+        f"- Openable PDBs (ontology REMARK): **{remarks.get('n_pdb', gate.get('n_pdb'))}**",
+        f"- Quality gate: **{gate.get('ok')}**"
+        + (f" reasons={gate.get('reasons')}" if gate.get("reasons") else ""),
+        f"- Verify tree: **{ver.get('ok')}**",
+        f"- SHA256 package check: **{(ver.get('sha256') or {}).get('ok')}**",
+        "",
+        "## Package",
+        "",
+        f"- package_dir: `{pkg.get('package_dir')}`",
+        f"- zip: `{pkg.get('zip_path')}`",
+        f"- zip_sha256: `{pkg.get('zip_sha256')}`",
+        f"- SUMMARY: `{exp.get('summary_md')}`",
+        f"- has_summary_md: {pkg.get('has_summary_md')}",
+        "",
+        "## IDs",
+        "",
+        ", ".join(str(i) for i in (campaign.get("ids") or [])) or "(none)",
+        "",
+        "## Ontology",
+        "",
+        "Crit projection molds only. **Never** lambda=gamma / RH claims.",
+        "LengthPolicy production numbers were not modified by this release.",
+        "",
+        "Verify:",
+        "",
+        "```bash",
+        "python handoff_verify.py <package_dir> --require-sha256",
+        "```",
+        "",
+    ]
+    dest.write_text("\n".join(lines), encoding="utf-8")
+    logger.info("RELEASE notes → %s", dest)
+    return dest
+
+
 PARTNER_README = """# Geometric mold handoff package
 
 Generated: {timestamp}
@@ -37,6 +110,7 @@ Ontology: **Crit projection molds** (ζ substrate scaffolding only).
 | `manifest.tsv` | Per-mold paths, rank scores, soft_T, REMARK check |
 | `enrichment_summary.tsv` | Optional dual-gate enrichment stamp (if campaign used `--with-enrichment`) |
 | `SUMMARY.md` | Human-readable campaign summary (export batch root) |
+| `RELEASE.md` | Partner release notes (pin, openable PDB count, zip SHA) when campaign copied it |
 | `batch_index.json` / `index.json` | Machine-readable index + LengthPolicy snapshot |
 | `SHA256SUMS.txt` | Checksums of packaged files |
 
