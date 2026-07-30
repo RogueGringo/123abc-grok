@@ -9,7 +9,9 @@ import pytest
 from realm.handoff.package import (
     archive_partner_release,
     build_partner_package,
+    scan_release_drops,
     write_release_md,
+    write_releases_catalog,
 )
 from realm.handoff.pipeline import export_structure_handoff
 from realm.validate.length_policy import policy_for
@@ -106,6 +108,16 @@ def test_archive_partner_release(tmp_path: Path):
     # labeled pointer
     assert (tmp_path / "releases" / "LATEST_probe-v1.json").is_file() or list(
         (tmp_path / "releases").glob("LATEST_*.json")
+    )
+    assert (tmp_path / "releases" / "INDEX.json").is_file()
+    assert (tmp_path / "releases" / "INDEX.md").is_file()
+    assert meta.get("catalog_index")
+    drops = scan_release_drops(tmp_path / "releases")
+    assert len(drops) >= 1
+    cat = write_releases_catalog(tmp_path / "releases")
+    assert cat.is_file()
+    assert "probe" in cat.read_text(encoding="utf-8").lower() or "drops" in cat.read_text(
+        encoding="utf-8"
     )
 
 

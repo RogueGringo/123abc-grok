@@ -12,6 +12,7 @@ on:
       - "handoff_verify.py"
       - "handoff_release.py"
       - "handoff_matrix.py"
+      - "handoff_status.py"
       - "tests/test_handoff*.py"
       - "tests/test_pdb_write.py"
       - ".github/workflows/handoff.yml"
@@ -25,6 +26,7 @@ on:
       - "handoff_verify.py"
       - "handoff_release.py"
       - "handoff_matrix.py"
+      - "handoff_status.py"
       - "tests/test_handoff*.py"
       - "tests/test_pdb_write.py"
       - ".github/workflows/handoff.yml"
@@ -49,7 +51,7 @@ jobs:
         run: |
           pytest tests/test_pdb_write.py tests/test_handoff.py tests/test_handoff_pipeline.py \
             tests/test_handoff_structure.py tests/test_handoff_package.py tests/test_handoff_verify.py \
-            tests/test_handoff_release.py tests/test_handoff_matrix.py \
+            tests/test_handoff_release.py tests/test_handoff_matrix.py tests/test_handoff_status.py \
             -q --tb=line
       - name: Dual-gate policy pin + verify CLI
         env:
@@ -58,6 +60,8 @@ jobs:
           python -c "from realm.validate.length_policy import policy_for; p=policy_for(12,base_beta=0.20); assert abs(p.soft_T-0.036)<1e-12; assert p.seq_mix==0.0; print('dual-gate OK', p.soft_T)"
           python handoff_verify.py --pin-only
           python handoff_matrix.py --dry-run --tokens probe,holdout --out-root /tmp/handoff_matrix_dry
+          mkdir -p /tmp/handoff_empty_releases
+          python handoff_status.py --releases /tmp/handoff_empty_releases --report /tmp/handoff_status.json
       - name: BioPython open metric (1CSA commercial smoke)
         env:
           PYTHONPATH: ${{ github.workspace }}

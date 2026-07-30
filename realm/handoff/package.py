@@ -208,7 +208,15 @@ def archive_partner_release(
     )
     latest = write_latest_pointer(meta, root)
     meta["latest_pointer"] = str(latest.resolve())
-    logger.info("archived release → %s files=%d latest=%s", dest, meta["n_files"], latest)
+    catalog = write_releases_catalog(root)
+    meta["catalog_index"] = str(catalog.resolve())
+    logger.info(
+        "archived release → %s files=%d latest=%s catalog=%s",
+        dest,
+        meta["n_files"],
+        latest,
+        catalog,
+    )
     return meta
 
 
@@ -238,6 +246,90 @@ def write_latest_pointer(
     labeled.write_text(json.dumps(pointer, indent=2) + "\n", encoding="utf-8")
     logger.info("LATEST pointer → %s (also %s)", dest, labeled.name)
     return dest
+
+
+def scan_release_drops(archive_root: Path | str) -> list[dict[str, Any]]:
+    """List dated release directories under archive_root (newest first)."""
+    root = Path(archive_root)
+    if not root.is_dir():
+        return []
+    rows: list[dict[str, Any]] = []
+    for child in sorted(root.iterdir(), reverse=True):
+        if not child.is_dir():
+            continue
+        arch = child / "ARCHIVE.json"
+        if not arch.is_file():
+            continue
+        try:
+            meta = json.loads(arch.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001
+            meta = {}
+        rows.append(
+            {
+                "name": child.name,
+                "archive_dir": str(child.resolve()),
+                "label": meta.get("label"),
+                "created_utc": meta.get("created_utc"),
+                "quality_gate_ok": meta.get("quality_gate_ok"),
+                "zip_sha256": meta.get("zip_sha256"),
+                "n_ids": len(meta.get("ids") or []),
+                "ids": meta.get("ids"),
+                "n_files": meta.get("n_files"),
+            }
+        )
+    # sort by created_utc then name, newest first
+    rows.sort(key=lambda r: (r.get("created_utc") or "", r.get("name") or ""), reverse=True)
+    return rows
+
+
+def write_releases_catalog(archive_root: Path | str) -> Path:
+    """Write INDEX.json + INDEX.md catalog of all release drops."""
+    root = Path(archive_root)
+    root.mkdir(parents=True, exist_ok=True)
+    drops = scan_release_drops(root)
+    latest_path = root / "LATEST.json"
+    latest = None
+    if latest_path.is_file():
+        try:
+            latest = json.loads(latest_path.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001
+            latest = None
+    catalog = {
+        "archive_root": str(root.resolve()),
+        "n_drops": len(drops),
+        "latest": latest,
+        "drops": drops,
+        "ontology": "handoff_releases_catalog_not_lambda_eq_gamma",
+        "note": "Catalog of immutable dual-gate partner drops; not enrichment chase.",
+        "verify_cli": "python handoff_verify.py --archive <archive_dir>",
+        "status_cli": "python handoff_status.py --releases <archive_root>",
+    }
+    idx = root / "INDEX.json"
+    idx.write_text(json.dumps(catalog, indent=2) + "\n", encoding="utf-8")
+
+    lines = [
+        "# Dual-gate handoff releases catalog",
+        "",
+        f"- Archive root: `{root}`",
+        f"- Drops: **{len(drops)}**",
+        f"- Latest: `{((latest or {}).get('archive_dir'))}`",
+        "",
+        "Ontology: Crit projection molds only -- **not** lambda=gamma.",
+        "",
+        "| created_utc | label | n_ids | gate | archive |",
+        "|-------------|-------|-------|------|---------|",
+    ]
+    for d in drops:
+        lines.append(
+            f"| {d.get('created_utc')} | {d.get('label')} | {d.get('n_ids')} | "
+            f"{d.get('quality_gate_ok')} | `{d.get('name')}` |"
+        )
+    lines.append("")
+    lines.append("Verify: `python handoff_verify.py --archive <archive_dir>`")
+    lines.append("")
+    (root / "INDEX.md").write_text("\n".join(lines), encoding="utf-8")
+    logger.info("releases catalog → %s drops=%d", idx, len(drops))
+    return idx
 
 
 PARTNER_README = """# Geometric mold handoff package
