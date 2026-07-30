@@ -413,3 +413,270 @@ def compare_arms_filtration(
             "Dual-gate LengthPolicy untouched. Never λ=γ."
         ),
     }
+
+
+# ---------------------------------------------------------------------------
+# Multi-carrier Stage 8 + multi-arm existence scan (Stage 9-lite)
+# ---------------------------------------------------------------------------
+
+
+def multi_carrier_persistence(
+    win_masks: dict[str, np.ndarray | list[bool]],
+) -> dict[str, Any]:
+    """Stage 8 over several carriers: per-carrier barcode + OR / AND fusion.
+
+    OR: advantage if *any* carrier wins at that window (liberal).
+    AND: advantage only if *all* carriers win (strict).
+    """
+    if not win_masks:
+        raise ValueError("need at least one carrier mask")
+    names = list(win_masks.keys())
+    mats = [np.asarray(win_masks[n], dtype=bool).ravel() for n in names]
+    W = min(m.size for m in mats)
+    mats = [m[:W] for m in mats]
+    stacked = np.stack(mats, axis=0)
+    or_mask = np.any(stacked, axis=0)
+    and_mask = np.all(stacked, axis=0)
+    per = {n: persistence_barcode(m) for n, m in zip(names, mats)}
+    best_name = max(per.keys(), key=lambda n: per[n]["max_lifespan"])
+    return {
+        "W": W,
+        "carriers": per,
+        "or_fusion": persistence_barcode(or_mask),
+        "and_fusion": persistence_barcode(and_mask),
+        "best_carrier": best_name,
+        "best_lifespan": per[best_name]["max_lifespan"],
+        "stage8_pass_any": bool(per[best_name]["stage8_pass"]),
+        "stage8_pass_or": bool(persistence_barcode(or_mask)["stage8_pass"]),
+        "stage8_pass_and": bool(persistence_barcode(and_mask)["stage8_pass"]),
+    }
+
+
+def score_arm_component_series(
+    knobs: dict[str, Any],
+    arm: str,
+    *,
+    n_windows: int = 7,
+    n_zeros: int = 14,
+    N: int = 13,
+    n_sectors: int = 6,
+    component_keys: tuple[str, ...] = ("density_return_l1", "corr_penalty", "stationarity"),
+    use_g5_span: bool = True,
+    omega_span: float | None = None,
+    rng_seed: int = 0,
+) -> dict[str, Any]:
+    """Independent-baseline component series for one arm under shared knobs + G5."""
+    from realm.validate.baseline import score_with_independent_baseline
+    from realm.validate.window_filtration import (
+        _knobs_for_forge,
+        anchor_omega_span,
+        contiguous_windows,
+        score_window_filtration,
+    )
+    from realm.validate.zeros import real_zeros as _rz
+
+    W = int(n_windows)
+    k = int(n_zeros)
+    table_n = max(k * (W + 1), 2 * k)
+    kn = dict(knobs)
+    if omega_span is not None:
+        kn["omega_span"] = float(omega_span)
+    elif use_g5_span and kn.get("omega_span") is None:
+        kn["omega_span"] = anchor_omega_span(_rz(k), n_zeros=k)
+
+    series: dict[str, list[float]] = {ck: [] for ck in component_keys}
+    guard_clear = 0
+
+    if arm == "zeta":
+        filt = score_window_filtration(
+            kn,
+            n_windows=W,
+            n_zeros=k,
+            N=N,
+            n_sectors=n_sectors,
+            use_g5_span=True,
+            omega_span=kn.get("omega_span"),
+        )
+        for w in filt["windows"]:
+            c = w["components"]
+            for ck in component_keys:
+                series[ck].append(float(c.get(ck, np.nan)))
+            if not w["is_degenerate"]:
+                guard_clear += 1
+        g5 = filt.get("g5")
+        span = filt.get("omega_span")
+    else:
+        rng = np.random.default_rng(int(rng_seed))
+        kind = "gue" if arm == "gue" else arm
+        g = make_seed(kind, table_n, rng)
+        blocks = contiguous_windows(g, n_zeros=k, n_windows=W)
+        kn_forge = _knobs_for_forge(kn)
+        for b in blocks:
+            row = score_with_independent_baseline(
+                knobs=kn_forge,
+                key_gammas=b["key_gammas"],
+                lock_gammas=b["lock_gammas"],
+                N=int(N),
+                n_sectors=int(n_sectors),
+            )
+            c = row["components"]
+            for ck in component_keys:
+                series[ck].append(float(c.get(ck, np.nan)))
+            if not bool((row.get("degeneracy") or {}).get("is_degenerate", True)):
+                guard_clear += 1
+        g5 = None
+        span = kn.get("omega_span")
+
+    means = {
+        ck: float(np.nanmean(np.asarray(series[ck], dtype=float))) for ck in component_keys
+    }
+    rig = score_rigidity_filtration(
+        n_windows=W, n_zeros=k, n_zeros_table=table_n, arm=arm if arm != "arith" else "arith",
+        rng_seed=int(rng_seed),
+    )
+    # arith arm for rigidity: use make_seed path via score_rigidity - need arith support
+    return {
+        "arm": arm,
+        "W": W,
+        "series": series,
+        "means": means,
+        "guard_clear": int(guard_clear),
+        "rigidity_carrier_mean": rig["carrier_mean"],
+        "rigidity_series": rig["carrier_series"],
+        "omega_span": span,
+        "g5": g5,
+    }
+
+
+def existence_arm_scan(
+    knobs: dict[str, Any],
+    *,
+    arms: tuple[str, ...] = ("zeta", "arith", "gue", "poisson"),
+    n_windows: int = 7,
+    n_zeros: int = 14,
+    N: int = 13,
+    n_sectors: int = 6,
+    rng_seed: int = 0,
+) -> dict[str, Any]:
+    """Stage 9-lite: deterministic/stochastic arm means under G5 (no M=59).
+
+    Existence claims (design §7.1): if arith mean dens < ζ mean dens, that is an
+    existence falsifier of residual preference under these knobs — no p-value.
+
+    Also multi-carrier Stage 8 of ζ vs each null on dens/corr/rigidity.
+    """
+    # Ensure arith works in rigidity filtration
+    component_keys = ("density_return_l1", "corr_penalty", "stationarity")
+    arm_rows: dict[str, Any] = {}
+    for i, arm in enumerate(arms):
+        # rigidity for arith via special case
+        if arm == "arith":
+            row = score_arm_component_series(
+                knobs,
+                "arith",
+                n_windows=n_windows,
+                n_zeros=n_zeros,
+                N=N,
+                n_sectors=n_sectors,
+                component_keys=component_keys,
+                use_g5_span=True,
+                rng_seed=rng_seed + i,
+            )
+            # fix rigidity for arith spectrum
+            from realm.validate.window_filtration import contiguous_windows as _cw
+            from realm.validate.zeros import real_zeros as _rz
+
+            k = int(n_zeros)
+            W = int(n_windows)
+            table_n = max(k * (W + 1), 2 * k)
+            g = make_seed("arith", table_n, np.random.default_rng(rng_seed + i))
+            carriers = []
+            for j in range(W):
+                block = g[j * k : (j + 1) * k]
+                carriers.append(rigidity_report_for_block(block)["carrier"]["rigidity_score"])
+            row["rigidity_series"] = carriers
+            fin = [c for c in carriers if np.isfinite(c)]
+            row["rigidity_carrier_mean"] = float(np.mean(fin)) if fin else float("nan")
+            arm_rows[arm] = row
+        else:
+            arm_rows[arm] = score_arm_component_series(
+                knobs,
+                arm,
+                n_windows=n_windows,
+                n_zeros=n_zeros,
+                N=N,
+                n_sectors=n_sectors,
+                component_keys=component_keys,
+                use_g5_span=True,
+                rng_seed=rng_seed + i,
+            )
+
+    # Rank arms by mean density_return (lower better)
+    dens_rank = sorted(
+        arms, key=lambda a: arm_rows[a]["means"].get("density_return_l1", 1e9)
+    )
+    zeta_dens = arm_rows["zeta"]["means"]["density_return_l1"]
+    arith_beats_zeta = bool(
+        "arith" in arm_rows
+        and arm_rows["arith"]["means"]["density_return_l1"] < zeta_dens
+    )
+
+    # Multi-carrier persistence ζ vs each null
+    vs: dict[str, Any] = {}
+    if "zeta" in arm_rows:
+        z = arm_rows["zeta"]
+        for null in arms:
+            if null == "zeta":
+                continue
+            n = arm_rows[null]
+            masks = {
+                "density_return_l1": advantage_series(
+                    z["series"]["density_return_l1"],
+                    n["series"]["density_return_l1"],
+                    lower_is_better=True,
+                ),
+                "corr_penalty": advantage_series(
+                    z["series"]["corr_penalty"],
+                    n["series"]["corr_penalty"],
+                    lower_is_better=True,
+                ),
+                "rigidity_delta3": advantage_series(
+                    z["rigidity_series"],
+                    n["rigidity_series"],
+                    lower_is_better=True,
+                ),
+            }
+            # stationarity: higher may be worse under residual — lower is better in residual terms
+            if "stationarity" in z["series"]:
+                masks["stationarity"] = advantage_series(
+                    z["series"]["stationarity"],
+                    n["series"]["stationarity"],
+                    lower_is_better=True,
+                )
+            vs[null] = multi_carrier_persistence(masks)
+
+    return {
+        "stage": "9-lite",
+        "stage_name": "existence_arm_scan_g5",
+        "arms": list(arms),
+        "arm_rows": {
+            a: {
+                "means": arm_rows[a]["means"],
+                "guard_clear": arm_rows[a]["guard_clear"],
+                "rigidity_carrier_mean": arm_rows[a]["rigidity_carrier_mean"],
+                "omega_span": arm_rows[a].get("omega_span"),
+            }
+            for a in arms
+        },
+        "density_return_rank_lower_better": list(dens_rank),
+        "arith_beats_zeta_existence": arith_beats_zeta,
+        "multi_carrier_vs_zeta": vs,
+        "any_stage8_pass": any(
+            v.get("stage8_pass_or") or v.get("stage8_pass_any") for v in vs.values()
+        ),
+        "ontology": "existence_scan_g5_not_lambda_eq_gamma",
+        "note": (
+            "Stage 9-lite under G5. Deterministic arith is an existence result "
+            "(§7.1), not a sampling p-value. Dual-gate LengthPolicy untouched. Never λ=γ."
+        ),
+    }

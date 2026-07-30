@@ -92,3 +92,46 @@ def test_compare_arms_persistence_smoke():
     assert out["ontology"].endswith("not_lambda_eq_gamma")
     # stage8 result is boolean either way — structure only
     assert isinstance(out["component_persistence"]["stage8_pass"], bool)
+
+
+def test_multi_carrier_or_and_fusion():
+    from realm.validate.cross_window import multi_carrier_persistence
+
+    # carrier A wins first 4 windows; B wins last 4 → OR lifespan 7, AND 0
+    a = [True, True, True, True, False, False, False]
+    b = [False, False, False, True, True, True, True]
+    out = multi_carrier_persistence({"A": a, "B": b})
+    assert out["or_fusion"]["max_lifespan"] == 7
+    assert out["or_fusion"]["stage8_pass"] is True  # ceil(7/2)=4
+    assert out["and_fusion"]["max_lifespan"] == 1
+    assert out["best_lifespan"] == 4
+
+
+def test_existence_arm_scan_smoke():
+    from realm.validate.cross_window import existence_arm_scan
+
+    kn_path = Path("evolve_result.json")
+    if not kn_path.is_file():
+        pytest.skip("need evolve_result.json")
+    kn = load_champion_knobs(kn_path)
+    out = existence_arm_scan(
+        kn,
+        arms=("zeta", "arith", "gue"),
+        n_windows=3,
+        n_zeros=14,
+        N=13,
+        n_sectors=6,
+        rng_seed=2,
+    )
+    assert out["stage"] == "9-lite"
+    assert "zeta" in out["arm_rows"] and "arith" in out["arm_rows"]
+    assert "density_return_rank_lower_better" in out
+    assert "arith_beats_zeta_existence" in out
+    assert "multi_carrier_vs_zeta" in out
+    assert "gue" in out["multi_carrier_vs_zeta"]
+    mc = out["multi_carrier_vs_zeta"]["gue"]
+    assert "or_fusion" in mc and "and_fusion" in mc
+    assert out["ontology"].endswith("not_lambda_eq_gamma")
+    # dual-gate still locked
+    p = policy_for(12, base_beta=0.20)
+    assert abs(p.soft_T - 0.036) < 1e-12

@@ -5,9 +5,17 @@
 (`window_filtration.py`, `cross_window.py`); **G5 `omega_span` wired** through baseline
 filtration (`--g5-span`). Stage 9 open.
 
-**Measured (champion, W=7):** G5 rel_spread → 0 with anchor span≈4.304; Stage 8
-persistence still fails (lifespan 1–2 < 4). Under G5, independent-baseline guard
-clears only 4/7 windows (stricter than legacy).
+**Measured (champion, W=7, G5):** Stage 9-lite existence scan (`--stage 9lite`):
+
+| vs null | dens life | corr life | Δ₃ life | stationarity life | OR Stage8 |
+|---------|-----------|-----------|---------|-------------------|-----------|
+| arith   | **7** (pass) | 1 | 0 | 0 | pass |
+| gue     | 2 | 2 | 2 | **5** (pass) | pass |
+| poisson | 1 | 2 | **7** (pass) | **5** (pass) | pass |
+
+Mean dens rank (lower better): poisson < gue < ζ < arith — residual dens does
+**not** prefer ζ over GUE. Long-range **Δ₃** persists vs Poisson; dens persists
+vs arith (existence). Full Stage 9 (M≥59) still required for distributional GUE claim.
 **Gate condition met:** the equal-budget table is public (PR #2, `fair_fight_result.json`),
 which was the precondition for re-opening residual design.
 **Supersedes for selection purposes:** `2026-07-30-validation-ladder-design.md` (retracted)

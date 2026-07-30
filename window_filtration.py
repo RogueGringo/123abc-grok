@@ -12,7 +12,11 @@ import logging
 import sys
 from pathlib import Path
 
-from realm.validate.cross_window import compare_arms_filtration, score_rigidity_filtration
+from realm.validate.cross_window import (
+    compare_arms_filtration,
+    existence_arm_scan,
+    score_rigidity_filtration,
+)
 from realm.validate.window_filtration import load_champion_knobs, score_window_filtration
 
 logger = logging.getLogger("window_filtration")
@@ -24,9 +28,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     p.add_argument(
         "--stage",
-        choices=("6", "7", "8", "7+8"),
+        choices=("6", "7", "8", "7+8", "9lite"),
         default="6",
-        help="6=filtration, 7=rigidity, 8 or 7+8=ζ vs gue persistence",
+        help="6=filtration, 7=rigidity, 8/7+8=ζ vs null persistence, 9lite=existence scan",
     )
     p.add_argument("--knobs", type=str, default="evolve_result.json")
     p.add_argument("-W", "--n-windows", type=int, default=7)
@@ -60,6 +64,7 @@ def main(argv: list[str] | None = None) -> int:
             "7": "out/window_filtration_stage7.json",
             "8": "out/window_filtration_stage8.json",
             "7+8": "out/window_filtration_stage7_8.json",
+            "9lite": "out/window_filtration_stage9lite.json",
         }[stage]
     )
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -127,6 +132,27 @@ def main(argv: list[str] | None = None) -> int:
             out["W"],
             out["carrier_mean"],
             out["carrier_std"],
+            dest,
+        )
+        return 0
+
+    if stage == "9lite":
+        kn = load_champion_knobs(args.knobs)
+        out = existence_arm_scan(
+            kn,
+            arms=("zeta", "arith", "gue", "poisson"),
+            n_windows=int(args.n_windows),
+            n_zeros=int(args.n_zeros),
+            N=int(args.N),
+            n_sectors=int(args.sectors),
+            rng_seed=int(args.seed),
+        )
+        dest.write_text(json.dumps(out, indent=2) + "\n", encoding="utf-8")
+        logger.info(
+            "Stage9-lite dens_rank=%s arith_beats_zeta=%s any_stage8_or=%s → %s",
+            out["density_return_rank_lower_better"],
+            out["arith_beats_zeta_existence"],
+            out["any_stage8_pass"],
             dest,
         )
         return 0
