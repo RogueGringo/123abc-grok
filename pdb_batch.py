@@ -27,6 +27,7 @@ from realm.validate.dual import (
     forge_crit_geometry,
     multimode_for_ca_length,
     polish_crit_pack_holonomy,
+    refine_pack_height_amp,
     sectors_for_ca_length,
     select_mold_by_fit,
     select_multimode_by_fit,
@@ -186,6 +187,7 @@ def rank_one(
     # Optional mid-length sheaf holonomy feedback (off by default — dual-gate
     # 40×3 preferred pure dense-superset molds without polish).
     polish_diag = None
+    height_diag = None
     if (
         holonomy_polish
         and n_ca >= 12
@@ -208,6 +210,20 @@ def rank_one(
             step=0.04,
             soft_T=soft_T,
             prefer_maxop=True,
+        )
+    # 1TET-class only: structure-conditioned height-amp mold refine.
+    # Broader n>=12 dual-gate lost 4K8Y top20 while lifting 1TET.
+    if n_ca == 12 and mm_mode in (
+        "self_fit_dense",
+        "dense",
+        "self_fit_mid",
+        "mid",
+        "self_fit_wide",
+        "wide",
+        "self_fit",
+    ):
+        pack, height_diag = refine_pack_height_amp(
+            xyz, pack, soft_T=soft_T
         )
 
     a = float(np.clip(alpha_proj, 0.0, 1.0))
@@ -298,6 +314,7 @@ def rank_one(
         ),
         "multimode_fit": fit_diag,
         "holonomy_polish": polish_diag,
+        "height_amp_refine": height_diag,
         "defect_beta": float(defect_beta),
         "defect_beta_effective": float(eff_beta),
         "defect_dist": float(native.get("defect_dist") or 0.0),

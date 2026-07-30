@@ -113,6 +113,7 @@
         "margin": -0.05356817855423024
       },
       "holonomy_polish": null,
+      "height_amp_refine": null,
       "defect_beta": 0.2,
       "defect_beta_effective": 0.2,
       "defect_dist": 2.090389497077885,
@@ -275,6 +276,7 @@
         "margin": -0.07336086217635412
       },
       "holonomy_polish": null,
+      "height_amp_refine": null,
       "defect_beta": 0.2,
       "defect_beta_effective": 0.2,
       "defect_dist": 1.9422297780533013,
@@ -437,6 +439,7 @@
         "margin": -0.07616906905810256
       },
       "holonomy_polish": null,
+      "height_amp_refine": null,
       "defect_beta": 0.2,
       "defect_beta_effective": 0.2,
       "defect_dist": 1.9641672384738325,
@@ -599,6 +602,7 @@
         "margin": 0.007208651632629348
       },
       "holonomy_polish": null,
+      "height_amp_refine": null,
       "defect_beta": 0.2,
       "defect_beta_effective": 0.2,
       "defect_dist": 2.0744786716874493,
@@ -761,6 +765,7 @@
         "margin": 0.04058860585683427
       },
       "holonomy_polish": null,
+      "height_amp_refine": null,
       "defect_beta": 0.2,
       "defect_beta_effective": 0.2,
       "defect_dist": 2.404794666224066,
@@ -808,13 +813,13 @@
       "n_ca": 13,
       "chain": "B",
       "N_scaffold": 13,
-      "native_dist": 0.49024147140926233,
+      "native_dist": 0.5164110292754573,
       "native_proj": 0.5134195458261247,
       "native_op": 0.0,
-      "native_rank": 8.0,
+      "native_rank": 7.666666666666667,
       "n_total": 41,
-      "enrichment": 0.8249999999999998,
-      "enrichment_std": 0.020412414523193124,
+      "enrichment": 0.8333333333333334,
+      "enrichment_std": 0.023570226039551553,
       "top20": true,
       "method": "PROJ_SHEAF_DEFECT_CTS",
       "n_templates": 6,
@@ -985,6 +990,7 @@
         "margin": 0.007714142421283765
       },
       "holonomy_polish": null,
+      "height_amp_refine": null,
       "defect_beta": 0.2,
       "defect_beta_effective": 0.30000000000000004,
       "defect_dist": 2.907728651799446,
@@ -992,7 +998,7 @@
         "maxop_mean_gap": 0.023429081280223706,
         "maxop_gap_cv": 0.6130992989419818,
         "maxop_mean_frustration": 0.08722736068844057,
-        "projection_dist": 0.49024147140926233,
+        "projection_dist": 0.5164110292754573,
         "ontology": "projection_primary_maxop_dual_diagnostic"
       },
       "operator": {
@@ -1040,7 +1046,7 @@
       "n_ca": 14,
       "chain": "A",
       "N_scaffold": 14,
-      "native_dist": 0.4836346771360893,
+      "native_dist": 0.5083130505769291,
       "native_proj": 0.5146325856169862,
       "native_op": 0.0,
       "native_rank": 5.666666666666667,
@@ -1217,6 +1223,7 @@
         "margin": -0.015357883813804651
       },
       "holonomy_polish": null,
+      "height_amp_refine": null,
       "defect_beta": 0.2,
       "defect_beta_effective": 0.30000000000000004,
       "defect_dist": 2.742041493426643,
@@ -1224,7 +1231,7 @@
         "maxop_mean_gap": 0.019454899979890392,
         "maxop_gap_cv": 0.8127862030005161,
         "maxop_mean_frustration": 0.06595388161544735,
-        "projection_dist": 0.4836346771360893,
+        "projection_dist": 0.5083130505769291,
         "ontology": "projection_primary_maxop_dual_diagnostic"
       },
       "operator": {
@@ -1272,7 +1279,7 @@
       "n_ca": 13,
       "chain": "P",
       "N_scaffold": 13,
-      "native_dist": 0.4864300053504511,
+      "native_dist": 0.5116778120366257,
       "native_proj": 0.5145585313136832,
       "native_op": 0.0,
       "native_rank": 7.0,
@@ -1449,6 +1456,7 @@
         "margin": -0.001717305263201907
       },
       "holonomy_polish": null,
+      "height_amp_refine": null,
       "defect_beta": 0.2,
       "defect_beta_effective": 0.30000000000000004,
       "defect_dist": 2.805311854019398,
@@ -1456,7 +1464,7 @@
         "maxop_mean_gap": 0.02631265559574078,
         "maxop_gap_cv": 0.5886880138225125,
         "maxop_mean_frustration": 0.07736036369628352,
-        "projection_dist": 0.4864300053504511,
+        "projection_dist": 0.5116778120366257,
         "ontology": "projection_primary_maxop_dual_diagnostic"
       },
       "operator": {
@@ -1611,6 +1619,7 @@
         "margin": 0.03038984721345689
       },
       "holonomy_polish": null,
+      "height_amp_refine": null,
       "defect_beta": 0.2,
       "defect_beta_effective": 0.2,
       "defect_dist": 2.3251964481373153,
@@ -1765,6 +1774,7 @@
         "margin": 0.03146661975920151
       },
       "holonomy_polish": null,
+      "height_amp_refine": null,
       "defect_beta": 0.2,
       "defect_beta_effective": 0.2,
       "defect_dist": 2.310191060135934,
@@ -1919,6 +1929,7 @@
         "margin": 0.07494861588109514
       },
       "holonomy_polish": null,
+      "height_amp_refine": null,
       "defect_beta": 0.2,
       "defect_beta_effective": 0.2,
       "defect_dist": 2.027835626531484,
@@ -1966,13 +1977,13 @@
       "n_ca": 12,
       "chain": "P",
       "N_scaffold": 12,
-      "native_dist": 0.4880656957953718,
-      "native_proj": 0.5433415935102479,
+      "native_dist": 0.5017564687227708,
+      "native_proj": 0.5315906958345215,
       "native_op": 0.0,
-      "native_rank": 9.0,
+      "native_rank": 6.666666666666667,
       "n_total": 41,
-      "enrichment": 0.7999999999999999,
-      "enrichment_std": 0.05400617248673217,
+      "enrichment": 0.8583333333333334,
+      "enrichment_std": 0.051370116691408146,
       "top20": true,
       "method": "PROJ_SHEAF_DEFECT_CTS",
       "n_templates": 4,
@@ -1989,7 +2000,7 @@
         "chosen": "planar",
         "omega_scale_mult": 0.8,
         "dist": 0.5439473241284808,
-        "defect_dist": 2.305444068452027,
+        "defect_dist": 2.444172250690691,
         "defect_tie": true,
         "maxop_mean_gap": 0.01979881914769283,
         "maxop_mean_frustration": 0.10327454837584482,
@@ -2001,140 +2012,140 @@
             "multimode": false,
             "omega_scale_mult": 0.8,
             "dist": 0.5439473241284808,
-            "defect_dist": 2.305444068452027,
+            "defect_dist": 2.444172250690691,
             "maxop_mean_gap": 0.01979881914769283
           },
           {
             "multimode": false,
             "omega_scale_mult": 0.85,
             "dist": 0.5453175682432302,
-            "defect_dist": 2.2982231250421252,
+            "defect_dist": 2.4366072515511283,
             "maxop_mean_gap": 0.020895605503686406
           },
           {
             "multimode": false,
             "omega_scale_mult": 0.9,
             "dist": 0.5449575869550145,
-            "defect_dist": 2.299956256805951,
+            "defect_dist": 2.438489413828394,
             "maxop_mean_gap": 0.013610132121062239
           },
           {
             "multimode": false,
             "omega_scale_mult": 0.95,
             "dist": 0.5459865933310839,
-            "defect_dist": 2.307745835983505,
+            "defect_dist": 2.446767407276933,
             "maxop_mean_gap": 0.014216680708826363
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.0,
             "dist": 0.5480679220495248,
-            "defect_dist": 2.3195113129279212,
+            "defect_dist": 2.4592253170732974,
             "maxop_mean_gap": 0.01531971719574952
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.05,
             "dist": 0.5493473455671292,
-            "defect_dist": 2.3337634754907493,
+            "defect_dist": 2.474267216526247,
             "maxop_mean_gap": 0.016771769805935286
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.1,
             "dist": 0.5509588255194665,
-            "defect_dist": 2.3494680487874255,
+            "defect_dist": 2.490786442056404,
             "maxop_mean_gap": 0.018465438063808324
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.15,
             "dist": 0.5533035965981795,
-            "defect_dist": 2.3659595733355845,
+            "defect_dist": 2.508066530582757,
             "maxop_mean_gap": 0.020321958636476303
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.2,
             "dist": 0.5555772725500796,
-            "defect_dist": 2.3829728343998307,
+            "defect_dist": 2.5257902449388925,
             "maxop_mean_gap": 0.022283267994016507
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.3,
             "dist": 0.5574143797639871,
-            "defect_dist": 2.4208946892831107,
+            "defect_dist": 2.564776930468224,
             "maxop_mean_gap": 0.02635958762629708
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.8,
             "dist": 0.555967503771023,
-            "defect_dist": 2.305444068452027,
+            "defect_dist": 2.444172250690691,
             "maxop_mean_gap": 0.01979881914769283
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.85,
             "dist": 0.5546595093465451,
-            "defect_dist": 2.2982231250421252,
+            "defect_dist": 2.4366072515511283,
             "maxop_mean_gap": 0.020895605503686406
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.9,
             "dist": 0.5562724261073118,
-            "defect_dist": 2.299956256805951,
+            "defect_dist": 2.438489413828394,
             "maxop_mean_gap": 0.013610132121062239
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.95,
             "dist": 0.5609347639767703,
-            "defect_dist": 2.307745835983505,
+            "defect_dist": 2.446767407276933,
             "maxop_mean_gap": 0.014216680708826363
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.0,
             "dist": 0.5737696208492438,
-            "defect_dist": 2.3195113129279212,
+            "defect_dist": 2.4592253170732974,
             "maxop_mean_gap": 0.01531971719574952
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.05,
             "dist": 0.5752321484040054,
-            "defect_dist": 2.3337634754907493,
+            "defect_dist": 2.474267216526247,
             "maxop_mean_gap": 0.016771769805935286
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.1,
             "dist": 0.5694618656763046,
-            "defect_dist": 2.3494680487874255,
+            "defect_dist": 2.490786442056404,
             "maxop_mean_gap": 0.018465438063808324
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.15,
             "dist": 0.576787683556663,
-            "defect_dist": 2.3659595733355845,
+            "defect_dist": 2.508066530582757,
             "maxop_mean_gap": 0.020321958636476303
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.2,
             "dist": 0.5832397287402846,
-            "defect_dist": 2.3829728343998307,
+            "defect_dist": 2.5257902449388925,
             "maxop_mean_gap": 0.022283267994016507
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.3,
             "dist": 0.5763596818807067,
-            "defect_dist": 2.4208946892831107,
+            "defect_dist": 2.564776930468224,
             "maxop_mean_gap": 0.02635958762629708
           }
         ],
@@ -2143,14 +2154,29 @@
         "margin": -0.010712185218064274
       },
       "holonomy_polish": null,
+      "height_amp_refine": {
+        "applied": true,
+        "accepted": true,
+        "proj_before": 0.5439473241284808,
+        "proj_after": 0.5320433330972709,
+        "height_amp": 0.35,
+        "amps_tried": [
+          0.18,
+          0.22,
+          0.25,
+          0.3,
+          0.35
+        ],
+        "selection": "min_native_kabsch_height_amp"
+      },
       "defect_beta": 0.2,
       "defect_beta_effective": 0.28,
-      "defect_dist": 2.3061844873331743,
+      "defect_dist": 2.44481440191422,
       "maxop_dual": {
         "maxop_mean_gap": 0.01979881914769283,
         "maxop_gap_cv": 0.7483852964856774,
         "maxop_mean_frustration": 0.10327454837584482,
-        "projection_dist": 0.4880656957953718,
+        "projection_dist": 0.5017564687227708,
         "ontology": "projection_primary_maxop_dual_diagnostic"
       },
       "operator": {
@@ -2188,10 +2214,10 @@
   "summary": {
     "n_ok": 12,
     "n_total_ids": 12,
-    "mean_enrichment": 0.8666666666666668,
-    "mean_enrichment_std": 0.045906936209908794,
+    "mean_enrichment": 0.8722222222222223,
+    "mean_enrichment_std": 0.045950415853328326,
     "probe_mean_enrichment": 0.8833333333333334,
-    "holdout_mean_enrichment": 0.8583333333333334,
+    "holdout_mean_enrichment": 0.8666666666666667,
     "top20_count": 12,
     "n_seeds": 3,
     "n_decoys": 40,

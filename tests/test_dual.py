@@ -16,6 +16,7 @@ from realm.validate.dual import (
     multimode_for_ca_length,
     operator_fingerprint,
     polish_crit_pack_holonomy,
+    refine_pack_height_amp,
     sectors_for_ca_length,
     select_mold_by_fit,
     select_multimode_by_fit,
@@ -87,6 +88,19 @@ def test_adaptive_defect_beta():
     assert abs(adaptive_defect_beta(12, 0.20) - 0.28) < 1e-12
     assert abs(adaptive_defect_beta(13, 0.20) - 0.30) < 1e-12
     assert adaptive_defect_beta(14, 0.0) == 0.0
+
+
+def test_refine_pack_height_amp():
+    kn = _knobs()
+    t = np.linspace(0, 2 * np.pi, 12, endpoint=False)
+    xyz = np.column_stack([np.cos(t), np.sin(t), 0.08 * np.sin(3 * t)])
+    pack = forge_crit_geometry(
+        kn, N=12, n_zeros=14, n_sectors=4, multimode=False, prefer_maxop=False
+    )
+    out, diag = refine_pack_height_amp(xyz, pack, soft_T=0.04)
+    assert diag["applied"] is True
+    assert "proj_before" in diag and "proj_after" in diag
+    assert diag["proj_after"] <= diag["proj_before"] + 1e-6
 
 
 def test_combine_sector_weights():

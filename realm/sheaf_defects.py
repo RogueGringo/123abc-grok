@@ -180,7 +180,7 @@ def adaptive_chord_weight(n_ca: int, override: float | None = None) -> float:
     if n >= 13:
         return 0.25
     if n >= 12:
-        return 0.12
+        return 0.18  # 1TET-class: stronger multi-residue strain
     return 0.0
 
 
@@ -281,14 +281,25 @@ def softmin_defect_vs_crit(
     }
 
 
+def adaptive_defect_scale(n_ca: int) -> float:
+    """Map sheaf defect softmin into Kabsch units (length-adaptive)."""
+    n = int(n_ca)
+    if n >= 13:
+        return 0.18
+    if n >= 12:
+        return 0.17
+    return 0.15
+
+
 def blend_projection_defect(
     proj_dist: float,
     defect_dist: float,
     *,
     beta: float = 0.08,
+    scale: float = 0.15,
 ) -> float:
     """Projection-primary blend: (1-β)·Kabsch + β·sheaf-defect softmin."""
     b = float(np.clip(beta, 0.0, 1.0))
     # scale defect into Kabsch range (~0.3–0.6)
-    d_scaled = float(defect_dist) * 0.15
+    d_scaled = float(defect_dist) * float(scale)
     return (1.0 - b) * float(proj_dist) + b * d_scaled

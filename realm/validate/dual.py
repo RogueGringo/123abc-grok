@@ -368,6 +368,86 @@ def mid_length_omega_bank(n_ca: int) -> tuple[float, ...]:
     return dense
 
 
+def refine_pack_height_amp(
+    xyz: np.ndarray,
+    pack: dict[str, Any],
+    *,
+    amps: tuple[float, ...] = (0.18, 0.22, 0.25, 0.30, 0.35),
+    soft_T: float = 0.04,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Structure-conditioned height-amplitude re-embed of Crit molds.
+
+    Keeps Crit θ* fixed; varies planar ribbon height_amp (and multimode is
+    left as-is via re-forge of planar embeds only when not multimode).
+    Accepts only if native Kabsch softmin does not worsen.
+    """
+    from realm.derive import embed_multimode_cycle
+    from realm.validate.decoys import score_geometry_vs_crit
+    from realm.zeta_geometry import embed_cycle_from_twist
+
+    thetas = np.asarray(pack.get("thetas"), dtype=float).ravel()
+    if thetas.size == 0:
+        return pack, {"applied": False, "reason": "no_thetas"}
+    N = int(pack.get("N") or max(int(xyz.shape[0]), 7))
+    multimode = bool(pack.get("multimode", False))
+    der = pack.get("derivation")
+    field = getattr(der, "field", None) if der is not None else None
+    basin_w = pack.get("basin_weights")
+    d0 = float(
+        score_geometry_vs_crit(
+            xyz,
+            pack["templates"],
+            soft_T=soft_T,
+            aggregate="softmin_persist" if basin_w is not None else "softmin",
+            sector_weights=basin_w,
+        )["mean_dist"]
+    )
+    best_amp = 0.25
+    best_templates = pack["templates"]
+    best_d = d0
+    for amp in amps:
+        templates: list[np.ndarray] = []
+        for th in thetas:
+            if multimode and field is not None:
+                # multimode embed has no height_amp; scale z after embed
+                pts = embed_multimode_cycle(
+                    N, float(th), field, n_modes=min(8, int(field.gammas.size))
+                )
+                pts = pts.copy()
+                pts[:, 2] *= float(amp) / 0.25
+                pts -= pts.mean(axis=0)
+            else:
+                pts = embed_cycle_from_twist(N, float(th), height_amp=float(amp))
+            templates.append(np.asarray(pts, float)[:, :3])
+        d = float(
+            score_geometry_vs_crit(
+                xyz,
+                templates,
+                soft_T=soft_T,
+                aggregate="softmin_persist" if basin_w is not None else "softmin",
+                sector_weights=basin_w,
+            )["mean_dist"]
+        )
+        if d < best_d - 1e-9:
+            best_d = d
+            best_amp = float(amp)
+            best_templates = templates
+    accept = best_d <= d0 + 1e-9
+    diag = {
+        "applied": True,
+        "accepted": accept and best_amp != 0.25,
+        "proj_before": d0,
+        "proj_after": best_d,
+        "height_amp": best_amp if accept else 0.25,
+        "amps_tried": list(amps),
+        "selection": "min_native_kabsch_height_amp",
+    }
+    if accept and best_templates is not pack["templates"]:
+        out = {**pack, "templates": best_templates, "height_amp": best_amp}
+        return out, diag
+    return pack, {**diag, "accepted": False}
+
+
 def polish_crit_pack_holonomy(
     xyz: np.ndarray,
     pack: dict[str, Any],
@@ -633,7 +713,15 @@ def dual_score_geometry(
             sector_weights=sector_w if n_ca_guess >= 12 else basin_w,
         )
         defect_d = float(defc["mean_dist"])
-        base = blend_projection_defect(proj_d, defect_d, beta=b)
+        from realm.sheaf_defects import adaptive_defect_scale
+
+        d_scale = adaptive_defect_scale(n_ca_guess)
+        base = blend_projection_defect(proj_d, defect_d, beta=b, scale=d_scale)
+        # Mild hard-min pull on 1TET-class only (n=12); broader mid-length
+        # pull dual-gate cost a top20 on 4K8Y.
+        if n_ca_guess == 12 and proj.get("min_dist") is not None:
+            dmin = float(proj["min_dist"])
+            base = 0.88 * float(base) + 0.12 * dmin
         method = (
             "PROJ_SHEAF_DEFECT_CTS"
             if proj.get("method") == "CRIT_KABSCH_SOFTMIN_PERSIST"

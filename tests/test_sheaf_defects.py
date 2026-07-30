@@ -66,7 +66,7 @@ def test_chord_and_multi_scale():
     assert ms["combined_strain"] > 0.0
     assert "hop2_mean" in ms["means"]
     assert adaptive_chord_weight(10) == 0.0
-    assert adaptive_chord_weight(12) == 0.12
+    assert adaptive_chord_weight(12) == 0.18
     assert adaptive_chord_weight(13) == 0.25
     # n=13 activates multi-scale method tag
     t13 = np.linspace(0, 2 * np.pi, 13, endpoint=False)
@@ -82,3 +82,5 @@ def test_blend_projection_primary():
     assert abs(blend_projection_defect(0.5, 2.0, beta=0.0) - 0.5) < 1e-12
     b = blend_projection_defect(0.5, 2.0, beta=0.1)
     assert 0.4 < b < 0.6
+    b2 = blend_projection_defect(0.5, 2.0, beta=0.1, scale=0.18)
+    assert b2 != b
