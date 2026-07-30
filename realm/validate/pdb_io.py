@@ -37,12 +37,19 @@ def fetch_pdb(pdb_id: str, cache_dir: Path | str = Path("data/pdb")) -> Path:
     return dest
 
 
-def parse_ca_trace(pdb_text: str, chain: str | None = None) -> np.ndarray:
+def parse_ca_trace(
+    pdb_text: str,
+    chain: str | None = None,
+    *,
+    with_resnames: bool = False,
+) -> np.ndarray | tuple[np.ndarray, list[str]]:
     """Parse CA coordinates from PDB text. Optional chain filter.
 
     Only the first MODEL block is used (NMR ensembles would otherwise stack).
+    If ``with_resnames`` is True, also return residue names (columns 17–20).
     """
     rows = []
+    resnames: list[str] = []
     in_model = False
     saw_model = False
     for line in pdb_text.splitlines():
@@ -77,9 +84,14 @@ def parse_ca_trace(pdb_text: str, chain: str | None = None) -> np.ndarray:
         except ValueError:
             continue
         rows.append([x, y, z])
+        if with_resnames:
+            resnames.append(line[17:20].strip() or "UNK")
     if len(rows) < 3:
         raise PdbIOError(f"need ≥3 CA atoms, got {len(rows)}")
-    return np.asarray(rows, dtype=float)
+    xyz = np.asarray(rows, dtype=float)
+    if with_resnames:
+        return xyz, resnames
+    return xyz
 
 
 def load_ca(path: Path | str, chain: str | None = None) -> np.ndarray:
@@ -116,18 +128,39 @@ def load_ca_cyclic_band(
     lo: int = 6,
     hi: int = 40,
     chain: str | None = None,
-) -> tuple[np.ndarray, str]:
-    """Load CA trace preferring a chain with length in [lo, hi] (cyclic peptide band)."""
+    *,
+    with_resnames: bool = False,
+) -> tuple[np.ndarray, str] | tuple[np.ndarray, list[str], str]:
+    """Load CA trace preferring a chain with length in [lo, hi] (cyclic peptide band).
+
+    When ``with_resnames`` is True returns ``(xyz, resnames, chain_id)``.
+    """
     text = Path(path).read_text(encoding="utf-8", errors="replace")
+
+    def _load(ch: str | None) -> tuple[np.ndarray, list[str] | None, str]:
+        label = ch if ch is not None else "ALL"
+        if with_resnames:
+            xyz, names = parse_ca_trace(text, chain=ch, with_resnames=True)  # type: ignore[misc]
+            return xyz, names, label  # type: ignore[return-value]
+        xyz = parse_ca_trace(text, chain=ch)
+        return xyz, None, label  # type: ignore[return-value]
+
     if chain is not None:
-        return parse_ca_trace(text, chain=chain), chain
+        xyz, names, label = _load(chain)
+        return (xyz, names, label) if with_resnames else (xyz, label)  # type: ignore[return-value]
     counts = chain_ca_counts(text)
     # prefer shortest chain inside band
     band = [(ch, n) for ch, n in counts.items() if lo <= n <= hi]
     if band:
         band.sort(key=lambda x: x[1])
         ch = band[0][0]
-        return parse_ca_trace(text, chain=None if ch == "_" else ch), ch
+        use = None if ch == "_" else ch
+        xyz, names, label = _load(use)
+        if label == "ALL" and ch == "_":
+            label = "_"
+        elif use is not None:
+            label = use
+        return (xyz, names, label) if with_resnames else (xyz, label)  # type: ignore[return-value]
     # fallback: full first-model parse
-    xyz = parse_ca_trace(text, chain=None)
-    return xyz, "ALL"
+    xyz, names, label = _load(None)
+    return (xyz, names, "ALL") if with_resnames else (xyz, "ALL")  # type: ignore[return-value]
