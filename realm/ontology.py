@@ -33,6 +33,7 @@ ONTOLOGY = {
     },
     "external_goal": "cyclic_native_vs_decoy_enrichment_under_crit_projection",
     "fold_protocol": "substrate→Crit(S)→MaxOp L net→mold bank→projection ranking",
+    "prime_fold": "Coutsias roots→SO(2) monodromy→MaxOp L→spectral zeta S_L(s)→NeRF embed",
     "axioms_primary": ["G1", "G2", "G3", "1.1", "2.4", "4.1", "5.2", "6.2", "12.3"],
     "math_refs_informal": [
         "Connes spectral action / spectral triple (A,H,D) — finite proxy only",
