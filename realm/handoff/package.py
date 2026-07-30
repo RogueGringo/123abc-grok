@@ -95,6 +95,102 @@ def write_release_md(
     return dest
 
 
+def archive_partner_release(
+    campaign: dict[str, Any],
+    *,
+    archive_root: Path | str = "out/releases",
+    label: str | None = None,
+    campaign_dir: Path | str | None = None,
+) -> dict[str, Any]:
+    """Snapshot zip + RELEASE + reports into a dated folder under archive_root.
+
+    Does not re-rank. Partner delivery path for immutable handoff drops.
+    """
+    root = Path(archive_root)
+    root.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    safe = "".join(
+        c if c.isalnum() or c in ("-", "_") else "-"
+        for c in (label or "handoff")
+    ).strip("-") or "handoff"
+    dest = root / f"{stamp}_{safe}"
+    dest.mkdir(parents=True, exist_ok=False)
+
+    copied: list[dict[str, str]] = []
+    pkg = campaign.get("package") or {}
+    exp = campaign.get("export") or {}
+
+    def _copy_named(src: Path | str | None, name: str) -> None:
+        if not src:
+            return
+        p = Path(src)
+        if not p.is_file():
+            return
+        target = dest / name
+        shutil.copy2(p, target)
+        copied.append(
+            {
+                "name": name,
+                "source": str(p.resolve()),
+                "sha256": _sha256_file(target),
+            }
+        )
+
+    # Prefer paths on campaign dict; fall back to campaign_dir siblings
+    camp = Path(campaign_dir) if campaign_dir else None
+    release_src = campaign.get("release_md")
+    if not release_src and camp and (camp / "RELEASE.md").is_file():
+        release_src = camp / "RELEASE.md"
+    report_src = None
+    if camp and (camp / "campaign_report.json").is_file():
+        report_src = camp / "campaign_report.json"
+    summary_src = exp.get("summary_md")
+    if not summary_src and camp and (camp / "SUMMARY.md").is_file():
+        summary_src = camp / "SUMMARY.md"
+    zip_src = pkg.get("zip_path")
+    verify_src = None
+    if camp and (camp / "verify_report.json").is_file():
+        verify_src = camp / "verify_report.json"
+
+    _copy_named(release_src, "RELEASE.md")
+    _copy_named(report_src, "campaign_report.json")
+    _copy_named(summary_src, "SUMMARY.md")
+    _copy_named(verify_src, "verify_report.json")
+    if zip_src and Path(zip_src).is_file():
+        zname = Path(zip_src).name
+        _copy_named(zip_src, zname)
+
+    meta = {
+        "archive_dir": str(dest.resolve()),
+        "created_utc": stamp,
+        "label": safe,
+        "n_files": len(copied),
+        "files": copied,
+        "ids": list(campaign.get("ids") or []),
+        "quality_gate_ok": (campaign.get("quality_gate") or {}).get("ok"),
+        "zip_sha256": pkg.get("zip_sha256"),
+        "ontology": "handoff_archive_not_lambda_eq_gamma",
+        "note": "Immutable partner drop: openable PDBs + pin; not enrichment chase.",
+    }
+    (dest / "ARCHIVE.json").write_text(
+        json.dumps(meta, indent=2) + "\n", encoding="utf-8"
+    )
+    # append ARCHIVE.json checksum
+    meta["files"].append(
+        {
+            "name": "ARCHIVE.json",
+            "source": str((dest / "ARCHIVE.json").resolve()),
+            "sha256": _sha256_file(dest / "ARCHIVE.json"),
+        }
+    )
+    meta["n_files"] = len(meta["files"])
+    (dest / "ARCHIVE.json").write_text(
+        json.dumps(meta, indent=2) + "\n", encoding="utf-8"
+    )
+    logger.info("archived release → %s files=%d", dest, meta["n_files"])
+    return meta
+
+
 PARTNER_README = """# Geometric mold handoff package
 
 Generated: {timestamp}

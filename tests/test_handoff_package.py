@@ -6,7 +6,11 @@ from pathlib import Path
 
 import pytest
 
-from realm.handoff.package import build_partner_package, write_release_md
+from realm.handoff.package import (
+    archive_partner_release,
+    build_partner_package,
+    write_release_md,
+)
 from realm.handoff.pipeline import export_structure_handoff
 from realm.validate.length_policy import policy_for
 from realm.validate.report import load_knobs
@@ -48,6 +52,41 @@ def test_write_release_md(tmp_path: Path):
     assert "1CSA" in text
     assert "Quality gate" in text
     assert "handoff_verify" in text
+
+
+def test_archive_partner_release(tmp_path: Path):
+    camp = tmp_path / "camp"
+    camp.mkdir()
+    (camp / "RELEASE.md").write_text("# RELEASE - t\n", encoding="utf-8")
+    (camp / "SUMMARY.md").write_text("# sum\n", encoding="utf-8")
+    (camp / "campaign_report.json").write_text("{}\n", encoding="utf-8")
+    (camp / "verify_report.json").write_text('{"ok": true}\n', encoding="utf-8")
+    zpath = tmp_path / "pkg.zip"
+    zpath.write_bytes(b"PK\x03\x04fake")
+    campaign = {
+        "ids": ["1CSA", "2X2C"],
+        "export": {"summary_md": str(camp / "SUMMARY.md")},
+        "package": {
+            "zip_path": str(zpath),
+            "zip_sha256": "deadbeef",
+        },
+        "release_md": str(camp / "RELEASE.md"),
+        "quality_gate": {"ok": True},
+    }
+    meta = archive_partner_release(
+        campaign,
+        archive_root=tmp_path / "releases",
+        label="probe-v1",
+        campaign_dir=camp,
+    )
+    dest = Path(meta["archive_dir"])
+    assert dest.is_dir()
+    assert (dest / "RELEASE.md").is_file()
+    assert (dest / "SUMMARY.md").is_file()
+    assert (dest / "pkg.zip").is_file()
+    assert (dest / "ARCHIVE.json").is_file()
+    assert meta["quality_gate_ok"] is True
+    assert "not_lambda_eq_gamma" in meta["ontology"]
 
 
 def test_build_partner_package(tmp_path: Path):

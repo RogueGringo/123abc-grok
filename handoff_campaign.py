@@ -16,7 +16,11 @@ ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from realm.handoff.package import build_partner_package, write_release_md
+from realm.handoff.package import (
+    archive_partner_release,
+    build_partner_package,
+    write_release_md,
+)
 from realm.handoff.pipeline import export_structure_batch, resolve_pdb_id_list
 from realm.handoff.verify import quality_gate, verify_dual_gate_pin, verify_handoff_tree
 from realm.validate.report import load_knobs
@@ -80,6 +84,17 @@ def main(argv: list[str] | None = None) -> int:
         "--no-release",
         action="store_true",
         help="skip writing RELEASE.md next to campaign_report.json",
+    )
+    p.add_argument(
+        "--archive",
+        action="store_true",
+        help="copy zip + RELEASE + reports into dated out/releases/ folder",
+    )
+    p.add_argument(
+        "--archive-dir",
+        type=Path,
+        default=Path("out/releases"),
+        help="root for dated release archives (default: out/releases)",
     )
     p.add_argument("-v", action="store_true")
     args = p.parse_args(argv)
@@ -203,6 +218,8 @@ def main(argv: list[str] | None = None) -> int:
                 campaign_fail,
                 release_label=args.release_label or f"fail-{args.pdb_ids}",
                 write_release=not args.no_release,
+                do_archive=False,
+                archive_dir=args.archive_dir,
             )
             return 3
 
@@ -236,6 +253,8 @@ def main(argv: list[str] | None = None) -> int:
         campaign,
         release_label=args.release_label or str(args.pdb_ids),
         write_release=not args.no_release,
+        do_archive=bool(args.archive) and bool(gate.get("ok")),
+        archive_dir=args.archive_dir,
     )
     if not gate.get("ok"):
         return 5
@@ -248,6 +267,8 @@ def _write_campaign_artifacts(
     *,
     release_label: str,
     write_release: bool,
+    do_archive: bool = False,
+    archive_dir: Path | None = None,
 ) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     report_path = out_dir / "campaign_report.json"
@@ -268,6 +289,17 @@ def _write_campaign_artifacts(
             dest = Path(pkg_dir) / "RELEASE.md"
             dest.write_text(rel.read_text(encoding="utf-8"), encoding="utf-8")
             logger.info("RELEASE.md copied into package dir %s", dest)
+
+    if do_archive:
+        arch = archive_partner_release(
+            campaign,
+            archive_root=archive_dir or Path("out/releases"),
+            label=release_label,
+            campaign_dir=out_dir,
+        )
+        campaign["archive"] = arch
+        report_path.write_text(json.dumps(campaign, indent=2) + "\n", encoding="utf-8")
+        logger.info("archive_dir=%s", arch.get("archive_dir"))
 
 
 if __name__ == "__main__":
