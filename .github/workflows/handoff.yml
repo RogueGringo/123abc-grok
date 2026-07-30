@@ -40,7 +40,8 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
         run: |
           pytest tests/test_pdb_write.py tests/test_handoff.py tests/test_handoff_pipeline.py \
-            tests/test_handoff_structure.py -q --tb=line
+            tests/test_handoff_structure.py tests/test_handoff_package.py tests/test_handoff_verify.py \
+            -q --tb=line
       - name: Dual-gate policy pin
         env:
           PYTHONPATH: ${{ github.workspace }}
