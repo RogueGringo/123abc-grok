@@ -70,6 +70,11 @@
     "path": "geometry_off_zeta_external_cyclic_ranking",
     "method": "CRIT_KABSCH_SOFTMIN + multi-seed; dual L×proj instrument ready",
     "dual": "realm/validate/dual.py + dual_probe.py (substrate→L vs projection)",
+    "axiomz": "01-DEVELOPMENT-AXiomZ + realm/axiomz.py CTS + stage_ledger.py",
+    "commit_policy": {
+      "zeta_preference": false,
+      "geometry_ranking_external": true
+    },
     "instrument": "see docs/RETRACTION_residual_instrument.md"
   }
 }
