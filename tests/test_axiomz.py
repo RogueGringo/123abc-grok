@@ -9,6 +9,7 @@ import pytest
 
 from realm.axiomz import (
     activation_signature,
+    basin_persistence_weights,
     crit_action_filtration,
     load_mapping,
     run_term_series,
@@ -39,6 +40,19 @@ def test_crit_filtration_finds_structure():
     filt = crit_action_filtration(der.action, n_grid=800, n_levels=20)
     assert filt["n_features"] >= 1
     assert filt["max_persistence"] > 0
+
+
+def test_basin_persistence_weights():
+    kn_path = Path("evolve_result.json")
+    if not kn_path.is_file():
+        pytest.skip("need evolve_result.json")
+    kn = json.loads(kn_path.read_text(encoding="utf-8"))["best_knobs"]
+    der = Keymaker(N=13, n_zeros=14, n_sectors=6).forge(**kn)
+    th = [float(s.twist) for s in der.sectors]
+    w = basin_persistence_weights(der.action, th, n_grid=800)
+    assert w.shape == (len(th),)
+    assert abs(float(w.mean()) - 1.0) < 1e-6
+    assert float(w.min()) > 0.0
 
 
 def test_term_series_five_stages():

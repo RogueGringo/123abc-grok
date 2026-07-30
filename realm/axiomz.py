@@ -136,6 +136,46 @@ def crit_action_filtration(
     }
 
 
+def basin_persistence_weights(
+    action,
+    thetas: np.ndarray | list[float],
+    *,
+    n_grid: int = 2000,
+    floor: float = 0.35,
+) -> np.ndarray:
+    """Per-Crit-θ basin depth weights from sublevel structure of S on S¹.
+
+    For each holonomy θ*, estimate 0-homology basin persistence as the
+    height of the lower saddle barrier in a local window of S_Λ, then
+    normalize so mean weight = 1 with a floor so weak basins still vote.
+
+    Used to reweight Kabsch softmin toward persistent Crit valleys (CTS
+    topology → projection ranking). Never λ=γ.
+    """
+    th = np.asarray(thetas, dtype=float).ravel()
+    if th.size == 0:
+        return np.zeros(0, dtype=float)
+    grid = np.linspace(0.0, 2.0 * np.pi, int(n_grid), endpoint=False)
+    Sv = np.asarray(action.S(grid), dtype=float)
+    half = max(int(n_grid) // 4, 8)
+    depths = np.zeros(th.size, dtype=float)
+    for k, t in enumerate(th):
+        # nearest grid on circle
+        dcirc = np.abs(((grid - float(t) + np.pi) % (2.0 * np.pi)) - np.pi)
+        i = int(np.argmin(dcirc))
+        s0 = float(Sv[i])
+        left = Sv[np.array([(i - j) % n_grid for j in range(1, half)], dtype=int)]
+        right = Sv[np.array([(i + j) % n_grid for j in range(1, half)], dtype=int)]
+        barrier = float(min(np.max(left), np.max(right)))
+        depths[k] = max(barrier - s0, 0.0)
+    mean_d = float(np.mean(depths)) + 1e-15
+    fl = float(np.clip(floor, 0.0, 0.95))
+    w = fl + (1.0 - fl) * (depths / mean_d)
+    # renorm mean to 1
+    w = w / (float(np.mean(w)) + 1e-15)
+    return w.astype(float)
+
+
 def run_term_series(
     knobs: dict[str, Any] | None = None,
     *,

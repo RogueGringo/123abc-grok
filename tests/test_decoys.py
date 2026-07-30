@@ -46,3 +46,21 @@ def test_score_geometry_softmin_and_topk():
     assert soft["mean_dist"] + 1e-12 >= soft["min_dist"]
     assert topk["mean_dist"] + 1e-12 >= topk["min_dist"]
     assert soft["mean_dist"] < 0.2
+
+
+def test_score_geometry_persist_weights():
+    ring = np.array(
+        [[1.0, 0, 0], [0, 1, 0], [-1, 0, 0], [0, -1, 0], [0.7, -0.7, 0]],
+        dtype=float,
+    )
+    tpls = [ring + 0.05 * i for i in range(4)]
+    # heavy weight on nearest (i=0) vs far templates
+    w = np.array([3.0, 0.2, 0.2, 0.2])
+    plain = score_geometry_vs_crit(ring, tpls, aggregate="softmin")
+    weighted = score_geometry_vs_crit(
+        ring, tpls, aggregate="softmin_persist", sector_weights=w
+    )
+    assert weighted["method"] == "CRIT_KABSCH_SOFTMIN_PERSIST"
+    assert weighted["weighted"] is True
+    # weighting nearest lower-distance template should not increase softmin
+    assert weighted["mean_dist"] <= plain["mean_dist"] + 1e-9

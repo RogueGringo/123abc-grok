@@ -149,14 +149,20 @@ def score_geometry_vs_crit(
     top_k: int = 3,
     aggregate: str = "softmin",
     soft_T: float = 0.04,
+    sector_weights: np.ndarray | list[float] | None = None,
 ) -> dict[str, Any]:
     """Cyclic Kabsch distance to Crit sector ensemble (projection side).
 
     aggregate
       softmin — temperature-weighted mean over all sector distances (default;
                 multi-valley sheaf; more stable than hard min / top-k alone)
+      softmin_persist — softmin reweighted by CTS basin-persistence weights
       topk    — mean of the *top_k* nearest templates
       min     — hard nearest template only
+
+    sector_weights
+      optional per-template positive weights (e.g. H0 basin persistence).
+      Used when aggregate is softmin / softmin_persist.
     """
     if not sector_points:
         return {
@@ -174,6 +180,20 @@ def score_geometry_vs_crit(
     T = max(float(soft_T), 1e-12)
     m = dmin
     w = np.exp(-(dists - m) / T)
+    sw = None
+    if sector_weights is not None and mode in (
+        "softmin",
+        "softmin_persist",
+        "persist",
+        "cts",
+        "softmin_min",
+        "blend",
+        "soft_min",
+    ):
+        sw = np.asarray(sector_weights, dtype=float).ravel()
+        if sw.size == dists.size and np.all(np.isfinite(sw)) and float(np.sum(sw)) > 0:
+            sw = np.clip(sw, 1e-6, None)
+            w = w * sw
     soft = float(np.sum(w * dists) / (np.sum(w) + 1e-15))
     if mode == "min":
         dmean = dmin
@@ -189,6 +209,10 @@ def score_geometry_vs_crit(
         dmean = float(np.sqrt(max(soft, 1e-15) * max(dmin, 1e-15)))
         method = "CRIT_KABSCH_SOFTMIN_MIN"
         k = int(dists.size)
+    elif mode in ("softmin_persist", "persist", "cts"):
+        dmean = soft
+        method = "CRIT_KABSCH_SOFTMIN_PERSIST"
+        k = int(dists.size)
     else:
         dmean = soft
         method = "CRIT_KABSCH_SOFTMIN"
@@ -202,4 +226,5 @@ def score_geometry_vs_crit(
         "top_k": k,
         "aggregate": mode,
         "soft_T": float(soft_T) if mode not in ("min", "topk", "top_k", "top-k") else None,
+        "weighted": bool(sw is not None),
     }

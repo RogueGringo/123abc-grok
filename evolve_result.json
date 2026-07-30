@@ -59,16 +59,16 @@
     "R_note": "legacy R is Crit seating self-consistency; not \u03b6 evidence (RETRACTED 2026-07-29)",
     "null_battery_zeta_preference": "RETRACTED",
     "residual_fitness": "informative_density_return",
-    "probe_enrichment": 0.8770833333333334,
-    "holdout_enrichment": 0.8416666666666668,
-    "batch_mean_enrichment": 0.8534722222222224,
-    "batch_mean_enrichment_std": 0.05393739796264258,
-    "batch_top20": 9,
+    "probe_enrichment": 0.8791666666666668,
+    "holdout_enrichment": 0.8427083333333334,
+    "batch_mean_enrichment": 0.8548611111111112,
+    "batch_mean_enrichment_std": 0.05640623167380577,
+    "batch_top20": 10,
     "batch_n_ok": 12,
     "batch_n_seeds": 3,
     "batch_n_decoys": 40,
     "path": "geometry_off_zeta_external_cyclic_ranking",
-    "method": "PROJ_SHEAF_DEFECT beta=0.20 + length-adaptive dense omega superset + mid-band S_Lambda",
+    "method": "PROJ_SHEAF_DEFECT_CTS beta=0.20 + basin H0 weights + dense omega superset + mid-band S",
     "dual": "realm/validate/dual.py + dual_probe.py (substrate\u2192L vs projection)",
     "axiomz": "01-DEVELOPMENT-AXiomZ + realm/axiomz.py CTS + stage_ledger.py",
     "commit_policy": {
@@ -85,9 +85,10 @@
       "sectors_rule": "n<=8->4 else 6",
       "multimode_mode": "self_fit_dense",
       "multimode_rule": "length-adaptive omega superset of dense; n>=13 adds wings/bridges",
-      "note": "40x3: mean 85.3% probe 87.7% hold 84.2% top20=9; 4K8Y 77.5% (was 73%)",
+      "note": "40x3: mean 85.5% probe 87.9% hold 84.3% top20=10; CTS basin softmin; 4M6E top20",
       "defect_beta": 0.2,
-      "chord_weight": "adaptive: 0 if n<12, 0.12 if n=12, 0.25 if n>=13"
+      "chord_weight": "adaptive: 0 if n<12, 0.12 if n=12, 0.25 if n>=13",
+      "cts_basin_weights": true
     },
     "rank_polish": "softmin_min T=0.04 probe-win rejected by full-batch continuity (76.7->74.1)",
     "sectors_mode": "adaptive_cap6",
@@ -107,7 +108,8 @@
       "projection": "Kabsch softmin primary + defect beta=0.20 blend",
       "fold_protocol": "defect_beta wired through rank_enrichment / substrate table",
       "adaptive_ns": "evolve_ns.py dual-fitness natural selection (probe env; holdout report-only)",
-      "mid_length_bank": "mid_length_omega_bank superset — dual-gate accepted 85.3%"
+      "mid_length_bank": "mid_length_omega_bank superset — dual-gate accepted 85.3%",
+      "cts_basin_weights": "basin_persistence_weights reweight Kabsch softmin — dual-gate 85.5% top20=10"
     },
     "adaptive_ns_last": {
       "accepted": false,
@@ -130,8 +132,9 @@
     "sectors_rule": "n<=8->4 else 6",
     "multimode_mode": "self_fit_dense",
     "multimode_rule": "length-adaptive omega superset of dense; n>=13 adds wings/bridges",
-    "note": "40x3: mean 85.3% probe 87.7% hold 84.2% top20=9; 4K8Y 77.5% (was 73%)",
+    "note": "40x3: mean 85.5% probe 87.9% hold 84.3% top20=10; CTS basin softmin; 4M6E top20",
     "defect_beta": 0.2,
-    "chord_weight": "adaptive: 0 if n<12, 0.12 if n=12, 0.25 if n>=13"
+    "chord_weight": "adaptive: 0 if n<12, 0.12 if n=12, 0.25 if n>=13",
+    "cts_basin_weights": true
   }
 }

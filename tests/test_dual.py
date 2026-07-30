@@ -147,7 +147,12 @@ def test_forge_and_dual_score():
     xyz = np.column_stack([np.cos(t), np.sin(t), 0.1 * np.sin(2 * t)])
     pure = dual_score_geometry(xyz, pack, alpha_proj=1.0, prefer_maxop=False)
     dual = dual_score_geometry(xyz, pack, alpha_proj=0.85, prefer_maxop=False)
-    assert pure["method"] in ("CRIT_KABSCH_SOFTMIN", "CRIT_KABSCH_TOPK")
+    assert pure["method"] in (
+        "CRIT_KABSCH_SOFTMIN",
+        "CRIT_KABSCH_SOFTMIN_PERSIST",
+        "CRIT_KABSCH_TOPK",
+    )
     assert dual["method"] == "DUAL_PROJ_OP"
     assert dual["proj_dist"] == pure["mean_dist"]
     assert dual["op_dist"] >= 0.0
+    assert pack.get("basin_weights") is not None

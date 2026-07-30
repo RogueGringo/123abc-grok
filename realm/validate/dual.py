@@ -481,11 +481,21 @@ def forge_crit_geometry(
             if arr.ndim == 2 and arr.shape[1] >= 3:
                 templates.append(arr[:, :3])
     fp = operator_fingerprint(thetas, N=N, prefer_maxop=prefer_maxop)
+    # CTS basin-persistence weights on Crit holonomies (topology → ranking)
+    basin_w: np.ndarray | None = None
+    try:
+        from realm.axiomz import basin_persistence_weights
+
+        if hasattr(der, "action") and der.action is not None and thetas:
+            basin_w = basin_persistence_weights(der.action, thetas)
+    except Exception:  # noqa: BLE001
+        basin_w = None
     return {
         "templates": templates,
         "thetas": np.asarray(thetas, float),
         "operator": fp,
         "derivation": der,
+        "basin_weights": basin_w,
         "n_sectors": len(templates),
         "N": N,
         "multimode": bool(kn.get("multimode", True)),
@@ -519,8 +529,22 @@ def dual_score_geometry(
     thetas = pack.get("thetas")
     if thetas is None:
         thetas = crit_fp.thetas
+    basin_w = pack.get("basin_weights")
+    # Use CTS persistence reweight when weights present (production softmin path)
+    agg = aggregate
+    if basin_w is not None and str(aggregate).lower().strip() in (
+        "softmin",
+        "softmin_persist",
+        "persist",
+        "cts",
+    ):
+        agg = "softmin_persist"
     proj = score_geometry_vs_crit(
-        xyz, templates, soft_T=soft_T, aggregate=aggregate
+        xyz,
+        templates,
+        soft_T=soft_T,
+        aggregate=agg,
+        sector_weights=basin_w,
     )
     proj_d = float(proj["mean_dist"])
     a = float(np.clip(alpha_proj, 0.0, 1.0))
@@ -533,7 +557,11 @@ def dual_score_geometry(
         )
         defect_d = float(defc["mean_dist"])
         base = blend_projection_defect(proj_d, defect_d, beta=b)
-        method = "PROJ_SHEAF_DEFECT"
+        method = (
+            "PROJ_SHEAF_DEFECT_CTS"
+            if proj.get("method") == "CRIT_KABSCH_SOFTMIN_PERSIST"
+            else "PROJ_SHEAF_DEFECT"
+        )
     else:
         base = proj_d
         method = proj.get("method")
