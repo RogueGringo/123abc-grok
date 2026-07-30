@@ -1,0 +1,134 @@
+{
+  "mode": "report",
+  "signature": {
+    "function_id": "stage_ledger",
+    "axioms_invoked": [
+      "5.2",
+      "6.1",
+      "6.2",
+      "12.2",
+      "12.3",
+      "18.2",
+      "G1"
+    ],
+    "axiom_roles": {
+      "5.2": "X\u2192dynamics\u2192geometry\u2192topology\u2192quale pipeline",
+      "6.1": "Claims require holdout / equal-budget / dual checks",
+      "6.2": "Block degenerate seating residual as \u03b6 evidence",
+      "12.2": "Resolve \u2192 verify \u2192 report; never claim from seating alone",
+      "12.3": "stage_ledger resolve mode before commit claims",
+      "18.2": "Annotate runs with axioms_invoked",
+      "G1": "Choose observable ontology: \u03b6 as substrate, not eigenvalue target"
+    },
+    "ontology": "not_lambda_eq_gamma"
+  },
+  "mapping_path": "01-DEVELOPMENT-AXiomZ/ACTIVE_MAPPING.json",
+  "cts": null,
+  "artifacts": {
+    "batch": {
+      "n_ok": 12,
+      "n_total_ids": 12,
+      "mean_enrichment": 0.8736111111111112,
+      "mean_enrichment_std": 0.044720039102153636,
+      "probe_mean_enrichment": 0.8875000000000001,
+      "holdout_mean_enrichment": 0.8666666666666667,
+      "top20_count": 12,
+      "n_seeds": 3,
+      "n_decoys": 40,
+      "alpha_proj": 1.0,
+      "soft_T": 0.04,
+      "aggregate": "softmin",
+      "sectors_mode": "adaptive",
+      "sectors_default": 6,
+      "multimode": null,
+      "multimode_mode": "self_fit_dense",
+      "defect_beta": 0.2,
+      "holonomy_polish": false
+    },
+    "transfer_holdout_preference": false,
+    "null_claim": "RETRACTED",
+    "dual_summary": {
+      "projection": {
+        "zeta": 0.7666666666666667,
+        "arith": 0.7958333333333333,
+        "gue": 0.7083333333333333,
+        "poisson": 0.7750000000000001
+      },
+      "dual": {
+        "zeta": 0.7541666666666667,
+        "arith": 0.7375,
+        "gue": 0.8291666666666666,
+        "poisson": 0.8125
+      }
+    }
+  },
+  "verification": [
+    {
+      "name": "zeta_preference_not_claimed",
+      "ok": true,
+      "detail": "null_battery claim=RETRACTED",
+      "axioms": [
+        "6.1",
+        "6.2",
+        "G1"
+      ]
+    },
+    {
+      "name": "seating_recorded_as_artifact",
+      "ok": true,
+      "detail": "legacy seating_pass=True (not \u03b6 evidence)",
+      "axioms": [
+        "6.2",
+        "12.3"
+      ]
+    },
+    {
+      "name": "transfer_holdout_no_false_preference",
+      "ok": true,
+      "detail": "zeta_preference_on_holdout=False",
+      "axioms": [
+        "6.1",
+        "12.2"
+      ]
+    },
+    {
+      "name": "holdout_legacy_advantage_collapsed",
+      "ok": true,
+      "detail": "hold_g15_28 adv_legacy=0.77\u00d7",
+      "axioms": [
+        "6.1"
+      ]
+    },
+    {
+      "name": "external_ranking_signal",
+      "ok": true,
+      "detail": "batch mean_enrichment=87.4% (projection path)",
+      "axioms": [
+        "2.4",
+        "5.2",
+        "5.3"
+      ]
+    },
+    {
+      "name": "multi_seed_stability",
+      "ok": true,
+      "detail": "n_seeds=3",
+      "axioms": [
+        "4.3"
+      ]
+    }
+  ],
+  "n_ok": 6,
+  "n_fail": 0,
+  "commit_policy": {
+    "zeta_preference": false,
+    "reason_blocked": "RETRACTED \u2014 \u03b6 is substrate seed only, not preference claim (see realm/ontology.py)",
+    "geometry_projection_ranking": true,
+    "geometry_ranking_external": true,
+    "maxop_dual_diagnostic": true,
+    "dual_instrument_ready": true,
+    "cts_resolved": false,
+    "ontology": "substrate_projection_operator_dual"
+  },
+  "ontology": "axiomz_stage_ledger_not_lambda_eq_gamma"
+}

@@ -1,0 +1,151 @@
+{
+  "framework": "Jones Axiomatic Framework v2.0 / AXiomZ",
+  "date_indexed": "2026-07-30",
+  "project": "123abc-grok fold protocol — substrate Crit projection",
+  "selection_note": "G1: ζ is substrate seed only; operational goal=Crit→geometry projection; MaxOp L is dual — never λ=γ",
+  "operational_goal": "native_vs_decoy enrichment under substrate-derived Crit molds (projection)",
+  "fold_protocol": "fold_protocol.py + realm/fold_protocol.py + realm/aqft_local.py",
+  "retracted": {
+    "claim": "ζ preference via legacy residual R under frozen knobs",
+    "axioms_violated_if_claimed": ["6.1", "12.2", "12.3", "G1"],
+    "reason": "ζ is substrate not target; seating residual was degenerate lock=key instrument"
+  },
+  "activations": [
+    {
+      "axiom_id": "G1",
+      "name": "ontological_selection",
+      "code": ["realm/zeta_field.py", "realm/validate/seeds.py", "docs/RETRACTION_residual_instrument.md"],
+      "status": "active",
+      "role": "Choose observable ontology: ζ as substrate, not eigenvalue target"
+    },
+    {
+      "axiom_id": "G2",
+      "name": "value_genesis",
+      "code": ["realm/derive.py:SpectralAction", "evolve.py"],
+      "status": "active",
+      "role": "S_Λ(θ) is the value-warped potential on holonomy"
+    },
+    {
+      "axiom_id": "G3",
+      "name": "path_of_least_resistance",
+      "code": ["realm/derive.py:critical_holonomies", "realm/validate/dual.py"],
+      "status": "active",
+      "role": "Crit(S) = geodesic/Morse loci of preferred monodromies"
+    },
+    {
+      "axiom_id": "1.1",
+      "name": "substrate_principle",
+      "code": ["realm/zeta_field.py", "realm/validate/seeds.py"],
+      "status": "active",
+      "role": "Seed ordinates as discrete condition:states of the field"
+    },
+    {
+      "axiom_id": "2.4",
+      "name": "operational_geometry",
+      "code": ["realm/projection.py", "realm/zeta_geometry.py", "realm/validate/decoys.py", "realm/validate/dual.py:sectors_for_ca_length"],
+      "status": "active",
+      "role": "Projected Crit geometry M_v; sectors 4/6; self_fit_dense bank (multimode x denser omega)"
+    },
+    {
+      "axiom_id": "4.1",
+      "name": "topological_invariance",
+      "code": ["realm/cohesive.py", "realm/sheaf_backend.py"],
+      "status": "active",
+      "role": "H0 / holonomy frustration as discrete topological invariants of L"
+    },
+    {
+      "axiom_id": "4.2",
+      "name": "filtration_principle",
+      "code": ["realm/axiomz.py:crit_action_filtration"],
+      "status": "active",
+      "role": "Filtration of S(θ) on S1 reveals multi-scale Crit structure"
+    },
+    {
+      "axiom_id": "4.3",
+      "name": "persistence_principle",
+      "code": ["realm/axiomz.py:crit_action_filtration", "pdb_batch.py:n_seeds"],
+      "status": "active",
+      "role": "Long-lived Crit wells + multi-seed ranking stability = signal"
+    },
+    {
+      "axiom_id": "5.2",
+      "name": "configurational_term_series",
+      "code": ["realm/axiomz.py:run_term_series", "stage_ledger.py"],
+      "status": "active",
+      "role": "X→dynamics→geometry→topology→quale pipeline"
+    },
+    {
+      "axiom_id": "6.1",
+      "name": "topological_verification",
+      "code": ["transfer.py", "fair_fight.py", "null_battery.py", "stage_ledger.py"],
+      "status": "active",
+      "role": "Claims require holdout / equal-budget / dual checks"
+    },
+    {
+      "axiom_id": "6.2",
+      "name": "continuity_guard",
+      "code": ["realm/lock_key.py:residual fitness=informative", "docs/RETRACTION_residual_instrument.md"],
+      "status": "active",
+      "role": "Block degenerate seating residual as ζ evidence"
+    },
+    {
+      "axiom_id": "9.2",
+      "name": "relational_primacy",
+      "code": ["realm/validate/dual.py", "realm/sheaf_backend.py"],
+      "status": "active",
+      "role": "L and projection relations over raw γ lists"
+    },
+    {
+      "axiom_id": "12.2",
+      "name": "verification_loop",
+      "code": ["stage_ledger.py", "tests/"],
+      "status": "active",
+      "role": "Resolve → verify → report; never claim from seating alone"
+    },
+    {
+      "axiom_id": "12.3",
+      "name": "commit_vs_resolve",
+      "code": ["stage_ledger.py"],
+      "status": "active",
+      "role": "stage_ledger resolve mode before commit claims"
+    },
+    {
+      "axiom_id": "18.2",
+      "name": "axiom_activation_signature",
+      "code": ["realm/axiomz.py:activation_signature"],
+      "status": "active",
+      "role": "Annotate runs with axioms_invoked"
+    },
+    {
+      "axiom_id": "20.2",
+      "name": "cross_level_consistency",
+      "code": ["realm/validate/dual.py", "pdb_batch.py"],
+      "status": "partial",
+      "role": "Operator L vs projection dual; full consistency still research"
+    },
+    {
+      "axiom_id": "19.3",
+      "name": "geodesic_search",
+      "code": ["rank_polish.py", "pdb_batch.py"],
+      "status": "active",
+      "role": "Probe geodesic on soft_T/aggregate; full-batch continuity before commit"
+    },
+    {
+      "axiom_id": "G3",
+      "name": "path_of_least_resistance_ranking",
+      "code": ["rank_polish.py"],
+      "status": "active",
+      "role": "Hyperparam geodesic on ranking geometry; holdout/full-batch guards"
+    }
+  ],
+  "cts_binding": {
+    "substrate_X": "ZetaField / make_seed",
+    "dynamics_f": "SpectralAction S + Crit holonomies",
+    "geometry_v": "multimode embed + Kabsch softmin mold",
+    "topology_Hk": "sheaf L fingerprint + Crit filtration persistence",
+    "quale_Q": "native-vs-decoy enrichment + dual score (external meaning)"
+  },
+  "witten_bridge": {
+    "note": "Witten Morse/SUSY licenses Crit(S) as sector selector; cellular sheaf L is discrete connection Laplacian — not λ=γ"
+  }
+}
