@@ -8,10 +8,13 @@ from pathlib import Path
 import pytest
 
 from realm.handoff.pipeline import (
+    DEFAULT_HANDOFF_IDS,
     biopython_open_check,
     export_structure_batch,
     export_structure_handoff,
     policy_stamp,
+    resolve_pdb_id_list,
+    write_enrichment_summary_tsv,
     write_manifest_tsv,
 )
 from realm.validate.length_policy import policy_for
@@ -94,3 +97,15 @@ def test_export_batch_manifest(tmp_path: Path):
     root_man = tmp_path / "batch" / "manifest.tsv"
     assert root_man.is_file()
     assert "1CSA" in root_man.read_text(encoding="utf-8")
+    enr = tmp_path / "batch" / "enrichment_summary.tsv"
+    assert enr.is_file()
+    assert "soft_T" in enr.read_text(encoding="utf-8")
+
+
+def test_resolve_pdb_id_list_tokens():
+    assert "1CSA" in resolve_pdb_id_list("probe")
+    assert "1TET" in resolve_pdb_id_list("holdout")
+    assert len(resolve_pdb_id_list("default")) == len(DEFAULT_HANDOFF_IDS)
+    assert resolve_pdb_id_list("1csa,2x2c") == ["1CSA", "2X2C"]
+    # unique
+    assert resolve_pdb_id_list("probe,1CSA")[0] == "1CSA"

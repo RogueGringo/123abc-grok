@@ -1,0 +1,48 @@
+# Dual-gate handoff smoke (does not change ranking policy).
+name: handoff
+
+on:
+  push:
+    paths:
+      - "realm/handoff/**"
+      - "realm/validate/pdb_write.py"
+      - "realm/validate/length_policy.py"
+      - "handoff_export.py"
+      - "tests/test_handoff*.py"
+      - "tests/test_pdb_write.py"
+      - ".github/workflows/handoff.yml"
+  pull_request:
+    paths:
+      - "realm/handoff/**"
+      - "realm/validate/pdb_write.py"
+      - "realm/validate/length_policy.py"
+      - "handoff_export.py"
+      - "tests/test_handoff*.py"
+      - "tests/test_pdb_write.py"
+      - ".github/workflows/handoff.yml"
+
+jobs:
+  handoff-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy pytest
+          # BioPython optional — open check skips if missing; install for full metric
+          pip install biopython || true
+      - name: Handoff + PDB write suite
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          pytest tests/test_pdb_write.py tests/test_handoff.py tests/test_handoff_pipeline.py \
+            tests/test_handoff_structure.py -q --tb=line
+      - name: Dual-gate policy pin
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python -c "from realm.validate.length_policy import policy_for; p=policy_for(12,base_beta=0.20); assert abs(p.soft_T-0.036)<1e-12; assert p.seq_mix==0.0; print('dual-gate OK', p.soft_T)"

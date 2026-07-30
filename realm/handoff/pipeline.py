@@ -26,14 +26,32 @@ from realm.validate.pdb_write import write_mold_pair
 
 logger = logging.getLogger(__name__)
 
-# Default commercial cyclic set (same as pdb_batch dual-gate campaign)
+# Default commercial cyclic set — keep in sync with pdb_batch.DEFAULT_CYCLIC_IDS
 DEFAULT_HANDOFF_IDS = (
     "1CSA",
     "1IKF",
     "2X2C",
     "4M6E",
     "3WNE",
+    "4K8Y",
+    "1JBL",
+    "5EOC",
+    "3AVB",
+    "3AV9",
     "5LSO",
+    "1TET",
+)
+
+PROBE_HANDOFF_IDS = ("1CSA", "2X2C", "4M6E", "3WNE")
+HOLDOUT_HANDOFF_IDS = (
+    "1IKF",
+    "1JBL",
+    "4K8Y",
+    "5EOC",
+    "3AVB",
+    "3AV9",
+    "5LSO",
+    "1TET",
 )
 
 
@@ -344,6 +362,86 @@ def export_structure_handoff(
     return index
 
 
+def write_enrichment_summary_tsv(rows: list[dict[str, Any]], path: Path | str) -> Path:
+    """One row per PDB: enrichment / top20 / soft_T / mold counts (commercial table)."""
+    dest = Path(path)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    fields = [
+        "pdb",
+        "status",
+        "n_molds",
+        "soft_T",
+        "n_ca",
+        "enrichment",
+        "enrichment_std",
+        "top20",
+        "native_rank",
+        "native_dist",
+        "method",
+        "set",
+        "error",
+    ]
+    probe = set(PROBE_HANDOFF_IDS)
+    hold = set(HOLDOUT_HANDOFF_IDS)
+    with dest.open("w", encoding="utf-8", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=fields, delimiter="\t")
+        w.writeheader()
+        for r in rows:
+            en = r.get("enrichment") or {}
+            pid = str(r.get("pdb") or "")
+            if pid in probe:
+                which = "probe"
+            elif pid in hold:
+                which = "holdout"
+            else:
+                which = ""
+            w.writerow(
+                {
+                    "pdb": pid,
+                    "status": r.get("status"),
+                    "n_molds": r.get("n_molds"),
+                    "soft_T": (r.get("dual_gate") or {}).get("length_policy", {}).get(
+                        "soft_T"
+                    ),
+                    "n_ca": en.get("n_ca"),
+                    "enrichment": en.get("enrichment"),
+                    "enrichment_std": en.get("enrichment_std"),
+                    "top20": en.get("top20"),
+                    "native_rank": en.get("native_rank"),
+                    "native_dist": en.get("native_dist"),
+                    "method": en.get("method"),
+                    "set": which,
+                    "error": r.get("error") or en.get("error") or "",
+                }
+            )
+    return dest
+
+
+def resolve_pdb_id_list(spec: str | None) -> list[str]:
+    """Parse --pdb-ids: comma list, or tokens default|probe|holdout|all."""
+    if not spec or not str(spec).strip():
+        return []
+    tokens = [t.strip().lower() for t in str(spec).replace(";", ",").split(",") if t.strip()]
+    out: list[str] = []
+    for t in tokens:
+        if t in ("default", "all", "campaign"):
+            out.extend(DEFAULT_HANDOFF_IDS)
+        elif t == "probe":
+            out.extend(PROBE_HANDOFF_IDS)
+        elif t in ("holdout", "hold"):
+            out.extend(HOLDOUT_HANDOFF_IDS)
+        else:
+            out.append(t.upper())
+    # stable unique
+    seen: set[str] = set()
+    uniq: list[str] = []
+    for p in out:
+        if p not in seen:
+            seen.add(p)
+            uniq.append(p)
+    return uniq
+
+
 def export_structure_batch(
     pdb_ids: list[str],
     knobs: dict[str, Any],
@@ -429,6 +527,20 @@ def export_structure_batch(
                     }
                 )
 
+    enr_path = write_enrichment_summary_tsv(rows, root / "enrichment_summary.tsv")
+
+    ok_rows = [r for r in rows if r.get("status") == "OK"]
+    enrs = [
+        float((r.get("enrichment") or {}).get("enrichment"))
+        for r in ok_rows
+        if (r.get("enrichment") or {}).get("enrichment") is not None
+    ]
+    top20_n = sum(
+        1
+        for r in ok_rows
+        if (r.get("enrichment") or {}).get("top20") is True
+    )
+
     summary = {
         "n_ids": len(rows),
         "n_ok": sum(1 for r in rows if r.get("status") == "OK"),
@@ -444,7 +556,13 @@ def export_structure_batch(
             }
             for r in rows
         ],
+        "enrichment_aggregate": {
+            "n_with_enrichment": len(enrs),
+            "mean_enrichment": float(sum(enrs) / len(enrs)) if enrs else None,
+            "top20_count": int(top20_n),
+        },
         "manifest": str((root / "manifest.tsv").resolve()),
+        "enrichment_summary": str(enr_path.resolve()),
         "ontology": "handoff_dual_gate_batch_not_lambda_eq_gamma",
     }
     (root / "batch_index.json").write_text(

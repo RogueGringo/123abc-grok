@@ -26,7 +26,12 @@ from realm.handoff.generate import (
     merge_and_rank,
 )
 from realm.handoff.physics import get_physics_adapter
-from realm.handoff.pipeline import export_structure_batch, export_structure_handoff
+from realm.handoff.pipeline import (
+    DEFAULT_HANDOFF_IDS,
+    export_structure_batch,
+    export_structure_handoff,
+    resolve_pdb_id_list,
+)
 from realm.handoff.types import BackboneArtifact, DecorateRequest
 from realm.validate.pdb_write import write_mold_pair
 from realm.validate.report import load_knobs, write_json
@@ -97,7 +102,10 @@ def main(argv=None) -> int:
         "--pdb-ids",
         type=str,
         default=None,
-        help="comma-separated PDB ids for --mode dual-gate batch export",
+        help=(
+            "dual-gate batch: comma IDs, or tokens default|probe|holdout "
+            f"(default campaign={','.join(DEFAULT_HANDOFF_IDS[:4])}…)"
+        ),
     )
     p.add_argument(
         "--with-enrichment",
@@ -129,13 +137,23 @@ def main(argv=None) -> int:
 
     sources = {s.strip().lower() for s in args.sources.split(",") if s.strip()}
     if args.mode == "dual-gate":
-        ids = []
+        ids: list[str] = []
         if args.pdb_ids:
-            ids.extend(s.strip() for s in args.pdb_ids.split(",") if s.strip())
+            ids.extend(resolve_pdb_id_list(args.pdb_ids))
         if args.pdb:
-            ids.append(args.pdb.strip())
+            ids.append(args.pdb.strip().upper())
+        _seen: set[str] = set()
+        uniq: list[str] = []
+        for x in ids:
+            if x and x not in _seen:
+                _seen.add(x)
+                uniq.append(x)
+        ids = uniq
         if not ids:
-            logger.error("--mode dual-gate requires --pdb and/or --pdb-ids")
+            logger.error(
+                "--mode dual-gate requires --pdb and/or --pdb-ids "
+                "(use --pdb-ids default|probe|holdout)"
+            )
             return 2
         logger.info("dual-gate handoff ids=%s top_k=%d …", ids, int(args.top_k))
         dg_kw = dict(
