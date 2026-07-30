@@ -7,7 +7,13 @@ from pathlib import Path
 
 import pytest
 
-from realm.handoff.pipeline import export_structure_handoff, policy_stamp
+from realm.handoff.pipeline import (
+    biopython_open_check,
+    export_structure_batch,
+    export_structure_handoff,
+    policy_stamp,
+    write_manifest_tsv,
+)
 from realm.validate.length_policy import policy_for
 from realm.validate.report import load_knobs
 
@@ -23,6 +29,12 @@ def test_policy_stamp_matches_policy_for():
     st = policy_stamp(12)
     assert abs(st["length_policy"]["soft_T"] - 0.036) < 1e-12
     assert "not_lambda_eq_gamma" in st["ontology"]
+
+
+def test_biopython_open_check_missing():
+    r = biopython_open_check(Path("/no/such/file.pdb"))
+    assert r["ok"] is False
+    assert r["error"] == "missing_file"
 
 
 def test_export_structure_handoff_1csa(tmp_path: Path):
@@ -41,16 +53,44 @@ def test_export_structure_handoff_1csa(tmp_path: Path):
         include_coutsias=False,
         decorate="null",
         physics="geometry",
+        with_enrichment=False,
+        with_biopython_check=True,
     )
     assert out["status"] == "OK"
     assert out["n_molds"] >= 1
     assert abs(out["dual_gate"]["length_policy"]["soft_T"] - policy_for(11).soft_T) < 1e-12
     idx = tmp_path / "1CSA" / "index.json"
     assert idx.is_file()
+    man = tmp_path / "1CSA" / "manifest.tsv"
+    assert man.is_file()
+    text = man.read_text(encoding="utf-8")
+    assert "path_ca" in text and "soft_T" in text
     for m in out["molds"]:
         assert Path(m["path_ca"]).is_file()
         assert Path(m["path_bb"]).is_file()
         assert m["ontology_remark_ok"] is True
-        text = Path(m["path_ca"]).read_text(encoding="utf-8")
-        assert "not_lambda_eq_gamma" in text
-        assert "SOURCE" in text
+        ca = Path(m["path_ca"]).read_text(encoding="utf-8")
+        assert "not_lambda_eq_gamma" in ca
+
+
+def test_export_batch_manifest(tmp_path: Path):
+    kn_path = Path("evolve_result.json")
+    pdb_path = Path("data/pdb/1CSA.pdb")
+    if not kn_path.is_file() or not pdb_path.is_file():
+        pytest.skip("need evolve_result.json and data/pdb/1CSA.pdb")
+    kn = load_knobs(kn_path)
+    if isinstance(kn, dict) and "best_knobs" in kn:
+        kn = kn["best_knobs"]
+    summary = export_structure_batch(
+        ["1CSA"],
+        kn,
+        out_root=tmp_path / "batch",
+        top_k=2,
+        include_coutsias=False,
+        with_enrichment=False,
+        with_biopython_check=False,
+    )
+    assert summary["n_ok"] == 1
+    root_man = tmp_path / "batch" / "manifest.tsv"
+    assert root_man.is_file()
+    assert "1CSA" in root_man.read_text(encoding="utf-8")

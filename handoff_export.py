@@ -100,6 +100,16 @@ def main(argv=None) -> int:
         help="comma-separated PDB ids for --mode dual-gate batch export",
     )
     p.add_argument(
+        "--with-enrichment",
+        action="store_true",
+        help="dual-gate: stamp read-only rank_one enrichment into index (slow)",
+    )
+    p.add_argument(
+        "--no-biopython-check",
+        action="store_true",
+        help="dual-gate: skip optional BioPython open check",
+    )
+    p.add_argument(
         "--sequence",
         type=str,
         default=None,
@@ -128,30 +138,43 @@ def main(argv=None) -> int:
             logger.error("--mode dual-gate requires --pdb and/or --pdb-ids")
             return 2
         logger.info("dual-gate handoff ids=%s top_k=%d …", ids, int(args.top_k))
-        if len(ids) == 1:
-            idx = export_structure_handoff(
-                ids[0],
-                knobs,
-                out_dir=args.out_dir,
-                top_k=int(args.top_k),
-                n_zeros=int(args.k),
-                include_coutsias=("coutsias" in sources),
-                decorate=args.decorate,
-                physics=args.physics,
-            )
-            logger.info("wrote %s status=%s molds=%s", args.out_dir, idx.get("status"), idx.get("n_molds"))
-            return 0 if idx.get("status") == "OK" else 1
-        summary = export_structure_batch(
-            ids,
-            knobs,
-            out_root=args.out_dir,
+        dg_kw = dict(
             top_k=int(args.top_k),
             n_zeros=int(args.k),
             include_coutsias=("coutsias" in sources),
             decorate=args.decorate,
             physics=args.physics,
+            with_enrichment=bool(args.with_enrichment),
+            with_biopython_check=not bool(args.no_biopython_check),
         )
-        logger.info("batch n_ok=%s / %s → %s", summary["n_ok"], summary["n_ids"], args.out_dir)
+        if len(ids) == 1:
+            idx = export_structure_handoff(
+                ids[0],
+                knobs,
+                out_dir=args.out_dir,
+                **dg_kw,
+            )
+            logger.info(
+                "wrote %s status=%s molds=%s manifest=%s",
+                args.out_dir,
+                idx.get("status"),
+                idx.get("n_molds"),
+                Path(args.out_dir) / "manifest.tsv",
+            )
+            return 0 if idx.get("status") == "OK" else 1
+        summary = export_structure_batch(
+            ids,
+            knobs,
+            out_root=args.out_dir,
+            **dg_kw,
+        )
+        logger.info(
+            "batch n_ok=%s / %s manifest=%s → %s",
+            summary["n_ok"],
+            summary["n_ids"],
+            summary.get("manifest"),
+            args.out_dir,
+        )
         return 0 if summary["n_ok"] > 0 else 1
 
     if args.mode == "structure":
