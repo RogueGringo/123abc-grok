@@ -96,5 +96,28 @@ jobs:
           print("LATEST", ptr)
           av = verify_archive_dir(ptr["archive_dir"])
           print("archive_verify", av.get("ok"), av.get("n_checked"))
+          acc = Path("/tmp/handoff_bio/ACCEPTANCE.json")
+          assert acc.is_file(), "ACCEPTANCE.json missing"
+          rec = json.loads(acc.read_text())
+          print("ACCEPTANCE", rec.get("accepted"), rec.get("criteria", {}).get("openable_pdbs"))
+          assert rec.get("accepted") is True
+          # stage artifact dir for upload
+          art = Path("/tmp/handoff_ci_artifact")
+          art.mkdir(parents=True, exist_ok=True)
+          import shutil
+          shutil.copy2(acc, art / "ACCEPTANCE.json")
+          shutil.copy2(Path("/tmp/handoff_bio/RELEASE.md"), art / "RELEASE.md")
+          zp = Path(ptr.get("archive_dir") or "")
+          for z in zp.glob("*.zip") if zp.is_dir() else []:
+              shutil.copy2(z, art / z.name)
+          shutil.copy2(Path(ptr["archive_dir"]) / "ARCHIVE.json", art / "ARCHIVE.json")
           raise SystemExit(0 if av.get("ok") else 3)
           PY
+      - name: Upload handoff CI package artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dual-gate-handoff-ci-bio
+          path: /tmp/handoff_ci_artifact/
+          if-no-files-found: ignore
+          retention-days: 14

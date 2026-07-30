@@ -17,7 +17,11 @@ ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from realm.handoff.package import archive_partner_release, write_release_md
+from realm.handoff.package import (
+    archive_partner_release,
+    write_acceptance_json,
+    write_release_md,
+)
 from realm.handoff.verify import quality_gate, verify_dual_gate_pin, verify_handoff_tree
 
 logger = logging.getLogger("handoff_release")
@@ -143,13 +147,16 @@ def main(argv: list[str] | None = None) -> int:
     if not args.no_release:
         rel = write_release_md(campaign, camp / "RELEASE.md", label=label)
         campaign["release_md"] = str(rel.resolve())
+        acc = write_acceptance_json(campaign, camp / "ACCEPTANCE.json", label=label)
+        campaign["acceptance_json"] = str(acc.resolve())
         pkg = campaign.get("package") or {}
         pkg_dir = pkg.get("package_dir")
         if pkg_dir and Path(pkg_dir).is_dir():
-            (Path(pkg_dir) / "RELEASE.md").write_text(
-                rel.read_text(encoding="utf-8"), encoding="utf-8"
-            )
-            logger.info("RELEASE.md copied into package dir")
+            for name, src in (("RELEASE.md", rel), ("ACCEPTANCE.json", acc)):
+                (Path(pkg_dir) / name).write_text(
+                    src.read_text(encoding="utf-8"), encoding="utf-8"
+                )
+            logger.info("RELEASE.md + ACCEPTANCE.json copied into package dir")
 
     if args.archive:
         # only archive when gate ok (or no gate yet)

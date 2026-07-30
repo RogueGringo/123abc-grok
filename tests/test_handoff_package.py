@@ -10,6 +10,7 @@ from realm.handoff.package import (
     archive_partner_release,
     build_partner_package,
     scan_release_drops,
+    write_acceptance_json,
     write_release_md,
     write_releases_catalog,
 )
@@ -52,6 +53,7 @@ def test_write_release_md(tmp_path: Path):
             },
             "ontology_remarks": {"ok": True, "n_pdb": 4},
             "sha256": {"ok": True},
+            "biopython": {"ok": None, "skipped": True},
         },
         "quality_gate": {"ok": True, "reasons": [], "n_pdb": 4},
         "ontology": "handoff_campaign_not_lambda_eq_gamma",
@@ -65,6 +67,14 @@ def test_write_release_md(tmp_path: Path):
     assert "handoff_verify" in text
     assert "informational only" in text.lower()
     assert "0.12" in text
+
+    acc = write_acceptance_json(campaign, tmp_path / "ACCEPTANCE.json", label="probe")
+    data = __import__("json").loads(acc.read_text(encoding="utf-8"))
+    assert data["accepted"] is True
+    assert data["criteria"]["dual_gate_pin"]["ok"] is True
+    assert data["criteria"]["openable_pdbs"]["n_pdb"] == 4
+    assert "mean_enrichment" in data["not_acceptance_criteria"]
+    assert "not_lambda_eq_gamma" in data["ontology"]
 
 
 def test_archive_partner_release(tmp_path: Path):

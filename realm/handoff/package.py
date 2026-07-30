@@ -23,6 +23,101 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
+def write_acceptance_json(
+    campaign: dict[str, Any],
+    path: Path | str,
+    *,
+    label: str | None = None,
+) -> Path:
+    """Partner acceptance record: pin + openable PDBs + gate (not enrichment).
+
+    Machine-readable criteria for handoff delivery. Never lambda=gamma.
+    """
+    dest = Path(path)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    exp = campaign.get("export") or {}
+    pkg = campaign.get("package") or {}
+    ver = campaign.get("verify") or {}
+    gate = campaign.get("quality_gate") or {}
+    pin = (ver.get("pin") or gate.get("pin") or {})
+    remarks = ver.get("ontology_remarks") or {}
+    bio = ver.get("biopython") or {}
+    sha = ver.get("sha256") or {}
+    n_pdb = int(remarks.get("n_pdb") or gate.get("n_pdb") or 0)
+    n_ok = int(exp.get("n_ok") or 0)
+    n_ids = int(exp.get("n_ids") or 0)
+
+    pin_ok = pin.get("ok") is True and abs(float(pin.get("soft_T", pin.get("expected_soft_T", -1)) or -1) - 0.036) < 1e-9
+    openable_ok = n_pdb >= 1 and remarks.get("ok") is not False
+    gate_ok = gate.get("ok") is True
+    sha_ok = sha.get("ok") is not False  # True or skipped None
+    # overall accept: pin + gate + openable; bio only if required in gate
+    accepted = bool(pin_ok and gate_ok and openable_ok and n_ok >= 1)
+
+    record = {
+        "label": label or "dual-gate-handoff",
+        "accepted": accepted,
+        "created_utc": datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"),
+        "criteria": {
+            "dual_gate_pin": {
+                "required": True,
+                "expected_soft_T_n12": 0.036,
+                "soft_T": pin.get("soft_T"),
+                "seq_mix": pin.get("seq_mix"),
+                "face_weight": pin.get("face_weight"),
+                "ok": pin_ok,
+            },
+            "structures_exported": {
+                "required": True,
+                "n_ok": n_ok,
+                "n_ids": n_ids,
+                "ok": n_ok >= 1 and (n_ids == 0 or n_ok == n_ids or gate_ok),
+            },
+            "openable_pdbs": {
+                "required": True,
+                "n_pdb": n_pdb,
+                "ontology_remark_ok": remarks.get("ok"),
+                "ok": openable_ok,
+                "note": "Primary commercial success metric",
+            },
+            "quality_gate": {
+                "required": True,
+                "ok": gate_ok,
+                "reasons": gate.get("reasons") or [],
+                "require_biopython": gate.get("require_biopython"),
+            },
+            "package_sha256": {
+                "required": False,
+                "ok": sha.get("ok"),
+                "n_checked": sha.get("n_checked"),
+            },
+            "biopython_open": {
+                "required": bool(gate.get("require_biopython")),
+                "ok": bio.get("ok"),
+                "skipped": bio.get("skipped"),
+            },
+        },
+        "not_acceptance_criteria": [
+            "mean_enrichment",
+            "top20_count",
+            "lambda_eq_gamma",
+            "RH_claims",
+        ],
+        "ids": list(campaign.get("ids") or []),
+        "package": {
+            "package_dir": pkg.get("package_dir"),
+            "zip_path": pkg.get("zip_path"),
+            "zip_sha256": pkg.get("zip_sha256"),
+        },
+        "ontology": "handoff_acceptance_not_lambda_eq_gamma",
+        "verify_cli": "python handoff_verify.py <package_dir> --require-sha256",
+        "note": "Accept on openable PDBs + dual-gate pin + quality_gate; never enrichment score-chase.",
+    }
+    dest.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    logger.info("ACCEPTANCE.json accepted=%s → %s", accepted, dest)
+    return dest
+
+
 def write_release_md(
     campaign: dict[str, Any],
     path: Path | str,
@@ -171,7 +266,12 @@ def archive_partner_release(
     if camp and (camp / "verify_report.json").is_file():
         verify_src = camp / "verify_report.json"
 
+    accept_src = campaign.get("acceptance_json")
+    if not accept_src and camp and (camp / "ACCEPTANCE.json").is_file():
+        accept_src = camp / "ACCEPTANCE.json"
+
     _copy_named(release_src, "RELEASE.md")
+    _copy_named(accept_src, "ACCEPTANCE.json")
     _copy_named(report_src, "campaign_report.json")
     _copy_named(summary_src, "SUMMARY.md")
     _copy_named(verify_src, "verify_report.json")
@@ -348,6 +448,7 @@ Ontology: **Crit projection molds** (ζ substrate scaffolding only).
 | `enrichment_summary.tsv` | Optional dual-gate enrichment stamp (if campaign used `--with-enrichment`) |
 | `SUMMARY.md` | Human-readable campaign summary (export batch root) |
 | `RELEASE.md` | Partner release notes (pin, openable PDB count, zip SHA) when campaign copied it |
+| `ACCEPTANCE.json` | Machine-readable accept/reject: pin + openable PDBs + gate (not enrichment) |
 | `batch_index.json` / `index.json` | Machine-readable index + LengthPolicy snapshot |
 | `SHA256SUMS.txt` | Checksums of packaged files |
 

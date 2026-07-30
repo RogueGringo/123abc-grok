@@ -19,6 +19,7 @@ if str(ROOT) not in sys.path:
 from realm.handoff.package import (
     archive_partner_release,
     build_partner_package,
+    write_acceptance_json,
     write_release_md,
 )
 from realm.handoff.pipeline import export_structure_batch, resolve_pdb_id_list
@@ -287,15 +288,25 @@ def _write_campaign_artifacts(
             label=release_label,
         )
         campaign["release_md"] = str(rel.resolve())
+        acc = write_acceptance_json(
+            campaign,
+            out_dir / "ACCEPTANCE.json",
+            label=release_label,
+        )
+        campaign["acceptance_json"] = str(acc.resolve())
         # re-stamp report with release path
         report_path.write_text(json.dumps(campaign, indent=2) + "\n", encoding="utf-8")
         # copy into partner package dir if present (sidecar; does not re-zip)
         pkg = campaign.get("package") or {}
         pkg_dir = pkg.get("package_dir")
         if pkg_dir and Path(pkg_dir).is_dir():
-            dest = Path(pkg_dir) / "RELEASE.md"
-            dest.write_text(rel.read_text(encoding="utf-8"), encoding="utf-8")
-            logger.info("RELEASE.md copied into package dir %s", dest)
+            for name, src in (
+                ("RELEASE.md", rel),
+                ("ACCEPTANCE.json", acc),
+            ):
+                dest = Path(pkg_dir) / name
+                dest.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+                logger.info("%s copied into package dir %s", name, dest)
 
     if do_archive:
         arch = archive_partner_release(
