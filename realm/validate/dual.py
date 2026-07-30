@@ -306,6 +306,112 @@ def mid_length_omega_bank(n_ca: int) -> tuple[float, ...]:
     return dense
 
 
+def polish_crit_pack_holonomy(
+    xyz: np.ndarray,
+    pack: dict[str, Any],
+    *,
+    n_steps: int = 4,
+    step: float = 0.04,
+    soft_T: float = 0.04,
+    prefer_maxop: bool = True,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Sheaf-energy holonomy feedback on Crit θ*, then re-embed molds.
+
+    Structure-conditioned (native CA only): each sector holonomy descends
+    Dirichlet energy E = xᵀ L_F(A(θ)) x a few control steps, re-embeds
+    planar/multimode templates, rebuilds MaxOp fingerprint. Pack is kept
+    only if Kabsch softmin to native does not regress (projection primary).
+
+    Connes/control framing: u ∝ −∂_θ E on Σ holonomy axis (realm.manifold_control).
+    Never λ=γ.
+    """
+    from realm.derive import embed_multimode_cycle
+    from realm.manifold_control import multi_step_holonomy_control
+    from realm.validate.decoys import score_geometry_vs_crit
+    from realm.zeta_geometry import embed_cycle_from_twist
+
+    xyz = np.asarray(xyz, dtype=float)
+    thetas = np.asarray(pack.get("thetas"), dtype=float).ravel()
+    if thetas.size == 0:
+        return pack, {"applied": False, "reason": "no_thetas"}
+
+    N = int(pack.get("N") or max(int(xyz.shape[0]), 7))
+    multimode = bool(pack.get("multimode", False))
+    der = pack.get("derivation")
+    field = getattr(der, "field", None) if der is not None else None
+
+    d0 = float(
+        score_geometry_vs_crit(
+            xyz, pack["templates"], soft_T=soft_T
+        )["mean_dist"]
+    )
+
+    new_thetas: list[float] = []
+    new_templates: list[np.ndarray] = []
+    energy_delta: list[float] = []
+    n_moved = 0
+    for th in thetas:
+        ctrl = multi_step_holonomy_control(
+            xyz,
+            float(th),
+            n_steps=n_steps,
+            step=step,
+            prefer_maxop=prefer_maxop,
+        )
+        th2 = float(ctrl["theta_final"])
+        e0 = ctrl.get("E0")
+        e1 = ctrl.get("E_final")
+        if e0 is not None and e1 is not None:
+            energy_delta.append(float(e1) - float(e0))
+            if float(e1) > float(e0) + 1e-12:
+                th2 = float(th)  # sheaf energy regressed — keep Crit θ
+            elif abs(th2 - float(th)) > 1e-9:
+                n_moved += 1
+        new_thetas.append(th2)
+        if multimode and field is not None:
+            pts = embed_multimode_cycle(
+                N, th2, field, n_modes=min(4, int(field.gammas.size))
+            )
+        else:
+            pts = embed_cycle_from_twist(N, th2)
+        new_templates.append(np.asarray(pts, dtype=float)[:, :3])
+
+    fp = operator_fingerprint(new_thetas, N=N, prefer_maxop=prefer_maxop)
+    polished = {
+        **pack,
+        "templates": new_templates,
+        "thetas": np.asarray(new_thetas, float),
+        "operator": fp,
+        "n_sectors": len(new_templates),
+        "holonomy_polished": True,
+    }
+    d1 = float(
+        score_geometry_vs_crit(xyz, new_templates, soft_T=soft_T)["mean_dist"]
+    )
+    mean_dE = float(np.mean(energy_delta)) if energy_delta else 0.0
+    # Strict projection-primary accept (no slack). Mild-slack variant dual-gate
+    # regressed mid-length floors (4K8Y); keep opt-in tool honest.
+    accept = d1 <= d0 + 1e-6
+    diag = {
+        "applied": True,
+        "accepted": accept,
+        "proj_before": d0,
+        "proj_after": d1,
+        "proj_slack": 0.0,
+        "n_sectors": len(new_thetas),
+        "n_moved": n_moved,
+        "mean_energy_delta": mean_dE,
+        "n_steps": n_steps,
+        "step": step,
+        "selection": "accept_if_proj_not_worse",
+        "ontology": "sheaf_feedback_projection_primary_not_lambda_eq_gamma",
+        "production_default": False,
+    }
+    if accept:
+        return polished, diag
+    return pack, {**diag, "accepted": False, "reverted": True}
+
+
 def select_multimode_by_fit(
     xyz: np.ndarray,
     knobs: dict[str, Any],

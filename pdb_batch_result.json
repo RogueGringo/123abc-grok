@@ -111,6 +111,7 @@
         "dist_multimode": 0.39833682297788975,
         "margin": -0.05215933990279409
       },
+      "holonomy_polish": null,
       "defect_beta": 0.2,
       "defect_dist": 2.0903957449027364,
       "maxop_dual": {
@@ -270,6 +271,7 @@
         "dist_multimode": 0.35306200337689275,
         "margin": -0.07664552598565066
       },
+      "holonomy_polish": null,
       "defect_beta": 0.2,
       "defect_dist": 1.9422403268879953,
       "maxop_dual": {
@@ -429,6 +431,7 @@
         "dist_multimode": 0.40598730891640317,
         "margin": -0.07566770403758116
       },
+      "holonomy_polish": null,
       "defect_beta": 0.2,
       "defect_dist": 2.001454369133981,
       "maxop_dual": {
@@ -588,6 +591,7 @@
         "dist_multimode": 0.48595183767111416,
         "margin": 0.011044523683391927
       },
+      "holonomy_polish": null,
       "defect_beta": 0.2,
       "defect_dist": 2.074519085571089,
       "maxop_dual": {
@@ -747,6 +751,7 @@
         "dist_multimode": 0.2177258512900318,
         "margin": 0.03996161306191187
       },
+      "holonomy_polish": null,
       "defect_beta": 0.2,
       "defect_dist": 2.404802287862446,
       "maxop_dual": {
@@ -954,6 +959,7 @@
         "dist_multimode": 0.5157472763312119,
         "margin": 0.005804837052429068
       },
+      "holonomy_polish": null,
       "defect_beta": 0.2,
       "defect_dist": 2.813890226020241,
       "maxop_dual": {
@@ -1169,6 +1175,7 @@
         "dist_multimode": 0.5366578284573225,
         "margin": -0.021355925372356088
       },
+      "holonomy_polish": null,
       "defect_beta": 0.2,
       "defect_dist": 2.7420420069503,
       "maxop_dual": {
@@ -1384,6 +1391,7 @@
         "dist_multimode": 0.5282299141563905,
         "margin": -0.013828708980312965
       },
+      "holonomy_polish": null,
       "defect_beta": 0.2,
       "defect_dist": 2.8053118491205518,
       "maxop_dual": {
@@ -1543,6 +1551,7 @@
         "dist_multimode": 0.4266752218213455,
         "margin": 0.035349142979316905
       },
+      "holonomy_polish": null,
       "defect_beta": 0.2,
       "defect_dist": 2.325199297008037,
       "maxop_dual": {
@@ -1694,6 +1703,7 @@
         "dist_multimode": 0.42275826733808186,
         "margin": 0.03606222070501863
       },
+      "holonomy_polish": null,
       "defect_beta": 0.2,
       "defect_dist": 2.310193504491823,
       "maxop_dual": {
@@ -1845,6 +1855,7 @@
         "dist_multimode": 0.46578102462268606,
         "margin": 0.07525491874283902
       },
+      "holonomy_polish": null,
       "defect_beta": 0.2,
       "defect_dist": 2.02783019188924,
       "maxop_dual": {
@@ -2024,6 +2035,7 @@
         "dist_multimode": 0.5963361027096196,
         "margin": -0.05102557079399073
       },
+      "holonomy_polish": null,
       "defect_beta": 0.2,
       "defect_dist": 2.32771541052193,
       "maxop_dual": {
@@ -2090,7 +2102,8 @@
     "sectors_default": 6,
     "multimode": null,
     "multimode_mode": "self_fit_dense",
-    "defect_beta": 0.2
+    "defect_beta": 0.2,
+    "holonomy_polish": false
   },
   "knobs": {
     "Lambda": 148.24406176702522,

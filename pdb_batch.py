@@ -25,6 +25,7 @@ from realm.validate.dual import (
     dual_score_geometry,
     forge_crit_geometry,
     multimode_for_ca_length,
+    polish_crit_pack_holonomy,
     sectors_for_ca_length,
     select_mold_by_fit,
     select_multimode_by_fit,
@@ -73,8 +74,13 @@ def rank_one(
     multimode: bool | None = None,
     multimode_mode: str = "adaptive_short",
     defect_beta: float = 0.0,
+    holonomy_polish: bool = False,
 ) -> dict:
-    """Native-vs-decoy rank. Projection-primary; defect_beta blends sheaf energy."""
+    """Native-vs-decoy rank. Projection-primary; defect_beta blends sheaf energy.
+
+    holonomy_polish: opt-in sheaf feedback on Crit θ for n≥12 (not production
+    default — dual-gate preferred dense-superset molds without polish).
+    """
     path = fetch_pdb(pdb_id)
     xyz, chain_used = load_ca_cyclic_band(path, lo=6, hi=40)
     n_ca = int(xyz.shape[0])
@@ -177,6 +183,33 @@ def rank_one(
             n_sectors=n_sec,
             multimode=use_mm,
         )
+    # Optional mid-length sheaf holonomy feedback (off by default — dual-gate
+    # 40×3 preferred pure dense-superset molds without polish).
+    polish_diag = None
+    if (
+        holonomy_polish
+        and n_ca >= 12
+        and mm_mode
+        in (
+            "self_fit_dense",
+            "dense",
+            "self_fit_mid",
+            "mid",
+            "self_fit_wide",
+            "wide",
+            "self_fit_omega",
+            "self_fit",
+        )
+    ):
+        pack, polish_diag = polish_crit_pack_holonomy(
+            xyz,
+            pack,
+            n_steps=4,
+            step=0.04,
+            soft_T=soft_T,
+            prefer_maxop=True,
+        )
+
     a = float(np.clip(alpha_proj, 0.0, 1.0))
     sc_kw = dict(
         alpha_proj=a,
@@ -260,6 +293,7 @@ def rank_one(
             "override" if multimode is not None else multimode_mode
         ),
         "multimode_fit": fit_diag,
+        "holonomy_polish": polish_diag,
         "defect_beta": float(defect_beta),
         "defect_dist": float(native.get("defect_dist") or 0.0),
         "maxop_dual": dual_diag,
@@ -336,6 +370,11 @@ def main(argv=None) -> int:
         default=0.20,
         help="blend sheaf Dirichlet defect into ranking (0=pure Kabsch; 0.20 production)",
     )
+    p.add_argument(
+        "--holonomy-polish",
+        action="store_true",
+        help="opt-in sheaf holonomy feedback on Crit θ for n≥12 (not dual-gate default)",
+    )
     p.add_argument("--null-json", type=Path, default=Path("null_battery_result.json"))
     p.add_argument("--force", action="store_true")
     p.add_argument("--json", type=Path, default=Path("pdb_batch_result.json"))
@@ -396,6 +435,7 @@ def main(argv=None) -> int:
                 multimode=args.multimode,
                 multimode_mode=args.multimode_mode,
                 defect_beta=args.defect_beta,
+                holonomy_polish=bool(args.holonomy_polish),
             )
         except PdbIOError as exc:
             row = {"pdb": pid, "status": "IO_FAIL", "error": str(exc)}
@@ -456,6 +496,7 @@ def main(argv=None) -> int:
             "multimode": args.multimode,
             "multimode_mode": args.multimode_mode,
             "defect_beta": args.defect_beta,
+            "holonomy_polish": bool(args.holonomy_polish),
         },
         "knobs": knobs,
         "ontology": "substrate_crit_projection_sheaf_defect_maxop_dual_not_lambda_eq_gamma",

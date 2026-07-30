@@ -42,7 +42,8 @@
       "sectors_default": 6,
       "multimode": null,
       "multimode_mode": "self_fit_dense",
-      "defect_beta": 0.2
+      "defect_beta": 0.2,
+      "holonomy_polish": false
     },
     "transfer_holdout_preference": false,
     "null_claim": "RETRACTED",

@@ -14,6 +14,7 @@ from realm.validate.dual import (
     mid_length_omega_bank,
     multimode_for_ca_length,
     operator_fingerprint,
+    polish_crit_pack_holonomy,
     sectors_for_ca_length,
     select_mold_by_fit,
     select_multimode_by_fit,
@@ -104,6 +105,26 @@ def test_mid_length_bank_and_defect_tie():
     assert diag["selection"] == "min_proj_then_defect_then_maxop_gap"
     assert len(diag["bank"]) == 18  # 2 × 9
     assert len(pack["templates"]) >= 1
+
+
+def test_polish_crit_pack_holonomy_proj_gate():
+    kn = _knobs()
+    t = np.linspace(0, 2 * np.pi, 13, endpoint=False)
+    xyz = np.column_stack([np.cos(t), np.sin(t), 0.04 * np.sin(2 * t)])
+    pack = forge_crit_geometry(
+        kn, N=13, n_zeros=14, n_sectors=4, multimode=False, prefer_maxop=False
+    )
+    polished, diag = polish_crit_pack_holonomy(
+        xyz, pack, n_steps=2, step=0.05, soft_T=0.04, prefer_maxop=False
+    )
+    assert diag["applied"] is True
+    assert "proj_before" in diag and "proj_after" in diag
+    if diag["accepted"]:
+        assert diag["proj_after"] <= diag["proj_before"] + 1e-5
+        assert polished.get("holonomy_polished") is True
+    else:
+        # reverted to original pack
+        assert polished is pack or not polished.get("holonomy_polished")
 
 
 def test_operator_fingerprint_shapes():

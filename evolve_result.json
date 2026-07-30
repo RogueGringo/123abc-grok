@@ -114,7 +114,12 @@
       "note": "compact 8x5 IR-focus loop: fast-probe gains failed multi-seed dual gate; sealed elite retained",
       "cli": "python evolve_ns.py --internal-gens 0 --n-pop 8 --epochs 5 --write-evolve"
     },
-    "note_4K8Y": "mid-length omega superset lifted enrich 73%→77.5% without top20 regression"
+    "note_4K8Y": "mid-length omega superset lifted enrich 73%→77.5% without top20 regression",
+    "holonomy_polish": {
+      "default": false,
+      "cli": "--holonomy-polish",
+      "note": "sheaf feedback on Crit theta dual-gate rejected for production (4K8Y regressed); opt-in only"
+    }
   },
   "ranking_hparams": {
     "aggregate": "softmin",
