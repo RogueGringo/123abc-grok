@@ -257,8 +257,8 @@ def run_term_series(
     # --- 5 Quale (internal structure signature — not external ranking) ---
     lock = build_lock(der)
     key = build_key(der)
-    res_inf = residual(lock, key, action=der.action, fitness="informative")
-    res_leg = residual(lock, key, action=der.action, fitness="legacy")
+    res_inf = residual(lock, key, action=der.action)
+    res_leg = residual(lock, key, action=der.action)
     quale = {
         "stage": "quale",
         "symbol": "Q(Φ)",
