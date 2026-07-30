@@ -7,9 +7,18 @@ from pathlib import Path
 import pytest
 
 from handoff_verify import main as verify_main
-from realm.handoff.package import build_partner_package
+from realm.handoff.package import (
+    archive_partner_release,
+    build_partner_package,
+    write_release_md,
+)
 from realm.handoff.pipeline import export_structure_batch, export_structure_handoff
-from realm.handoff.verify import quality_gate, verify_dual_gate_pin, verify_handoff_tree
+from realm.handoff.verify import (
+    quality_gate,
+    verify_archive_dir,
+    verify_dual_gate_pin,
+    verify_handoff_tree,
+)
 from realm.validate.report import load_knobs
 
 
@@ -38,6 +47,47 @@ def test_quality_gate_pass_and_fail():
     )
     assert g_fail["ok"] is False
     assert any("ok_fraction" in r for r in g_fail["reasons"])
+
+
+def test_verify_archive_dir(tmp_path: Path):
+    camp = tmp_path / "camp"
+    camp.mkdir()
+    zpath = tmp_path / "pkg.zip"
+    zpath.write_bytes(b"PK\x03\x04data")
+    campaign = {
+        "ids": ["1CSA"],
+        "export": {"n_ok": 1, "n_ids": 1, "summary_md": str(camp / "SUMMARY.md")},
+        "package": {
+            "zip_path": str(zpath),
+            "zip_sha256": "x",
+        },
+        "quality_gate": {"ok": True},
+    }
+    (camp / "SUMMARY.md").write_text("# s\n", encoding="utf-8")
+    (camp / "campaign_report.json").write_text("{}\n", encoding="utf-8")
+    (camp / "verify_report.json").write_text('{"ok":true}\n', encoding="utf-8")
+    write_release_md(campaign, camp / "RELEASE.md", label="t")
+    campaign["release_md"] = str(camp / "RELEASE.md")
+    meta = archive_partner_release(
+        campaign,
+        archive_root=tmp_path / "releases",
+        label="t",
+        campaign_dir=camp,
+    )
+    arch = Path(meta["archive_dir"])
+    report = verify_archive_dir(arch)
+    assert report["ok"] is True
+    assert report["n_checked"] >= 1
+    assert report["pin"]["ok"] is True
+
+    # tamper
+    (arch / "RELEASE.md").write_text("tampered\n", encoding="utf-8")
+    bad = verify_archive_dir(arch)
+    assert bad["ok"] is False
+    assert bad["n_bad"] >= 1
+
+    rc = verify_main(["--archive", str(arch), "--report", str(tmp_path / "av.json")])
+    assert rc == 3
 
 
 def test_verify_handoff_tree_after_package(tmp_path: Path):

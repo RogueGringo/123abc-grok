@@ -17,21 +17,26 @@ ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from realm.handoff.verify import quality_gate, verify_dual_gate_pin, verify_handoff_tree
+from realm.handoff.verify import (
+    quality_gate,
+    verify_archive_dir,
+    verify_dual_gate_pin,
+    verify_handoff_tree,
+)
 
 logger = logging.getLogger("handoff_verify")
 
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
-        description="Verify dual-gate handoff export or partner package"
+        description="Verify dual-gate handoff export, partner package, or release archive"
     )
     p.add_argument(
         "root",
         type=Path,
         nargs="?",
         default=None,
-        help="export or package directory (required unless --pin-only)",
+        help="export, package, or archive directory (required unless --pin-only)",
     )
     p.add_argument(
         "--pin-only",
@@ -39,9 +44,14 @@ def main(argv: list[str] | None = None) -> int:
         help="only check LengthPolicy production pin (soft_T n=12 = 0.036)",
     )
     p.add_argument(
+        "--archive",
+        action="store_true",
+        help="treat root as dated out/releases/* drop; verify ARCHIVE.json digests",
+    )
+    p.add_argument(
         "--require-sha256",
         action="store_true",
-        help="fail if SHA256SUMS.txt missing or mismatched",
+        help="fail if SHA256SUMS.txt missing or mismatched (package mode)",
     )
     p.add_argument(
         "--no-biopython",
@@ -80,6 +90,23 @@ def main(argv: list[str] | None = None) -> int:
     if not root.is_dir():
         logger.error("not a directory: %s", root)
         return 2
+
+    if args.archive or (root / "ARCHIVE.json").is_file():
+        report = verify_archive_dir(root)
+        out_path = Path(args.report) if args.report else root / "archive_verify.json"
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+        logger.info(
+            "archive verify ok=%s checked=%s bad=%s → %s",
+            report.get("ok"),
+            report.get("n_checked"),
+            report.get("n_bad"),
+            out_path,
+        )
+        if report.get("bad"):
+            for b in report["bad"]:
+                logger.warning("archive: %s", b)
+        return 0 if report.get("ok") else 3
 
     report = verify_handoff_tree(
         root,

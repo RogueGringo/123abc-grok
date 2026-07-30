@@ -249,3 +249,93 @@ def quality_gate(
         "ontology": "handoff_quality_gate_not_lambda_eq_gamma",
         "note": "Gate on openable PDBs + dual-gate pin; not enrichment score-chase.",
     }
+
+
+def verify_archive_dir(archive_dir: Path | str) -> dict[str, Any]:
+    """Verify a dated out/releases/* drop against its ARCHIVE.json digests.
+
+    Does not re-rank. Confirms partner drop integrity after transfer.
+    """
+    root = Path(archive_dir)
+    meta_path = root / "ARCHIVE.json"
+    pin = verify_dual_gate_pin()
+    if not root.is_dir():
+        return {
+            "ok": False,
+            "error": "not_a_directory",
+            "root": str(root),
+            "pin": pin,
+            "ontology": "handoff_archive_verify_not_lambda_eq_gamma",
+        }
+    if not meta_path.is_file():
+        return {
+            "ok": False,
+            "error": "missing_ARCHIVE_json",
+            "root": str(root.resolve()),
+            "pin": pin,
+            "ontology": "handoff_archive_verify_not_lambda_eq_gamma",
+        }
+    try:
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "ok": False,
+            "error": f"ARCHIVE_json_invalid: {exc}",
+            "root": str(root.resolve()),
+            "pin": pin,
+            "ontology": "handoff_archive_verify_not_lambda_eq_gamma",
+        }
+
+    bad: list[str] = []
+    checked = 0
+    for entry in meta.get("files") or []:
+        name = entry.get("name")
+        expect = entry.get("sha256")
+        if not name or not expect:
+            continue
+        if name == "ARCHIVE.json":
+            # file mutates when its own digest is appended; skip self-hash
+            continue
+        path = root / name
+        if not path.is_file():
+            bad.append(f"missing:{name}")
+            continue
+        got = _sha256_file(path)
+        checked += 1
+        if got != expect:
+            bad.append(f"mismatch:{name}")
+
+    # structural presence
+    for required in ("RELEASE.md",):
+        if not (root / required).is_file() and not any(
+            (e.get("name") == required) for e in (meta.get("files") or [])
+        ):
+            # soft: only flag if listed but missing already handled
+            pass
+
+    has_zip = any(
+        str(e.get("name", "")).lower().endswith(".zip") for e in (meta.get("files") or [])
+    )
+    if not has_zip and not any(p.suffix.lower() == ".zip" for p in root.iterdir() if p.is_file()):
+        bad.append("no_zip_in_archive")
+
+    ok = (
+        pin.get("ok") is True
+        and len(bad) == 0
+        and checked > 0
+        and meta.get("quality_gate_ok") is not False
+    )
+    return {
+        "ok": ok,
+        "root": str(root.resolve()),
+        "pin": pin,
+        "label": meta.get("label"),
+        "n_checked": checked,
+        "n_bad": len(bad),
+        "bad": bad[:20],
+        "quality_gate_ok": meta.get("quality_gate_ok"),
+        "ids": meta.get("ids"),
+        "zip_sha256": meta.get("zip_sha256"),
+        "ontology": "handoff_archive_verify_not_lambda_eq_gamma",
+        "note": "Integrity of dated partner drop; not enrichment score-chase.",
+    }
