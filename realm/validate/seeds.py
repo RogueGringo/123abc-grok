@@ -1,4 +1,15 @@
-"""Frequency ordinate factories for null battery (not λ=γ scoring)."""
+"""Frequency ordinate factories for null battery (not λ=γ scoring).
+
+Kinds
+-----
+zeta      — real critical-line ordinates (table / mpmath via zeros.py for windows)
+scramble  — exact permutation of ζ gaps (same multiset)
+gue       — GUE Wigner surmise spacings (correct null for ζ; Montgomery–Odlyzko)
+poisson   — exponential spacings
+arith     — constant-gap arithmetic progression (cheapest falsifier)
+
+Deprecated alias: ``goe`` → ``gue`` (historical misname; density was always GUE).
+"""
 
 from __future__ import annotations
 
@@ -7,39 +18,59 @@ import numpy as np
 from realm.zeta_field import ZETA_ZEROS_IMAG
 
 
+def _gue_surmise_pdf(s: np.ndarray | float) -> np.ndarray | float:
+    """GUE Wigner surmise p(s) = (32/π²) s² exp(-4 s² / π), mean 1."""
+    s = np.asarray(s, dtype=float)
+    return (32.0 / (np.pi**2)) * (s**2) * np.exp(-4.0 * (s**2) / np.pi)
+
+
 def _sample_gue_spacings(n: int, rng: np.random.Generator) -> np.ndarray:
-    """Sample Wigner-surmise spacings p(s)=(32/π²)s² exp(-4s²/π) via rejection."""
+    """Sample GUE Wigner-surmise spacings via pure rejection (no mixed proposal).
+
+    Proposal: Exp(1). Envelope constant c=2.5 dominates p(s) on (0, ∞)
+    (p peaks ≈0.772 at s=√(π/8)≈0.627). On reject, *retry* the same proposal
+    — never fall through to a second independent proposal (that broke the law).
+    """
+    n = int(n)
     out = np.empty(n, dtype=float)
-    # mode near s~0.8; envelope C * exp(-s) works poorly — use gamma-ish proposal
+    c = 2.5
     i = 0
-    # p_max roughly at s=sqrt(pi/8) ≈ 0.626; p≈0.61
-    p_peak = 0.65
+    # safety: expected accept rate is healthy; cap attempts anyway
+    attempts = 0
+    max_attempts = max(n * 200, 1000)
     while i < n:
-        s = rng.exponential(scale=1.0)  # heavy tail ok
-        # acceptance ratio vs exponential(1): p(s)/ (c e^{-s})
-        p = (32.0 / (np.pi**2)) * (s**2) * np.exp(-4.0 * (s**2) / np.pi)
-        c = 2.5  # envelope constant
-        if rng.random() * c * np.exp(-s) < p and s > 1e-9:
+        attempts += 1
+        if attempts > max_attempts:
+            raise RuntimeError("GUE rejection sampler failed to fill quota")
+        s = float(rng.exponential(scale=1.0))
+        if s <= 1e-12:
+            continue
+        p = float(_gue_surmise_pdf(s))
+        # accept with prob p / (c e^{-s})
+        if rng.random() * c * np.exp(-s) < p:
             out[i] = s
             i += 1
-            continue
-        # fallback: truncated normal-ish positive
-        s2 = abs(rng.normal(0.8, 0.4))
-        p2 = (32.0 / (np.pi**2)) * (s2**2) * np.exp(-4.0 * (s2**2) / np.pi)
-        if rng.random() * p_peak < p2:
-            out[i] = max(s2, 1e-6)
-            i += 1
     return out
+
+
+# Back-compat name used in older docs/tests
+_sample_goe_spacings = _sample_gue_spacings
 
 
 def make_seed(kind: str, k: int, rng: np.random.Generator) -> np.ndarray:
     """Return k increasing positive ordinates for spectral action seed.
 
-    kinds: zeta | scramble | goe | poisson
+    kinds: zeta | scramble | gue | poisson | arith
+    alias: goe → gue
     """
     k = max(int(k), 2)
+    kind = str(kind).lower().strip()
+    if kind == "goe":
+        kind = "gue"
+
     if k > ZETA_ZEROS_IMAG.size:
-        # extend ζ table by mean-gap extrapolation if needed
+        # extend ζ table by mean-gap extrapolation if needed (warn-level path;
+        # prefer zeros.riemann_zeros_imag / zeros_window for held-out tests)
         base = ZETA_ZEROS_IMAG.copy()
         mg = float(np.mean(np.diff(base)))
         extra = base[-1] + mg * np.arange(1, k - base.size + 1)
@@ -59,7 +90,12 @@ def make_seed(kind: str, k: int, rng: np.random.Generator) -> np.ndarray:
         rng.shuffle(gaps)
         return np.concatenate([[g0], g0 + np.cumsum(gaps)])
 
-    if kind == "goe":
+    if kind == "arith":
+        # constant-gap progression on the same [g0, g0+span] window as ζ
+        mg = span / (k - 1)
+        return g0 + mg * np.arange(k, dtype=float)
+
+    if kind == "gue":
         s = _sample_gue_spacings(k - 1, rng)
     elif kind == "poisson":
         s = rng.exponential(1.0, size=k - 1)
