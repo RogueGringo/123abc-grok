@@ -26,33 +26,37 @@ from realm.validate.pdb_write import write_mold_pair
 
 logger = logging.getLogger(__name__)
 
-# Default commercial cyclic set — keep in sync with pdb_batch.DEFAULT_CYCLIC_IDS
-DEFAULT_HANDOFF_IDS = (
-    "1CSA",
-    "1IKF",
-    "2X2C",
-    "4M6E",
-    "3WNE",
-    "4K8Y",
-    "1JBL",
-    "5EOC",
-    "3AVB",
-    "3AV9",
-    "5LSO",
-    "1TET",
-)
+def _load_campaign_ids() -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...]]:
+    """Single source of truth: prefer pdb_batch lists when importable."""
+    try:
+        from pdb_batch import DEFAULT_CYCLIC_IDS, HOLDOUT_IDS, PROBE_IDS
 
-PROBE_HANDOFF_IDS = ("1CSA", "2X2C", "4M6E", "3WNE")
-HOLDOUT_HANDOFF_IDS = (
-    "1IKF",
-    "1JBL",
-    "4K8Y",
-    "5EOC",
-    "3AVB",
-    "3AV9",
-    "5LSO",
-    "1TET",
-)
+        return (
+            tuple(DEFAULT_CYCLIC_IDS),
+            tuple(PROBE_IDS),
+            tuple(HOLDOUT_IDS),
+        )
+    except Exception:  # noqa: BLE001
+        default = (
+            "1CSA",
+            "1IKF",
+            "2X2C",
+            "4M6E",
+            "3WNE",
+            "4K8Y",
+            "1JBL",
+            "5EOC",
+            "3AVB",
+            "3AV9",
+            "5LSO",
+            "1TET",
+        )
+        probe = ("1CSA", "2X2C", "4M6E", "3WNE")
+        hold = tuple(x for x in default if x not in probe)
+        return default, probe, hold
+
+
+DEFAULT_HANDOFF_IDS, PROBE_HANDOFF_IDS, HOLDOUT_HANDOFF_IDS = _load_campaign_ids()
 
 
 def policy_stamp(n_ca: int, *, base_beta: float = 0.20) -> dict[str, Any]:
@@ -442,22 +446,69 @@ def resolve_pdb_id_list(spec: str | None) -> list[str]:
     return uniq
 
 
+def _existing_ok_index(sub: Path) -> dict[str, Any] | None:
+    """Load prior OK export if present (resume)."""
+    idx = sub / "index.json"
+    if not idx.is_file():
+        return None
+    try:
+        data = json.loads(idx.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        return None
+    if data.get("status") != "OK" or not data.get("molds"):
+        return None
+    return data
+
+
 def export_structure_batch(
     pdb_ids: list[str],
     knobs: dict[str, Any],
     *,
     out_root: Path | str,
     top_k: int = 4,
+    resume: bool = False,
+    dry_run: bool = False,
     **kwargs: Any,
 ) -> dict[str, Any]:
-    """Export dual-gate handoff for each PDB id under out_root/<PDB>/ + root manifest."""
+    """Export dual-gate handoff for each PDB id under out_root/<PDB>/ + root manifest.
+
+    resume: skip IDs that already have a successful index.json.
+    dry_run: resolve IDs and policy pins only — no forge/export.
+    """
     root = Path(out_root)
     rows = []
+    n_skipped = 0
+    if dry_run:
+        from realm.validate.length_policy import policy_for as _pf
+
+        pin = {
+            "soft_T_n12": float(_pf(12, base_beta=0.20).soft_T),
+            "seq_mix": float(_pf(12, base_beta=0.20).seq_mix),
+            "face_weight": float(_pf(12, base_beta=0.20).face_weight),
+        }
+        return {
+            "n_ids": len(pdb_ids),
+            "n_ok": 0,
+            "n_skipped": 0,
+            "dry_run": True,
+            "ids": [str(p).strip().upper() for p in pdb_ids if str(p).strip()],
+            "dual_gate_pin": pin,
+            "rows": [],
+            "ontology": "handoff_dual_gate_batch_dry_run_not_lambda_eq_gamma",
+        }
+
     for pid in pdb_ids:
         pid = str(pid).strip().upper()
         if not pid:
             continue
         sub = root / pid
+        if resume:
+            prior = _existing_ok_index(sub)
+            if prior is not None:
+                logger.info("resume skip %s (existing OK export)", pid)
+                rows.append(prior)
+                n_skipped += 1
+                continue
         try:
             row = export_structure_handoff(pid, knobs, out_dir=sub, top_k=top_k, **kwargs)
         except Exception as exc:  # noqa: BLE001
@@ -544,6 +595,7 @@ def export_structure_batch(
     summary = {
         "n_ids": len(rows),
         "n_ok": sum(1 for r in rows if r.get("status") == "OK"),
+        "n_skipped_resume": int(n_skipped),
         "rows": [
             {
                 "pdb": r.get("pdb"),
@@ -568,4 +620,36 @@ def export_structure_batch(
     (root / "batch_index.json").write_text(
         json.dumps(summary, indent=2) + "\n", encoding="utf-8"
     )
+    write_partner_summary_md(summary, root / "SUMMARY.md")
     return summary
+
+
+def write_partner_summary_md(summary: dict[str, Any], path: Path | str) -> Path:
+    """Human-readable campaign summary for partners / internal release notes."""
+    dest = Path(path)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    agg = summary.get("enrichment_aggregate") or {}
+    lines = [
+        "# Dual-gate handoff campaign summary",
+        "",
+        f"- Structures OK: **{summary.get('n_ok')}** / {summary.get('n_ids')}",
+        f"- Resume skips: {summary.get('n_skipped_resume', 0)}",
+        f"- Mean enrichment (if stamped): {agg.get('mean_enrichment')}",
+        f"- top20 count (if stamped): {agg.get('top20_count')}",
+        f"- Manifest: `{summary.get('manifest')}`",
+        f"- Enrichment table: `{summary.get('enrichment_summary')}`",
+        "",
+        "Ontology: Crit projection molds only -- **not** lambda=gamma.",
+        "LengthPolicy production pins were not modified by this export.",
+        "",
+        "| PDB | status | n_molds | soft_T | enrichment | top20 |",
+        "|-----|--------|---------|--------|------------|-------|",
+    ]
+    for r in summary.get("rows") or []:
+        lines.append(
+            f"| {r.get('pdb')} | {r.get('status')} | {r.get('n_molds')} | "
+            f"{r.get('soft_T')} | {r.get('enrichment')} | {r.get('top20')} |"
+        )
+    lines.append("")
+    dest.write_text("\n".join(lines), encoding="utf-8")
+    return dest

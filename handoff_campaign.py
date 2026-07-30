@@ -43,6 +43,16 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--no-biopython-check", action="store_true")
     p.add_argument("--no-package", action="store_true")
     p.add_argument("--no-verify", action="store_true")
+    p.add_argument(
+        "--resume",
+        action="store_true",
+        help="skip PDB ids that already have a successful index.json under out-dir",
+    )
+    p.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="resolve IDs + print dual-gate pins; do not export",
+    )
     p.add_argument("-v", action="store_true")
     args = p.parse_args(argv)
 
@@ -51,16 +61,31 @@ def main(argv: list[str] | None = None) -> int:
         format="%(asctime)s - %(levelname)s - %(message)s",
     )
 
-    knobs = load_knobs(args.knobs)
-    if isinstance(knobs, dict) and "best_knobs" in knobs:
-        knobs = knobs["best_knobs"]
-
     ids = resolve_pdb_id_list(args.pdb_ids)
     if not ids:
         logger.error("no PDB ids resolved from %r", args.pdb_ids)
         return 2
 
-    logger.info("campaign export ids=%s → %s", ids, args.out_dir)
+    if args.dry_run:
+        summary = export_structure_batch(
+            ids, {}, out_root=args.out_dir, dry_run=True
+        )
+        logger.info(
+            "dry-run ids=%s pin=%s",
+            summary.get("ids"),
+            summary.get("dual_gate_pin"),
+        )
+        (Path(args.out_dir)).mkdir(parents=True, exist_ok=True)
+        (Path(args.out_dir) / "dry_run.json").write_text(
+            json.dumps(summary, indent=2) + "\n", encoding="utf-8"
+        )
+        return 0
+
+    knobs = load_knobs(args.knobs)
+    if isinstance(knobs, dict) and "best_knobs" in knobs:
+        knobs = knobs["best_knobs"]
+
+    logger.info("campaign export ids=%s → %s resume=%s", ids, args.out_dir, args.resume)
     summary = export_structure_batch(
         ids,
         knobs,
@@ -70,11 +95,13 @@ def main(argv: list[str] | None = None) -> int:
         include_coutsias=False,
         with_enrichment=bool(args.with_enrichment),
         with_biopython_check=not bool(args.no_biopython_check),
+        resume=bool(args.resume),
     )
     logger.info(
-        "export n_ok=%s/%s mean_enr=%s",
+        "export n_ok=%s/%s skipped=%s mean_enr=%s",
         summary["n_ok"],
         summary["n_ids"],
+        summary.get("n_skipped_resume"),
         (summary.get("enrichment_aggregate") or {}).get("mean_enrichment"),
     )
     if summary["n_ok"] == 0:
@@ -116,9 +143,11 @@ def main(argv: list[str] | None = None) -> int:
         "export": {
             "n_ok": summary["n_ok"],
             "n_ids": summary["n_ids"],
+            "n_skipped_resume": summary.get("n_skipped_resume"),
             "manifest": summary.get("manifest"),
             "enrichment_summary": summary.get("enrichment_summary"),
             "enrichment_aggregate": summary.get("enrichment_aggregate"),
+            "summary_md": str((Path(args.out_dir) / "SUMMARY.md").resolve()),
         },
         "package": package_meta,
         "verify": report,

@@ -109,3 +109,42 @@ def test_resolve_pdb_id_list_tokens():
     assert resolve_pdb_id_list("1csa,2x2c") == ["1CSA", "2X2C"]
     # unique
     assert resolve_pdb_id_list("probe,1CSA")[0] == "1CSA"
+
+
+def test_export_batch_dry_run_and_resume(tmp_path: Path):
+    dry = export_structure_batch(
+        ["1CSA", "2X2C"], {}, out_root=tmp_path / "dry", dry_run=True
+    )
+    assert dry["dry_run"] is True
+    assert dry["ids"] == ["1CSA", "2X2C"]
+    assert abs(dry["dual_gate_pin"]["soft_T_n12"] - 0.036) < 1e-12
+
+    kn_path = Path("evolve_result.json")
+    pdb_path = Path("data/pdb/1CSA.pdb")
+    if not kn_path.is_file() or not pdb_path.is_file():
+        return  # dry-run already exercised
+    kn = load_knobs(kn_path)
+    if isinstance(kn, dict) and "best_knobs" in kn:
+        kn = kn["best_knobs"]
+    root = tmp_path / "res"
+    s1 = export_structure_batch(
+        ["1CSA"],
+        kn,
+        out_root=root,
+        top_k=1,
+        include_coutsias=False,
+        with_biopython_check=False,
+    )
+    assert s1["n_ok"] == 1
+    assert (root / "SUMMARY.md").is_file()
+    s2 = export_structure_batch(
+        ["1CSA"],
+        kn,
+        out_root=root,
+        top_k=1,
+        include_coutsias=False,
+        with_biopython_check=False,
+        resume=True,
+    )
+    assert s2["n_skipped_resume"] == 1
+    assert s2["n_ok"] == 1
