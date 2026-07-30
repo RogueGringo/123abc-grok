@@ -169,12 +169,18 @@ def select_mold_by_fit(
     prefer_maxop: bool = True,
     multimodes: tuple[bool, ...] = (False, True),
     omega_scales: tuple[float, ...] = (1.0,),
+    defect_tie: bool = False,
 ) -> tuple[bool, dict[str, Any], dict[str, Any]]:
     """Pick Crit mold from a small bank by native projection distance.
 
     Structure-conditioned (not decoy-label training): forge each
     (multimode × omega_scale) candidate, keep lowest softmin Kabsch to native CA.
     ``omega_scales`` are multipliers on knobs['omega_scale'].
+
+    When ``defect_tie`` is True (mid-length floors), break near-projection
+    ties with native sheaf-defect softmin, then MaxOp gap — still native-only,
+    never decoy-label training.
+
     Returns (use_multimode, pack, diagnostics).
     """
     from realm.validate.decoys import score_geometry_vs_crit
@@ -200,36 +206,67 @@ def select_mold_by_fit(
                 )["mean_dist"]
             )
             op = pack["operator"]
+            defect_d = 0.0
+            if defect_tie:
+                from realm.sheaf_defects import softmin_defect_vs_crit
+
+                thetas = pack.get("thetas")
+                if thetas is None:
+                    thetas = op.thetas
+                defc = softmin_defect_vs_crit(
+                    xyz,
+                    thetas,
+                    soft_T=soft_T,
+                    prefer_maxop=prefer_maxop,
+                )
+                defect_d = float(defc["mean_dist"])
             candidates.append(
                 {
                     "multimode": bool(mm),
                     "omega_scale_mult": float(os),
                     "omega_scale": kn["omega_scale"],
                     "dist": dist,
+                    "defect_dist": defect_d,
                     # MaxOp dual: prefer sharper sheaf gaps on projection ties (4.1)
                     "maxop_mean_gap": float(op.mean_gap),
                     "maxop_mean_frustration": float(op.mean_frustration),
                     "pack": pack,
                 }
             )
-    # Primary: projection distance (operational geometry). Secondary: MaxOp gap.
-    best = min(
-        candidates,
-        key=lambda c: (c["dist"], -c["maxop_mean_gap"]),
-    )
+    # Primary: projection. Optional: sheaf defect (native). Tertiary: MaxOp gap.
+    if defect_tie:
+        best = min(
+            candidates,
+            key=lambda c: (
+                c["dist"],
+                0.15 * c["defect_dist"],
+                -c["maxop_mean_gap"],
+            ),
+        )
+        selection = "min_proj_then_defect_then_maxop_gap"
+    else:
+        best = min(
+            candidates,
+            key=lambda c: (c["dist"], -c["maxop_mean_gap"]),
+        )
+        selection = "min_proj_then_max_maxop_gap"
     diag = {
         "chosen": "multimode" if best["multimode"] else "planar",
         "omega_scale_mult": best["omega_scale_mult"],
         "dist": best["dist"],
+        "defect_dist": best.get("defect_dist", 0.0),
+        "defect_tie": bool(defect_tie),
         "maxop_mean_gap": best["maxop_mean_gap"],
         "maxop_mean_frustration": best["maxop_mean_frustration"],
-        "selection": "min_proj_then_max_maxop_gap",
+        "selection": selection,
         "ontology": "projection_primary_maxop_tiebreak_not_lambda_eq_gamma",
+        "n_bank": len(candidates),
         "bank": [
             {
                 "multimode": c["multimode"],
                 "omega_scale_mult": c["omega_scale_mult"],
                 "dist": c["dist"],
+                "defect_dist": c.get("defect_dist", 0.0),
                 "maxop_mean_gap": c["maxop_mean_gap"],
             }
             for c in candidates
@@ -249,6 +286,24 @@ def select_mold_by_fit(
         ),
     }
     return bool(best["multimode"]), best["pack"], diag
+
+
+def mid_length_omega_bank(n_ca: int) -> tuple[float, ...]:
+    """Length-adaptive omega bank (superset of production dense).
+
+    Short/default: confirmed 5-point dense bank.
+    n≥12: add mid bridges; n≥13: add UV/IR wings for steric floors
+    while keeping the original 5 dense cells so prior winners remain
+    selectable (structure-conditioned, not forced).
+    """
+    n = int(n_ca)
+    dense = (0.85, 0.95, 1.0, 1.1, 1.2)
+    if n >= 13:
+        # superset: keep dense anchors + wings/bridges
+        return (0.80, 0.85, 0.90, 0.95, 1.0, 1.05, 1.1, 1.2, 1.3)
+    if n >= 12:
+        return (0.85, 0.90, 0.95, 1.0, 1.1, 1.15, 1.2)
+    return dense
 
 
 def select_multimode_by_fit(

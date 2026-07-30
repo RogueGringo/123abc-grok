@@ -28,10 +28,10 @@
     "batch": {
       "n_ok": 12,
       "n_total_ids": 12,
-      "mean_enrichment": 0.8486111111111113,
-      "mean_enrichment_std": 0.052405725994774145,
+      "mean_enrichment": 0.8534722222222224,
+      "mean_enrichment_std": 0.05393739796264258,
       "probe_mean_enrichment": 0.8770833333333334,
-      "holdout_mean_enrichment": 0.8343750000000001,
+      "holdout_mean_enrichment": 0.8416666666666668,
       "top20_count": 9,
       "n_seeds": 3,
       "n_decoys": 40,
@@ -101,7 +101,7 @@
     {
       "name": "external_ranking_signal",
       "ok": true,
-      "detail": "batch mean_enrichment=84.9% (projection path)",
+      "detail": "batch mean_enrichment=85.3% (projection path)",
       "axioms": [
         "2.4",
         "5.2",

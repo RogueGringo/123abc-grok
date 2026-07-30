@@ -123,7 +123,14 @@ def rank_one(
             omega_scales=(0.9, 1.0, 1.15),
         )
     elif mm_mode in ("self_fit_dense", "dense"):
-        # denser omega bank (full-batch tuned)
+        # Length-adaptive dense bank: finer omega + native sheaf-defect
+        # mold tie-breaks on mid-length rings (4K8Y / 1TET floors).
+        from realm.validate.dual import mid_length_omega_bank
+
+        # Length-adaptive dense bank (superset of confirmed 5-point dense).
+        # defect_tie off by default in production path — dual-gate rejected
+        # defect-tie for n≥12/13 (lost 5EOC top20). Available via self_fit_mid.
+        omega_bank = mid_length_omega_bank(n_ca)
         use_mm, pack, fit_diag = select_mold_by_fit(
             xyz,
             knobs,
@@ -132,7 +139,23 @@ def rank_one(
             n_sectors=n_sec,
             soft_T=soft_T,
             multimodes=(False, True),
-            omega_scales=(0.85, 0.95, 1.0, 1.1, 1.2),
+            omega_scales=omega_bank,
+            defect_tie=False,
+        )
+    elif mm_mode in ("self_fit_mid", "mid"):
+        # Explicit mid-length attack bank (always defect-tie)
+        from realm.validate.dual import mid_length_omega_bank
+
+        use_mm, pack, fit_diag = select_mold_by_fit(
+            xyz,
+            knobs,
+            N=N,
+            n_zeros=n_zeros,
+            n_sectors=n_sec,
+            soft_T=soft_T,
+            multimodes=(False, True),
+            omega_scales=mid_length_omega_bank(max(n_ca, 12)),
+            defect_tie=True,
         )
     elif mm_mode in ("self_fit_wide", "wide"):
         use_mm, pack, fit_diag = select_mold_by_fit(
@@ -290,6 +313,7 @@ def main(argv=None) -> int:
         default="self_fit_dense",
         choices=(
             "self_fit_dense",
+            "self_fit_mid",
             "self_fit_wide",
             "self_fit_omega",
             "self_fit",
@@ -297,8 +321,8 @@ def main(argv=None) -> int:
             "on",
             "off",
         ),
-        help="self_fit_dense: denser multimode×omega bank by native Crit dist; "
-        "self_fit_omega/self_fit: smaller banks; adaptive_short/on/off length rules",
+        help="self_fit_dense: length-adaptive multimode×omega bank (+ defect-tie n≥12); "
+        "self_fit_mid: mid-length attack bank; self_fit_omega/self_fit: smaller banks",
     )
     p.add_argument(
         "--multimode",

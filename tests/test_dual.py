@@ -11,6 +11,7 @@ import pytest
 from realm.validate.dual import (
     dual_score_geometry,
     forge_crit_geometry,
+    mid_length_omega_bank,
     multimode_for_ca_length,
     operator_fingerprint,
     sectors_for_ca_length,
@@ -75,6 +76,34 @@ def test_select_mold_bank_by_fit():
     assert len(pack["templates"]) >= 1
     assert len(diag["bank"]) == 6
     assert "omega_scale_mult" in diag
+
+
+def test_mid_length_bank_and_defect_tie():
+    assert mid_length_omega_bank(11) == (0.85, 0.95, 1.0, 1.1, 1.2)
+    assert 0.85 in mid_length_omega_bank(12) and 0.90 in mid_length_omega_bank(12)
+    b13 = mid_length_omega_bank(13)
+    assert set((0.85, 0.95, 1.0, 1.1, 1.2)).issubset(set(b13))
+    assert len(b13) == 9
+    kn = _knobs()
+    t = np.linspace(0, 2 * np.pi, 13, endpoint=False)
+    xyz = np.column_stack([np.cos(t), np.sin(t), 0.04 * np.sin(2 * t)])
+    use_m, pack, diag = select_mold_by_fit(
+        xyz,
+        kn,
+        N=13,
+        n_zeros=14,
+        n_sectors=6,
+        soft_T=0.04,
+        prefer_maxop=False,
+        multimodes=(False, True),
+        omega_scales=b13,
+        defect_tie=True,
+    )
+    assert isinstance(use_m, bool)
+    assert diag["defect_tie"] is True
+    assert diag["selection"] == "min_proj_then_defect_then_maxop_gap"
+    assert len(diag["bank"]) == 18  # 2 × 9
+    assert len(pack["templates"]) >= 1
 
 
 def test_operator_fingerprint_shapes():

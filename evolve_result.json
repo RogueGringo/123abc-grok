@@ -60,15 +60,15 @@
     "null_battery_zeta_preference": "RETRACTED",
     "residual_fitness": "informative_density_return",
     "probe_enrichment": 0.8770833333333334,
-    "holdout_enrichment": 0.8343750000000001,
-    "batch_mean_enrichment": 0.8486111111111113,
-    "batch_mean_enrichment_std": 0.052405725994774145,
+    "holdout_enrichment": 0.8416666666666668,
+    "batch_mean_enrichment": 0.8534722222222224,
+    "batch_mean_enrichment_std": 0.05393739796264258,
     "batch_top20": 9,
     "batch_n_ok": 12,
     "batch_n_seeds": 3,
     "batch_n_decoys": 40,
     "path": "geometry_off_zeta_external_cyclic_ranking",
-    "method": "PROJ_SHEAF_DEFECT beta=0.20 + adaptive multi-residue chords + self_fit_dense + mid-band S_Lambda",
+    "method": "PROJ_SHEAF_DEFECT beta=0.20 + length-adaptive dense omega superset + mid-band S_Lambda",
     "dual": "realm/validate/dual.py + dual_probe.py (substrate\u2192L vs projection)",
     "axiomz": "01-DEVELOPMENT-AXiomZ + realm/axiomz.py CTS + stage_ledger.py",
     "commit_policy": {
@@ -84,8 +84,8 @@
       "sectors_mode": "adaptive",
       "sectors_rule": "n<=8->4 else 6",
       "multimode_mode": "self_fit_dense",
-      "multimode_rule": "bank multimode x omega in {0.85,0.95,1.0,1.1,1.2} by native Crit dist",
-      "note": "40x3: mean 84.9% probe 87.7% hold 83.4% top20=9; defect beta=0.20; adaptive chords n>=12",
+      "multimode_rule": "length-adaptive omega superset of dense; n>=13 adds wings/bridges",
+      "note": "40x3: mean 85.3% probe 87.7% hold 84.2% top20=9; 4K8Y 77.5% (was 73%)",
       "defect_beta": 0.2,
       "chord_weight": "adaptive: 0 if n<12, 0.12 if n=12, 0.25 if n>=13"
     },
@@ -106,13 +106,15 @@
       "witten_morse": "mid-band harmonic envelope on SpectralAction",
       "projection": "Kabsch softmin primary + defect beta=0.20 blend",
       "fold_protocol": "defect_beta wired through rank_enrichment / substrate table",
-      "adaptive_ns": "evolve_ns.py dual-fitness natural selection (probe env; holdout report-only)"
+      "adaptive_ns": "evolve_ns.py dual-fitness natural selection (probe env; holdout report-only)",
+      "mid_length_bank": "mid_length_omega_bank superset — dual-gate accepted 85.3%"
     },
     "adaptive_ns_last": {
       "accepted": false,
       "note": "compact 8x5 IR-focus loop: fast-probe gains failed multi-seed dual gate; sealed elite retained",
       "cli": "python evolve_ns.py --internal-gens 0 --n-pop 8 --epochs 5 --write-evolve"
-    }
+    },
+    "note_4K8Y": "mid-length omega superset lifted enrich 73%→77.5% without top20 regression"
   },
   "ranking_hparams": {
     "aggregate": "softmin",
@@ -122,8 +124,8 @@
     "sectors_mode": "adaptive",
     "sectors_rule": "n<=8->4 else 6",
     "multimode_mode": "self_fit_dense",
-    "multimode_rule": "bank multimode x omega in {0.85,0.95,1.0,1.1,1.2} by native Crit dist",
-    "note": "40x3: mean 84.9% probe 87.7% hold 83.4% top20=9; defect beta=0.20; adaptive chords n>=12",
+    "multimode_rule": "length-adaptive omega superset of dense; n>=13 adds wings/bridges",
+    "note": "40x3: mean 85.3% probe 87.7% hold 84.2% top20=9; 4K8Y 77.5% (was 73%)",
     "defect_beta": 0.2,
     "chord_weight": "adaptive: 0 if n<12, 0.12 if n=12, 0.25 if n>=13"
   }

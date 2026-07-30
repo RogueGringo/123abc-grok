@@ -28,6 +28,7 @@ from realm.validate.decoys import make_ca_decoys, score_geometry_vs_crit
 from realm.validate.dual import (
     dual_score_geometry,
     forge_crit_geometry,
+    mid_length_omega_bank,
     sectors_for_ca_length,
     select_mold_by_fit,
 )
@@ -76,18 +77,21 @@ def select_mold_for_substrate(
     kind: str,
     n_zeros: int = 14,
     soft_T: float = SOFT_T,
-    omega_scales: tuple[float, ...] = DENSE_OMEGA,
+    omega_scales: tuple[float, ...] | None = None,
     rng: np.random.Generator | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Equal mold-bank budget: multimode × omega_scales, min proj dist.
 
     For non-ζ substrates, each bank cell gets an independent seed draw
     (same count of forges as ζ bank — equal selection budget).
+    Default omega bank is length-adaptive (mid_length_omega_bank).
     """
     rng = rng or np.random.default_rng(0)
     n_ca = int(xyz.shape[0])
     N = max(n_ca, 7)
     n_sec = sectors_for_ca_length(n_ca, mode="adaptive")
+    if omega_scales is None:
+        omega_scales = mid_length_omega_bank(n_ca)
     base_omega = float(knobs.get("omega_scale", 1.0))
     candidates: list[dict[str, Any]] = []
     for mm in (False, True):
