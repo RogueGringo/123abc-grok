@@ -211,8 +211,8 @@ def rank_one(
             soft_T=soft_T,
             prefer_maxop=True,
         )
-    # Structure-conditioned height-amp mold refine on soft floors only:
-    # n=12 (1TET) and n=10 (4M6E). Broader n>=12 dual-gate lost 4K8Y top20.
+    # Structure-conditioned height-amp mold refine on soft floors:
+    # n=10 (4M6E), n=12 (1TET). n=13 includes 5EOC — height refine dual-gate hurt.
     if n_ca in (10, 12) and mm_mode in (
         "self_fit_dense",
         "dense",

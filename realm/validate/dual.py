@@ -367,7 +367,7 @@ def mid_length_omega_bank(n_ca: int) -> tuple[float, ...]:
         # 1TET/4K8Y-class: full wings/bridges
         return (0.80, 0.85, 0.90, 0.95, 1.0, 1.05, 1.1, 1.15, 1.2, 1.3)
     if n == 10:
-        # 4M6E: mild bridges only (full mid-bank dual-gate regressed hard)
+        # 4M6E: mild bridges only (n=8 expansion dual-gate regressed holdout)
         return (0.85, 0.90, 0.95, 1.0, 1.1, 1.15, 1.2)
     return dense
 
@@ -721,8 +721,7 @@ def dual_score_geometry(
 
         d_scale = adaptive_defect_scale(n_ca_guess)
         base = blend_projection_defect(proj_d, defect_d, beta=b, scale=d_scale)
-        # Mild hard-min pull on soft floors only (n=10 4M6E, n=12 1TET).
-        # Broader mid-length pull dual-gate cost a top20 on 4K8Y.
+        # Mild hard-min pull on soft floors (n=10/12). n=13 uses pure softmin.
         if n_ca_guess in (10, 12) and proj.get("min_dist") is not None:
             dmin = float(proj["min_dist"])
             base = 0.88 * float(base) + 0.12 * dmin

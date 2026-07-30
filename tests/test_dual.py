@@ -87,6 +87,7 @@ def test_adaptive_defect_beta():
     assert abs(adaptive_defect_beta(10, 0.20) - 0.24) < 1e-12  # 4M6E mild
     assert abs(adaptive_defect_beta(12, 0.20) - 0.28) < 1e-12
     assert abs(adaptive_defect_beta(13, 0.20) - 0.30) < 1e-12
+    assert adaptive_defect_beta(6, 0.20) == 0.20
     assert adaptive_defect_beta(14, 0.0) == 0.0
 
 
@@ -115,6 +116,7 @@ def test_combine_sector_weights():
 
 
 def test_mid_length_bank_and_defect_tie():
+    assert mid_length_omega_bank(6) == (0.85, 0.95, 1.0, 1.1, 1.2)
     assert mid_length_omega_bank(8) == (0.85, 0.95, 1.0, 1.1, 1.2)
     b10 = mid_length_omega_bank(10)
     assert 0.90 in b10 and 1.15 in b10 and 0.80 not in b10

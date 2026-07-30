@@ -103,6 +103,10 @@ def main(argv=None) -> int:
                     0.45,
                     rng,
                     n_seeds=1,  # fast objective; multi-seed only on holdout/batch
+                    soft_T=0.04,
+                    sectors_mode="adaptive",
+                    multimode_mode="self_fit_dense",
+                    defect_beta=0.20,
                 )
             except Exception as exc:  # noqa: BLE001
                 row = {"pdb": pid, "status": "ERROR", "error": str(exc)}
@@ -189,6 +193,10 @@ def main(argv=None) -> int:
                     0.45,
                     rng,
                     n_seeds=3,
+                    soft_T=0.04,
+                    sectors_mode="adaptive",
+                    multimode_mode="self_fit_dense",
+                    defect_beta=0.20,
                 )
             except Exception as exc:  # noqa: BLE001
                 row = {"pdb": pid, "status": "ERROR", "error": str(exc)}
