@@ -15,7 +15,19 @@ filtration (`--g5-span`). Stage 9 open.
 
 Mean dens rank (lower better): poisson < gue < ζ < arith — residual dens does
 **not** prefer ζ over GUE. Long-range **Δ₃** persists vs Poisson; dens persists
-vs arith (existence). Full Stage 9 (M≥59) still required for distributional GUE claim.
+vs arith (existence).
+
+**Stage 9 rigidity tournament** (`--stage 9 -M 59`, carrier = mean Δ₃(L=5)):
+
+| arm | null mean Δ₃ | MC p | p_Bonf (×3) | sig@0.05 | Stage8 frac |
+|-----|--------------|------|-------------|----------|-------------|
+| gue | **0.022** (&lt; ζ 0.028) | 0.83 | 1.00 | **no** | 0.07 |
+| poisson | 0.101 | **0.0167** (floor) | **0.05** | **yes** | **0.95** |
+| scramble | 0.019 | 0.92 | 1.00 | no | 0.02 |
+| arith (exist.) | ~0 | — | — | — | ζ never wins |
+
+Matches design O4 / Montgomery–Odlyzko: **Δ₃ cannot separate ζ from GUE** (GUE is
+slightly *more* rigid here); **does** separate ζ from Poisson at the MC floor.
 **Gate condition met:** the equal-budget table is public (PR #2, `fair_fight_result.json`),
 which was the precondition for re-opening residual design.
 **Supersedes for selection purposes:** `2026-07-30-validation-ladder-design.md` (retracted)

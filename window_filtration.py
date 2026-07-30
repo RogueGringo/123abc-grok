@@ -17,6 +17,7 @@ from realm.validate.cross_window import (
     existence_arm_scan,
     score_rigidity_filtration,
 )
+from realm.validate.stage9_tournament import run_rigidity_tournament, save_tournament
 from realm.validate.window_filtration import load_champion_knobs, score_window_filtration
 
 logger = logging.getLogger("window_filtration")
@@ -28,9 +29,16 @@ def main(argv: list[str] | None = None) -> int:
     )
     p.add_argument(
         "--stage",
-        choices=("6", "7", "8", "7+8", "9lite"),
+        choices=("6", "7", "8", "7+8", "9lite", "9"),
         default="6",
-        help="6=filtration, 7=rigidity, 8/7+8=ζ vs null persistence, 9lite=existence scan",
+        help="6=filtration, 7=rigidity, 8/7+8=persistence, 9lite=existence, 9=powered rigidity",
+    )
+    p.add_argument(
+        "-M",
+        "--n-instances",
+        type=int,
+        default=59,
+        help="Stage 9 null spectra per stochastic arm (design ≥59)",
     )
     p.add_argument("--knobs", type=str, default="evolve_result.json")
     p.add_argument("-W", "--n-windows", type=int, default=7)
@@ -65,6 +73,7 @@ def main(argv: list[str] | None = None) -> int:
             "8": "out/window_filtration_stage8.json",
             "7+8": "out/window_filtration_stage7_8.json",
             "9lite": "out/window_filtration_stage9lite.json",
+            "9": "out/window_filtration_stage9.json",
         }[stage]
     )
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -153,6 +162,28 @@ def main(argv: list[str] | None = None) -> int:
             out["density_return_rank_lower_better"],
             out["arith_beats_zeta_existence"],
             out["any_stage8_pass"],
+            dest,
+        )
+        return 0
+
+    if stage == "9":
+        out = run_rigidity_tournament(
+            M=int(args.n_instances),
+            n_windows=int(args.n_windows),
+            n_zeros=int(args.n_zeros),
+            base_seed=int(args.seed),
+            progress=lambda m: logger.info("%s", m),
+        )
+        save_tournament(out, dest)
+        s = out["summary"]
+        logger.info(
+            "Stage9 M=%s gue_sig=%s poisson_sig=%s gue_s8=%.3f poisson_s8=%.3f elapsed=%.1fs → %s",
+            out["M"],
+            s.get("zeta_beats_gue_bonferroni"),
+            s.get("zeta_beats_poisson_bonferroni"),
+            s.get("gue_stage8_fraction") or 0.0,
+            s.get("poisson_stage8_fraction") or 0.0,
+            s.get("elapsed_s") or 0.0,
             dest,
         )
         return 0
