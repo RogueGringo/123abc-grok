@@ -9,6 +9,7 @@ import numpy as np
 import pytest
 
 from realm.validate.dual import (
+    adaptive_defect_beta,
     dual_score_geometry,
     forge_crit_geometry,
     mid_length_omega_bank,
@@ -77,6 +78,13 @@ def test_select_mold_bank_by_fit():
     assert len(pack["templates"]) >= 1
     assert len(diag["bank"]) == 6
     assert "omega_scale_mult" in diag
+
+
+def test_adaptive_defect_beta():
+    assert adaptive_defect_beta(8, 0.20) == 0.20
+    assert adaptive_defect_beta(12, 0.20) == 0.25
+    assert adaptive_defect_beta(13, 0.20) == 0.28
+    assert adaptive_defect_beta(14, 0.0) == 0.0
 
 
 def test_mid_length_bank_and_defect_tie():

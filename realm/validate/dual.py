@@ -200,9 +200,16 @@ def select_mold_by_fit(
                 multimode=bool(mm),
                 prefer_maxop=prefer_maxop,
             )
+            # CTS basin-weighted softmin when forge attached weights
             dist = float(
                 score_geometry_vs_crit(
-                    xyz, pack["templates"], soft_T=soft_T
+                    xyz,
+                    pack["templates"],
+                    soft_T=soft_T,
+                    aggregate="softmin_persist"
+                    if pack.get("basin_weights") is not None
+                    else "softmin",
+                    sector_weights=pack.get("basin_weights"),
                 )["mean_dist"]
             )
             op = pack["operator"]
@@ -286,6 +293,23 @@ def select_mold_by_fit(
         ),
     }
     return bool(best["multimode"]), best["pack"], diag
+
+
+def adaptive_defect_beta(n_ca: int, base: float = 0.20) -> float:
+    """Length-adaptive sheaf-defect blend for mid-length floors.
+
+    Short rings keep base β. Mid/long get mild uplift so local obstruction
+    can separate natives without abandoning projection primacy.
+    """
+    b = float(np.clip(base, 0.0, 1.0))
+    if b <= 1e-12:
+        return 0.0
+    n = int(n_ca)
+    if n >= 13:
+        return float(min(0.32, b + 0.08))
+    if n >= 12:
+        return float(min(0.28, b + 0.05))
+    return b
 
 
 def mid_length_omega_bank(n_ca: int) -> tuple[float, ...]:

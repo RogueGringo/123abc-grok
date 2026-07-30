@@ -440,7 +440,9 @@ class Deriver:
         for i, c in enumerate(pool):
             th = float(c["theta"])
             if self.multimode:
-                pts = embed_multimode_cycle(self.N, th, field, n_modes=min(4, field.gammas.size))
+                # Longer scaffolds: more Fourier modes (steric mid-length floors)
+                n_modes = min(6 if self.N >= 12 else 4, int(field.gammas.size))
+                pts = embed_multimode_cycle(self.N, th, field, n_modes=n_modes)
             else:
                 pts = embed_cycle_from_twist(self.N, th)
             # seed label: nearest γ (bookkeeping only)

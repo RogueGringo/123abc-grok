@@ -22,6 +22,7 @@ if str(ROOT) not in sys.path:
 
 from realm.validate.decoys import make_ca_decoys
 from realm.validate.dual import (
+    adaptive_defect_beta,
     dual_score_geometry,
     forge_crit_geometry,
     multimode_for_ca_length,
@@ -211,11 +212,13 @@ def rank_one(
         )
 
     a = float(np.clip(alpha_proj, 0.0, 1.0))
+    # Length-adaptive sheaf defect blend (mid-length floors)
+    eff_beta = adaptive_defect_beta(n_ca, float(defect_beta))
     sc_kw = dict(
         alpha_proj=a,
         soft_T=soft_T,
         aggregate=aggregate,
-        defect_beta=float(defect_beta),
+        defect_beta=float(eff_beta),
     )
     # Ranking: projection (+ optional sheaf-defect blend). MaxOp dual diagnostic.
     native = dual_score_geometry(xyz, pack, **sc_kw)
@@ -295,6 +298,7 @@ def rank_one(
         "multimode_fit": fit_diag,
         "holonomy_polish": polish_diag,
         "defect_beta": float(defect_beta),
+        "defect_beta_effective": float(eff_beta),
         "defect_dist": float(native.get("defect_dist") or 0.0),
         "maxop_dual": dual_diag,
         "operator": pack["operator"].to_dict() if a < 1.0 else op_diag,

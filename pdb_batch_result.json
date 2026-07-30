@@ -27,7 +27,7 @@
       "multimode_fit": {
         "chosen": "planar",
         "omega_scale_mult": 1.0,
-        "dist": 0.34617748307509566,
+        "dist": 0.34630721761437944,
         "defect_dist": 0.0,
         "defect_tie": false,
         "maxop_mean_gap": 0.03321724751183885,
@@ -39,80 +39,81 @@
           {
             "multimode": false,
             "omega_scale_mult": 0.85,
-            "dist": 0.3487554801538088,
+            "dist": 0.3481077767088617,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03670753831709758
           },
           {
             "multimode": false,
             "omega_scale_mult": 0.95,
-            "dist": 0.34760996330759003,
+            "dist": 0.3475178508149126,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03221168034483282
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.0,
-            "dist": 0.34617748307509566,
+            "dist": 0.34630721761437944,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03321724751183885
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.1,
-            "dist": 0.34950186109285103,
+            "dist": 0.3500060543204129,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.036306335761915005
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.2,
-            "dist": 0.3498656527589638,
+            "dist": 0.35064497891920937,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03785500847020789
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.85,
-            "dist": 0.4013631739751654,
+            "dist": 0.4034797908873072,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03670753831709758
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.95,
-            "dist": 0.41198133475178234,
+            "dist": 0.41301615718089557,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03221168034483282
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.0,
-            "dist": 0.4052831091178581,
+            "dist": 0.40699053432465654,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03321724751183885
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.1,
-            "dist": 0.39914556973385074,
+            "dist": 0.4012257626295312,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.036306335761915005
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.2,
-            "dist": 0.39833682297788975,
+            "dist": 0.3998753961686097,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03785500847020789
           }
         ],
-        "dist_planar": 0.34617748307509566,
-        "dist_multimode": 0.39833682297788975,
-        "margin": -0.05215933990279409
+        "dist_planar": 0.34630721761437944,
+        "dist_multimode": 0.3998753961686097,
+        "margin": -0.05356817855423024
       },
       "holonomy_polish": null,
       "defect_beta": 0.2,
+      "defect_beta_effective": 0.2,
       "defect_dist": 2.0903957449027364,
       "maxop_dual": {
         "maxop_mean_gap": 0.03321724751183885,
@@ -187,7 +188,7 @@
       "multimode_fit": {
         "chosen": "planar",
         "omega_scale_mult": 0.95,
-        "dist": 0.2764164773912421,
+        "dist": 0.27741822508303193,
         "defect_dist": 0.0,
         "defect_tie": false,
         "maxop_mean_gap": 0.03221168034483282,
@@ -199,80 +200,81 @@
           {
             "multimode": false,
             "omega_scale_mult": 0.85,
-            "dist": 0.27655809949452015,
+            "dist": 0.2789666040728992,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03670753831709758
           },
           {
             "multimode": false,
             "omega_scale_mult": 0.95,
-            "dist": 0.2764164773912421,
+            "dist": 0.27741822508303193,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03221168034483282
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.0,
-            "dist": 0.2779075593296919,
+            "dist": 0.27878850053126436,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03321724751183885
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.1,
-            "dist": 0.2784044060232778,
+            "dist": 0.27926457594513077,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.036306335761915005
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.2,
-            "dist": 0.2791319517216788,
+            "dist": 0.27947556197107154,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03785500847020789
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.85,
-            "dist": 0.35306200337689275,
+            "dist": 0.35077908725938606,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03670753831709758
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.95,
-            "dist": 0.35729655448901254,
+            "dist": 0.356850737500141,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03221168034483282
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.0,
-            "dist": 0.3558896487561377,
+            "dist": 0.35617322501461346,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03321724751183885
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.1,
-            "dist": 0.3592763659414562,
+            "dist": 0.3590873925234321,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.036306335761915005
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.2,
-            "dist": 0.36026676395724366,
+            "dist": 0.3591218510465517,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03785500847020789
           }
         ],
-        "dist_planar": 0.2764164773912421,
-        "dist_multimode": 0.35306200337689275,
-        "margin": -0.07664552598565066
+        "dist_planar": 0.27741822508303193,
+        "dist_multimode": 0.35077908725938606,
+        "margin": -0.07336086217635412
       },
       "holonomy_polish": null,
       "defect_beta": 0.2,
+      "defect_beta_effective": 0.2,
       "defect_dist": 1.9422403268879953,
       "maxop_dual": {
         "maxop_mean_gap": 0.03221168034483282,
@@ -326,13 +328,13 @@
       "n_ca": 11,
       "chain": "B",
       "N_scaffold": 11,
-      "native_dist": 0.3252038245230816,
-      "native_proj": 0.3314502418113277,
+      "native_dist": 0.32406875001899016,
+      "native_proj": 0.3314291523902076,
       "native_op": 0.0,
-      "native_rank": 6.666666666666667,
+      "native_rank": 6.0,
       "n_total": 41,
-      "enrichment": 0.8583333333333334,
-      "enrichment_std": 0.031180478223116204,
+      "enrichment": 0.875,
+      "enrichment_std": 0.02041241452319317,
       "top20": true,
       "method": "PROJ_SHEAF_DEFECT_CTS",
       "n_templates": 6,
@@ -346,12 +348,12 @@
       "multimode_mode": "self_fit_dense",
       "multimode_fit": {
         "chosen": "planar",
-        "omega_scale_mult": 1.0,
-        "dist": 0.330319604878822,
+        "omega_scale_mult": 0.95,
+        "dist": 0.3314291523902076,
         "defect_dist": 0.0,
         "defect_tie": false,
-        "maxop_mean_gap": 0.03321724751183885,
-        "maxop_mean_frustration": 0.10370680993661097,
+        "maxop_mean_gap": 0.03221168034483282,
+        "maxop_mean_frustration": 0.11473731750341642,
         "selection": "min_proj_then_max_maxop_gap",
         "ontology": "projection_primary_maxop_tiebreak_not_lambda_eq_gamma",
         "n_bank": 10,
@@ -359,125 +361,126 @@
           {
             "multimode": false,
             "omega_scale_mult": 0.85,
-            "dist": 0.3391937433283771,
+            "dist": 0.3394728227564917,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03670753831709758
           },
           {
             "multimode": false,
             "omega_scale_mult": 0.95,
-            "dist": 0.33087766263573776,
+            "dist": 0.3314291523902076,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03221168034483282
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.0,
-            "dist": 0.330319604878822,
+            "dist": 0.3314502418113277,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03321724751183885
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.1,
-            "dist": 0.33428007664247167,
+            "dist": 0.3342867301141009,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.036306335761915005
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.2,
-            "dist": 0.3338316891287533,
+            "dist": 0.33370595134770015,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03785500847020789
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.85,
-            "dist": 0.41207529711521784,
+            "dist": 0.4143976060798733,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03670753831709758
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.95,
-            "dist": 0.4066111276139374,
+            "dist": 0.40899683198045833,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03221168034483282
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.0,
-            "dist": 0.4074818479833039,
+            "dist": 0.4096826680655153,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03321724751183885
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.1,
-            "dist": 0.40849740220998726,
+            "dist": 0.4105226403055658,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.036306335761915005
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.2,
-            "dist": 0.40598730891640317,
+            "dist": 0.40759822144831015,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03785500847020789
           }
         ],
-        "dist_planar": 0.330319604878822,
-        "dist_multimode": 0.40598730891640317,
-        "margin": -0.07566770403758116
+        "dist_planar": 0.3314291523902076,
+        "dist_multimode": 0.40759822144831015,
+        "margin": -0.07616906905810256
       },
       "holonomy_polish": null,
       "defect_beta": 0.2,
-      "defect_dist": 2.001454369133981,
+      "defect_beta_effective": 0.2,
+      "defect_dist": 1.964180936894135,
       "maxop_dual": {
-        "maxop_mean_gap": 0.03321724751183885,
-        "maxop_gap_cv": 0.6970924286287847,
-        "maxop_mean_frustration": 0.10370680993661097,
-        "projection_dist": 0.3252038245230816,
+        "maxop_mean_gap": 0.03221168034483282,
+        "maxop_gap_cv": 0.77174037080237,
+        "maxop_mean_frustration": 0.11473731750341642,
+        "projection_dist": 0.32406875001899016,
         "ontology": "projection_primary_maxop_dual_diagnostic"
       },
       "operator": {
         "thetas": [
-          5.433442733622131,
-          1.0567827378305112,
-          4.533850426828477,
-          1.9850816202332593,
-          3.60618716582857,
-          2.865272583625245
+          5.719413403812734,
+          1.1124028819268543,
+          4.772474133503853,
+          2.0895596002453076,
+          3.795986490345813,
+          3.0160764038160477
         ],
         "gaps": [
-          0.005964491236481385,
-          0.009222570683468717,
-          0.02523742537773521,
-          0.0324782353461416,
-          0.058934046000245835,
-          0.06746671642696037
+          0.0026261916619646076,
+          0.01021806566637545,
+          0.0188319278964929,
+          0.03597640890115905,
+          0.050907827086418306,
+          0.07470966085658663
         ],
         "frustrations": [
-          0.23906535783744465,
-          0.009222570683468101,
-          0.16749121049054327,
-          0.03247823534614147,
-          0.10651676883510719,
-          0.06746671642696112
+          0.26430864893179806,
+          0.010218065666375953,
+          0.1853013587167276,
+          0.035976408901159385,
+          0.1179097619478513,
+          0.07470966085658626
         ],
         "logZ": [
-          0.5835927197996555,
-          0.523135939005207,
-          0.24496001491136324,
-          0.13338881957178952,
-          -0.1590295237296985,
-          -0.20655238949477459
+          0.646521738220654,
+          0.5048746276321433,
+          0.35178990129116766,
+          0.08359424782656054,
+          -0.09242881246913254,
+          -0.2282352933252105
         ],
-        "mean_gap": 0.03321724751183885,
-        "gap_cv": 0.6970924286287847,
-        "mean_frustration": 0.10370680993661097,
-        "mean_logZ": 0.18658259667725707
+        "mean_gap": 0.03221168034483282,
+        "gap_cv": 0.77174037080237,
+        "mean_frustration": 0.11473731750341642,
+        "mean_logZ": 0.21101940152936371
       }
     },
     {
@@ -507,7 +510,7 @@
       "multimode_fit": {
         "chosen": "multimode",
         "omega_scale_mult": 0.95,
-        "dist": 0.48595183767111416,
+        "dist": 0.49030976799345294,
         "defect_dist": 0.0,
         "defect_tie": false,
         "maxop_mean_gap": 0.03894087680151992,
@@ -519,80 +522,81 @@
           {
             "multimode": false,
             "omega_scale_mult": 0.85,
-            "dist": 0.5004434500029274,
+            "dist": 0.5009802154412342,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.04437751236183021
           },
           {
             "multimode": false,
             "omega_scale_mult": 0.95,
-            "dist": 0.4973925338088259,
+            "dist": 0.4980027810776814,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03894087680151992
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.0,
-            "dist": 0.4969963613545061,
+            "dist": 0.4975184196260823,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.040157965353351414
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.1,
-            "dist": 0.4992888007438918,
+            "dist": 0.5000667637237125,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.04389128387428167
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.2,
-            "dist": 0.5028295303269721,
+            "dist": 0.5040402991478067,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.04576351495563626
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.85,
-            "dist": 0.5247912507232851,
+            "dist": 0.5277144707449825,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.04437751236183021
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.95,
-            "dist": 0.48595183767111416,
+            "dist": 0.49030976799345294,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03894087680151992
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.0,
-            "dist": 0.48969196336003185,
+            "dist": 0.49379923689753424,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.040157965353351414
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.1,
-            "dist": 0.49961013787745123,
+            "dist": 0.502980018046914,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.04389128387428167
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.2,
-            "dist": 0.4910276819824583,
+            "dist": 0.49495107231952706,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.04576351495563626
           }
         ],
-        "dist_planar": 0.4969963613545061,
-        "dist_multimode": 0.48595183767111416,
-        "margin": 0.011044523683391927
+        "dist_planar": 0.4975184196260823,
+        "dist_multimode": 0.49030976799345294,
+        "margin": 0.007208651632629348
       },
       "holonomy_polish": null,
       "defect_beta": 0.2,
+      "defect_beta_effective": 0.2,
       "defect_dist": 2.074519085571089,
       "maxop_dual": {
         "maxop_mean_gap": 0.03894087680151992,
@@ -667,7 +671,7 @@
       "multimode_fit": {
         "chosen": "multimode",
         "omega_scale_mult": 1.2,
-        "dist": 0.2177258512900318,
+        "dist": 0.21913675563527263,
         "defect_dist": 0.0,
         "defect_tie": false,
         "maxop_mean_gap": 0.06516102319552378,
@@ -679,80 +683,81 @@
           {
             "multimode": false,
             "omega_scale_mult": 0.85,
-            "dist": 0.2837084523841666,
+            "dist": 0.2847336297776933,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.06112087348401994
           },
           {
             "multimode": false,
             "omega_scale_mult": 0.95,
-            "dist": 0.2785817860985014,
+            "dist": 0.2804735429935571,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.04163184812547539
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.0,
-            "dist": 0.2766701740596922,
+            "dist": 0.27905840799884185,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.044869068752404734
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.1,
-            "dist": 0.269063207839711,
+            "dist": 0.2714932735669276,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.05405732053648166
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.2,
-            "dist": 0.2576874643519437,
+            "dist": 0.2597253614921069,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.06516102319552378
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.85,
-            "dist": 0.29425213069222544,
+            "dist": 0.29099573523720756,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.06112087348401994
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.95,
-            "dist": 0.2436437525128215,
+            "dist": 0.2470602820680801,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.04163184812547539
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.0,
-            "dist": 0.2885504763677355,
+            "dist": 0.29124363512547,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.044869068752404734
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.1,
-            "dist": 0.24017742569959846,
+            "dist": 0.24028498273742296,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.05405732053648166
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.2,
-            "dist": 0.2177258512900318,
+            "dist": 0.21913675563527263,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.06516102319552378
           }
         ],
-        "dist_planar": 0.2576874643519437,
-        "dist_multimode": 0.2177258512900318,
-        "margin": 0.03996161306191187
+        "dist_planar": 0.2597253614921069,
+        "dist_multimode": 0.21913675563527263,
+        "margin": 0.04058860585683427
       },
       "holonomy_polish": null,
       "defect_beta": 0.2,
+      "defect_beta_effective": 0.2,
       "defect_dist": 2.404802287862446,
       "maxop_dual": {
         "maxop_mean_gap": 0.06516102319552378,
@@ -798,13 +803,13 @@
       "n_ca": 13,
       "chain": "B",
       "N_scaffold": 13,
-      "native_dist": 0.499714296740682,
-      "native_proj": 0.5191219874500934,
+      "native_dist": 0.4846898850216648,
+      "native_proj": 0.5048111241056646,
       "native_op": 0.0,
-      "native_rank": 10.0,
+      "native_rank": 9.333333333333334,
       "n_total": 41,
-      "enrichment": 0.775,
-      "enrichment_std": 0.05400617248673217,
+      "enrichment": 0.7916666666666666,
+      "enrichment_std": 0.04249182927993986,
       "top20": false,
       "method": "PROJ_SHEAF_DEFECT_CTS",
       "n_templates": 6,
@@ -818,12 +823,12 @@
       "multimode_mode": "self_fit_dense",
       "multimode_fit": {
         "chosen": "multimode",
-        "omega_scale_mult": 1.3,
-        "dist": 0.5157472763312119,
+        "omega_scale_mult": 0.95,
+        "dist": 0.5048111241056646,
         "defect_dist": 0.0,
         "defect_tie": false,
-        "maxop_mean_gap": 0.022553341029722562,
-        "maxop_mean_frustration": 0.07636060570623,
+        "maxop_mean_gap": 0.023091044578798226,
+        "maxop_mean_frustration": 0.0825110975472945,
         "selection": "min_proj_then_max_maxop_gap",
         "ontology": "projection_primary_maxop_tiebreak_not_lambda_eq_gamma",
         "n_bank": 18,
@@ -831,181 +836,182 @@
           {
             "multimode": false,
             "omega_scale_mult": 0.8,
-            "dist": 0.5223321990868454,
+            "dist": 0.5227306707282016,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.023429081280223706
           },
           {
             "multimode": false,
             "omega_scale_mult": 0.85,
-            "dist": 0.5246326096463666,
+            "dist": 0.5252199183017453,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.02631265559574078
           },
           {
             "multimode": false,
             "omega_scale_mult": 0.9,
-            "dist": 0.5228358555793517,
+            "dist": 0.5231541470114166,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.022260325765775826
           },
           {
             "multimode": false,
             "omega_scale_mult": 0.95,
-            "dist": 0.5222957281238029,
+            "dist": 0.5224995864067515,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.023091044578798226
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.0,
-            "dist": 0.5231170059615383,
+            "dist": 0.5232219249000815,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.023810723025796482
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.05,
-            "dist": 0.5233995187911967,
+            "dist": 0.5235270953172954,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.024817683473042296
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.1,
-            "dist": 0.5240346321145317,
+            "dist": 0.524049338906663,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.026026025684402546
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.2,
-            "dist": 0.5237298272028064,
+            "dist": 0.5237470744730147,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.027136170212999453
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.3,
-            "dist": 0.5215521133836409,
+            "dist": 0.5213444300195165,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.022553341029722562
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.8,
-            "dist": 0.5210939954373002,
+            "dist": 0.5149265462967596,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.023429081280223706
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.85,
-            "dist": 0.5206057231950124,
+            "dist": 0.5094994802941443,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.02631265559574078
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.9,
-            "dist": 0.5248394781735968,
+            "dist": 0.5056192957290138,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.022260325765775826
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.95,
-            "dist": 0.5242421530068901,
+            "dist": 0.5048111241056646,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.023091044578798226
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.0,
-            "dist": 0.5181349887947024,
+            "dist": 0.5080780518760116,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.023810723025796482
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.05,
-            "dist": 0.5164346625135551,
+            "dist": 0.5117463146163499,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.024817683473042296
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.1,
-            "dist": 0.5194842788576582,
+            "dist": 0.5148583483619645,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.026026025684402546
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.2,
-            "dist": 0.5268314877526158,
+            "dist": 0.5139170356987537,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.027136170212999453
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.3,
-            "dist": 0.5157472763312119,
+            "dist": 0.5221114542691374,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.022553341029722562
           }
         ],
-        "dist_planar": 0.5215521133836409,
-        "dist_multimode": 0.5157472763312119,
-        "margin": 0.005804837052429068
+        "dist_planar": 0.5213444300195165,
+        "dist_multimode": 0.5048111241056646,
+        "margin": 0.016533305913851826
       },
       "holonomy_polish": null,
       "defect_beta": 0.2,
-      "defect_dist": 2.813890226020241,
+      "defect_beta_effective": 0.28,
+      "defect_dist": 2.8863303729901495,
       "maxop_dual": {
-        "maxop_mean_gap": 0.022553341029722562,
-        "maxop_gap_cv": 0.8126845534949084,
-        "maxop_mean_frustration": 0.07636060570623,
-        "projection_dist": 0.499714296740682,
+        "maxop_mean_gap": 0.023091044578798226,
+        "maxop_gap_cv": 0.7722013808092462,
+        "maxop_mean_frustration": 0.0825110975472945,
+        "projection_dist": 0.4846898850216648,
         "ontology": "projection_primary_maxop_dual_diagnostic"
       },
       "operator": {
         "thetas": [
-          4.179571333555694,
-          0.8129097983311625,
-          3.487577251406521,
-          6.170443062977565,
-          1.526985861717892,
-          2.773990127560438
+          5.719413403812734,
+          1.1124028819268543,
+          4.772474133503853,
+          2.0895596002453076,
+          3.795986490345813,
+          3.0160764038160477
         ],
         "gaps": [
-          0.02612748045370301,
-          0.003908917395283131,
-          0.04606717174449704,
-          7.52114435558278e-05,
-          0.013781101816448257,
-          0.045360163324848116
+          0.0018804079810484365,
+          0.007317664483486446,
+          0.013489236892289296,
+          0.025780277584129485,
+          0.03649296372748807,
+          0.053585716804347615
         ],
         "frustrations": [
-          0.10247846677008932,
-          0.003908917395282874,
-          0.07154094389995791,
-          0.22109404103075292,
-          0.013781101816449093,
-          0.045360163324847935
+          0.1904582362535716,
+          0.007317664483488029,
+          0.1332653983780263,
+          0.02578027758413004,
+          0.08465929178020315,
+          0.05358571680434787
         ],
         "logZ": [
-          0.367589118393178,
-          0.650563356459312,
-          0.24248125082180236,
-          0.7121747316935882,
-          0.5078372941583534,
-          0.24479940912280898
+          0.6827735517990712,
+          0.5985394228677795,
+          0.5116936955577995,
+          0.37089303761484727,
+          0.28679673362169406,
+          0.22656251003250316
         ],
-        "mean_gap": 0.022553341029722562,
-        "gap_cv": 0.8126845534949084,
-        "mean_frustration": 0.07636060570623,
-        "mean_logZ": 0.4542408601081738
+        "mean_gap": 0.023091044578798226,
+        "gap_cv": 0.7722013808092462,
+        "mean_frustration": 0.0825110975472945,
+        "mean_logZ": 0.4462098252489491
       }
     },
     {
@@ -1014,13 +1020,13 @@
       "n_ca": 14,
       "chain": "A",
       "N_scaffold": 14,
-      "native_dist": 0.4940222905607514,
+      "native_dist": 0.48575069160893075,
       "native_proj": 0.514701287940303,
       "native_op": 0.0,
-      "native_rank": 6.0,
+      "native_rank": 5.666666666666667,
       "n_total": 41,
-      "enrichment": 0.875,
-      "enrichment_std": 0.05400617248673217,
+      "enrichment": 0.8833333333333334,
+      "enrichment_std": 0.042491829279939906,
       "top20": true,
       "method": "PROJ_SHEAF_DEFECT_CTS",
       "n_templates": 6,
@@ -1035,7 +1041,7 @@
       "multimode_fit": {
         "chosen": "planar",
         "omega_scale_mult": 1.3,
-        "dist": 0.5153019030849664,
+        "dist": 0.514701287940303,
         "defect_dist": 0.0,
         "defect_tie": false,
         "maxop_mean_gap": 0.019454899979890392,
@@ -1047,142 +1053,143 @@
           {
             "multimode": false,
             "omega_scale_mult": 0.8,
-            "dist": 0.5211895748140243,
+            "dist": 0.5228480338446136,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.02020910964583814
           },
           {
             "multimode": false,
             "omega_scale_mult": 0.85,
-            "dist": 0.5178072156093835,
+            "dist": 0.5198456267046262,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.02269721984386309
           },
           {
             "multimode": false,
             "omega_scale_mult": 0.9,
-            "dist": 0.5164385167689793,
+            "dist": 0.5174630680140562,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.01920232610195981
           },
           {
             "multimode": false,
             "omega_scale_mult": 0.95,
-            "dist": 0.5196785079511538,
+            "dist": 0.5210436099678427,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.01991859878243876
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.0,
-            "dist": 0.5186606312748683,
+            "dist": 0.5198676919724262,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.020539052417255274
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.05,
-            "dist": 0.5186523450014787,
+            "dist": 0.5197297005767725,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.021407651345566867
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.1,
-            "dist": 0.5194357966474115,
+            "dist": 0.5202972365996221,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.022450261414334663
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.2,
-            "dist": 0.5203908569052974,
+            "dist": 0.5207602626094111,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.02340787672418163
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.3,
-            "dist": 0.5153019030849664,
+            "dist": 0.514701287940303,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.019454899979890392
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.8,
-            "dist": 0.5448013715903759,
+            "dist": 0.5425063282349167,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.02020910964583814
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.85,
-            "dist": 0.5406361049450815,
+            "dist": 0.5408810852204183,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.02269721984386309
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.9,
-            "dist": 0.5366578284573225,
+            "dist": 0.5405712366960859,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.01920232610195981
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.95,
-            "dist": 0.5380536874622082,
+            "dist": 0.5398559487647211,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.01991859878243876
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.0,
-            "dist": 0.5447643021175698,
+            "dist": 0.5418370050047928,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.020539052417255274
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.05,
-            "dist": 0.5401644790250346,
+            "dist": 0.541163977460934,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.021407651345566867
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.1,
-            "dist": 0.5378723868427794,
+            "dist": 0.5398401289747046,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.022450261414334663
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.2,
-            "dist": 0.5455397583373074,
+            "dist": 0.5426279674701749,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.02340787672418163
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.3,
-            "dist": 0.5428432678158471,
+            "dist": 0.5416658341923951,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.019454899979890392
           }
         ],
-        "dist_planar": 0.5153019030849664,
-        "dist_multimode": 0.5366578284573225,
-        "margin": -0.021355925372356088
+        "dist_planar": 0.514701287940303,
+        "dist_multimode": 0.5398401289747046,
+        "margin": -0.02513884103440156
       },
       "holonomy_polish": null,
       "defect_beta": 0.2,
+      "defect_beta_effective": 0.28,
       "defect_dist": 2.7420420069503,
       "maxop_dual": {
         "maxop_mean_gap": 0.019454899979890392,
         "maxop_gap_cv": 0.8127862030005161,
         "maxop_mean_frustration": 0.06595388161544735,
-        "projection_dist": 0.4940222905607514,
+        "projection_dist": 0.48575069160893075,
         "ontology": "projection_primary_maxop_dual_diagnostic"
       },
       "operator": {
@@ -1230,13 +1237,13 @@
       "n_ca": 13,
       "chain": "P",
       "N_scaffold": 13,
-      "native_dist": 0.4961548023916553,
+      "native_dist": 0.488618999889298,
       "native_proj": 0.5149943086475485,
       "native_op": 0.0,
-      "native_rank": 8.666666666666666,
+      "native_rank": 7.333333333333333,
       "n_total": 41,
-      "enrichment": 0.8083333333333335,
-      "enrichment_std": 0.11606990230986766,
+      "enrichment": 0.8416666666666667,
+      "enrichment_std": 0.08498365855987977,
       "top20": true,
       "method": "PROJ_SHEAF_DEFECT_CTS",
       "n_templates": 6,
@@ -1251,7 +1258,7 @@
       "multimode_fit": {
         "chosen": "planar",
         "omega_scale_mult": 0.85,
-        "dist": 0.5144012051760776,
+        "dist": 0.5149943086475485,
         "defect_dist": 0.0,
         "defect_tie": false,
         "maxop_mean_gap": 0.02631265559574078,
@@ -1263,142 +1270,143 @@
           {
             "multimode": false,
             "omega_scale_mult": 0.8,
-            "dist": 0.5166032548896942,
+            "dist": 0.5167300500479748,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.023429081280223706
           },
           {
             "multimode": false,
             "omega_scale_mult": 0.85,
-            "dist": 0.5144012051760776,
+            "dist": 0.5149943086475485,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.02631265559574078
           },
           {
             "multimode": false,
             "omega_scale_mult": 0.9,
-            "dist": 0.519210904315061,
+            "dist": 0.518996142663873,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.022260325765775826
           },
           {
             "multimode": false,
             "omega_scale_mult": 0.95,
-            "dist": 0.5185686901720625,
+            "dist": 0.5180508166220141,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.023091044578798226
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.0,
-            "dist": 0.516838285656421,
+            "dist": 0.5166100687276515,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.023810723025796482
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.05,
-            "dist": 0.5157536790733058,
+            "dist": 0.515722703540473,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.024817683473042296
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.1,
-            "dist": 0.5159026483112532,
+            "dist": 0.5157526275959954,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.026026025684402546
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.2,
-            "dist": 0.5157477840061592,
+            "dist": 0.5152325201344419,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.027136170212999453
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.3,
-            "dist": 0.516683573923619,
+            "dist": 0.5171577097978828,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.022553341029722562
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.8,
-            "dist": 0.5297206189927561,
+            "dist": 0.5266771985299278,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.023429081280223706
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.85,
-            "dist": 0.5283802864085797,
+            "dist": 0.5230620649900956,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.02631265559574078
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.9,
-            "dist": 0.538814447963733,
+            "dist": 0.5247700805090636,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.022260325765775826
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.95,
-            "dist": 0.5300360139082739,
+            "dist": 0.5254259784417802,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.023091044578798226
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.0,
-            "dist": 0.5302027102154135,
+            "dist": 0.5279901615139517,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.023810723025796482
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.05,
-            "dist": 0.5361525507812421,
+            "dist": 0.5261056877359589,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.024817683473042296
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.1,
-            "dist": 0.5369865742134399,
+            "dist": 0.5225314611949524,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.026026025684402546
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.2,
-            "dist": 0.5282299141563905,
+            "dist": 0.5230370203829711,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.027136170212999453
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.3,
-            "dist": 0.5298048902795983,
+            "dist": 0.5235263052691803,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.022553341029722562
           }
         ],
-        "dist_planar": 0.5144012051760776,
-        "dist_multimode": 0.5282299141563905,
-        "margin": -0.013828708980312965
+        "dist_planar": 0.5149943086475485,
+        "dist_multimode": 0.5225314611949524,
+        "margin": -0.007537152547403947
       },
       "holonomy_polish": null,
       "defect_beta": 0.2,
+      "defect_beta_effective": 0.28,
       "defect_dist": 2.8053118491205518,
       "maxop_dual": {
         "maxop_mean_gap": 0.02631265559574078,
         "maxop_gap_cv": 0.5886880138225125,
         "maxop_mean_frustration": 0.07736036369628352,
-        "projection_dist": 0.4961548023916553,
+        "projection_dist": 0.488618999889298,
         "ontology": "projection_primary_maxop_dual_diagnostic"
       },
       "operator": {
@@ -1467,7 +1475,7 @@
       "multimode_fit": {
         "chosen": "multimode",
         "omega_scale_mult": 0.85,
-        "dist": 0.4266752218213455,
+        "dist": 0.4301284287282064,
         "defect_dist": 0.0,
         "defect_tie": false,
         "maxop_mean_gap": 0.04687352179018839,
@@ -1479,80 +1487,81 @@
           {
             "multimode": false,
             "omega_scale_mult": 0.85,
-            "dist": 0.47226626427000973,
+            "dist": 0.4678873452227807,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.04687352179018839
           },
           {
             "multimode": false,
             "omega_scale_mult": 0.95,
-            "dist": 0.4620243648006624,
+            "dist": 0.4605182759416633,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.031914537402421755
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.0,
-            "dist": 0.4695024327304206,
+            "dist": 0.4670379219121179,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03439422169504379
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.1,
-            "dist": 0.47044180050173157,
+            "dist": 0.46845919692564364,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.04144427159009142
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.2,
-            "dist": 0.46662855348937227,
+            "dist": 0.46603291853370227,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.049977038251178635
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.85,
-            "dist": 0.4266752218213455,
+            "dist": 0.4301284287282064,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.04687352179018839
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.95,
-            "dist": 0.48836320000785616,
+            "dist": 0.48951397773385547,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.031914537402421755
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.0,
-            "dist": 0.43692622938061276,
+            "dist": 0.4382905764138618,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03439422169504379
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.1,
-            "dist": 0.4503370643104292,
+            "dist": 0.4518461886308799,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.04144427159009142
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.2,
-            "dist": 0.43747887684350667,
+            "dist": 0.43726071280501094,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.049977038251178635
           }
         ],
-        "dist_planar": 0.4620243648006624,
-        "dist_multimode": 0.4266752218213455,
-        "margin": 0.035349142979316905
+        "dist_planar": 0.4605182759416633,
+        "dist_multimode": 0.4301284287282064,
+        "margin": 0.03038984721345689
       },
       "holonomy_polish": null,
       "defect_beta": 0.2,
+      "defect_beta_effective": 0.2,
       "defect_dist": 2.325199297008037,
       "maxop_dual": {
         "maxop_mean_gap": 0.04687352179018839,
@@ -1619,7 +1628,7 @@
       "multimode_fit": {
         "chosen": "multimode",
         "omega_scale_mult": 0.85,
-        "dist": 0.42275826733808186,
+        "dist": 0.4262671749082006,
         "defect_dist": 0.0,
         "defect_tie": false,
         "maxop_mean_gap": 0.04687352179018839,
@@ -1631,80 +1640,81 @@
           {
             "multimode": false,
             "omega_scale_mult": 0.85,
-            "dist": 0.4701379991139424,
+            "dist": 0.46588950253840367,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.04687352179018839
           },
           {
             "multimode": false,
             "omega_scale_mult": 0.95,
-            "dist": 0.4588204880431005,
+            "dist": 0.4577337946674021,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.031914537402421755
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.0,
-            "dist": 0.46569695568960073,
+            "dist": 0.4640134144171327,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03439422169504379
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.1,
-            "dist": 0.4679575749242034,
+            "dist": 0.46669179626709634,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.04144427159009142
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.2,
-            "dist": 0.46425834154853884,
+            "dist": 0.4643180819621071,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.049977038251178635
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.85,
-            "dist": 0.42275826733808186,
+            "dist": 0.4262671749082006,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.04687352179018839
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.95,
-            "dist": 0.4860912516188496,
+            "dist": 0.4874397007177479,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.031914537402421755
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.0,
-            "dist": 0.43394352110520823,
+            "dist": 0.435335362002254,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03439422169504379
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.1,
-            "dist": 0.4457579792280597,
+            "dist": 0.4471878958532935,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.04144427159009142
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.2,
-            "dist": 0.4339032474676083,
+            "dist": 0.43359841016064543,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.049977038251178635
           }
         ],
-        "dist_planar": 0.4588204880431005,
-        "dist_multimode": 0.42275826733808186,
-        "margin": 0.03606222070501863
+        "dist_planar": 0.4577337946674021,
+        "dist_multimode": 0.4262671749082006,
+        "margin": 0.03146661975920151
       },
       "holonomy_polish": null,
       "defect_beta": 0.2,
+      "defect_beta_effective": 0.2,
       "defect_dist": 2.310193504491823,
       "maxop_dual": {
         "maxop_mean_gap": 0.04687352179018839,
@@ -1771,7 +1781,7 @@
       "multimode_fit": {
         "chosen": "multimode",
         "omega_scale_mult": 1.0,
-        "dist": 0.46578102462268606,
+        "dist": 0.4670724581716297,
         "defect_dist": 0.0,
         "defect_tie": false,
         "maxop_mean_gap": 0.044869068752404734,
@@ -1783,80 +1793,81 @@
           {
             "multimode": false,
             "omega_scale_mult": 0.85,
-            "dist": 0.5431979214533076,
+            "dist": 0.5448251585717168,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.06112087348401994
           },
           {
             "multimode": false,
             "omega_scale_mult": 0.95,
-            "dist": 0.5411548626560918,
+            "dist": 0.5421628122223466,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.04163184812547539
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.0,
-            "dist": 0.5410359433655251,
+            "dist": 0.5420210740527248,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.044869068752404734
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.1,
-            "dist": 0.5461175584286025,
+            "dist": 0.5473858241740991,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.05405732053648166
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.2,
-            "dist": 0.5481720365987743,
+            "dist": 0.5497146896066856,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.06516102319552378
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.85,
-            "dist": 0.49473067817450345,
+            "dist": 0.4984053592238301,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.06112087348401994
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.95,
-            "dist": 0.4690344132482301,
+            "dist": 0.47030871231673804,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.04163184812547539
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.0,
-            "dist": 0.46578102462268606,
+            "dist": 0.4670724581716297,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.044869068752404734
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.1,
-            "dist": 0.4903596575682267,
+            "dist": 0.4908146936014181,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.05405732053648166
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.2,
-            "dist": 0.47201287247871415,
+            "dist": 0.47178461602600424,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.06516102319552378
           }
         ],
-        "dist_planar": 0.5410359433655251,
-        "dist_multimode": 0.46578102462268606,
-        "margin": 0.07525491874283902
+        "dist_planar": 0.5420210740527248,
+        "dist_multimode": 0.4670724581716297,
+        "margin": 0.07494861588109514
       },
       "holonomy_polish": null,
       "defect_beta": 0.2,
+      "defect_beta_effective": 0.2,
       "defect_dist": 2.02783019188924,
       "maxop_dual": {
         "maxop_mean_gap": 0.044869068752404734,
@@ -1902,13 +1913,13 @@
       "n_ca": 12,
       "chain": "P",
       "N_scaffold": 12,
-      "native_dist": 0.5073096759300495,
-      "native_proj": 0.5468477670179894,
+      "native_dist": 0.4961149805525944,
+      "native_proj": 0.5462894363210353,
       "native_op": 0.0,
       "native_rank": 10.0,
       "n_total": 41,
       "enrichment": 0.775,
-      "enrichment_std": 0.08164965809277258,
+      "enrichment_std": 0.05400617248673218,
       "top20": false,
       "method": "PROJ_SHEAF_DEFECT_CTS",
       "n_templates": 6,
@@ -1922,12 +1933,12 @@
       "multimode_mode": "self_fit_dense",
       "multimode_fit": {
         "chosen": "planar",
-        "omega_scale_mult": 1.1,
-        "dist": 0.5453105319156288,
+        "omega_scale_mult": 0.9,
+        "dist": 0.5462894363210353,
         "defect_dist": 0.0,
         "defect_tie": false,
-        "maxop_mean_gap": 0.03052822360258946,
-        "maxop_mean_frustration": 0.07232661515934032,
+        "maxop_mean_gap": 0.02611043675689742,
+        "maxop_mean_frustration": 0.10752721026809993,
         "selection": "min_proj_then_max_maxop_gap",
         "ontology": "projection_primary_maxop_tiebreak_not_lambda_eq_gamma",
         "n_bank": 14,
@@ -1935,163 +1946,164 @@
           {
             "multimode": false,
             "omega_scale_mult": 0.85,
-            "dist": 0.5474691839492971,
+            "dist": 0.5470923733076188,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.030864935377177643
           },
           {
             "multimode": false,
             "omega_scale_mult": 0.9,
-            "dist": 0.5455422144649591,
+            "dist": 0.5462894363210353,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.02611043675689742
           },
           {
             "multimode": false,
             "omega_scale_mult": 0.95,
-            "dist": 0.5468000299801423,
+            "dist": 0.5474676961820192,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.027085395020073733
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.0,
-            "dist": 0.5476935735765424,
+            "dist": 0.5484783857843353,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.02793016374995894
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.1,
-            "dist": 0.5453105319156288,
+            "dist": 0.5468477670179894,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03052822360258946
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.15,
-            "dist": 0.5458134724334258,
+            "dist": 0.5475950788221907,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.032023683361779486
           },
           {
             "multimode": false,
             "omega_scale_mult": 1.2,
-            "dist": 0.5471333343575076,
+            "dist": 0.5490623024079769,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03183041753258287
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.85,
-            "dist": 0.6013708429739266,
+            "dist": 0.5773954339274355,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.030864935377177643
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.9,
-            "dist": 0.5997821524720477,
+            "dist": 0.5778515254487632,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.02611043675689742
           },
           {
             "multimode": true,
             "omega_scale_mult": 0.95,
-            "dist": 0.5985660351171542,
+            "dist": 0.5770432217253799,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.027085395020073733
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.0,
-            "dist": 0.5980763464458968,
+            "dist": 0.5804515715219317,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.02793016374995894
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.1,
-            "dist": 0.597019770968086,
+            "dist": 0.582364407156488,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03052822360258946
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.15,
-            "dist": 0.5963361027096196,
+            "dist": 0.5829740337950501,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.032023683361779486
           },
           {
             "multimode": true,
             "omega_scale_mult": 1.2,
-            "dist": 0.5965963279895388,
+            "dist": 0.5834331245610095,
             "defect_dist": 0.0,
             "maxop_mean_gap": 0.03183041753258287
           }
         ],
-        "dist_planar": 0.5453105319156288,
-        "dist_multimode": 0.5963361027096196,
-        "margin": -0.05102557079399073
+        "dist_planar": 0.5462894363210353,
+        "dist_multimode": 0.5770432217253799,
+        "margin": -0.03075378540434459
       },
       "holonomy_polish": null,
       "defect_beta": 0.2,
-      "defect_dist": 2.32771541052193,
+      "defect_beta_effective": 0.25,
+      "defect_dist": 2.303944088315145,
       "maxop_dual": {
-        "maxop_mean_gap": 0.03052822360258946,
-        "maxop_gap_cv": 0.635163421712915,
-        "maxop_mean_frustration": 0.07232661515934032,
-        "projection_dist": 0.5073096759300495,
+        "maxop_mean_gap": 0.02611043675689742,
+        "maxop_gap_cv": 0.8479121445133877,
+        "maxop_mean_frustration": 0.10752721026809993,
+        "projection_dist": 0.4961149805525944,
         "ontology": "projection_primary_maxop_dual_diagnostic"
       },
       "operator": {
         "thetas": [
-          4.9394933942021835,
-          0.9607115798459193,
-          4.121682206207893,
-          1.8046196547575084,
-          3.278351968935064,
-          2.604793257841132
+          6.03715859291378,
+          1.1742030420339016,
+          5.037611585365056,
+          2.2056462447036984,
+          4.006874628698411,
+          3.18363620402805
         ],
         "gaps": [
-          0.01252515453334186,
-          0.006406068514071405,
-          0.032357479780786506,
-          0.022573049427033524,
-          0.06237461159659306,
-          0.04693297776371043
+          0.00042032655500484617,
+          0.009567035019514154,
+          0.010764315635390286,
+          0.03368885127433967,
+          0.03587549572357268,
+          0.0663465963335629
         ],
         "frustrations": [
-          0.16705581538885905,
-          0.006406068514070551,
-          0.116818785201795,
-          0.02257304942703353,
-          0.07417299466057337,
-          0.046932977763710415
+          0.24781241600863302,
+          0.00956703501951428,
+          0.17365983870930823,
+          0.033688851274340514,
+          0.11046130782513419,
+          0.06997381277166936
         ],
         "logZ": [
-          0.48761260537034357,
-          0.5893920957021578,
-          0.21557697731108383,
-          0.3372657558528048,
-          0.02779566870052899,
-          0.08827447707114737
+          0.6949138438468453,
+          0.5359662795824679,
+          0.5161952113872341,
+          0.20116118028956623,
+          0.17866586478729227,
+          0.023780002605443096
         ],
-        "mean_gap": 0.03052822360258946,
-        "gap_cv": 0.635163421712915,
-        "mean_frustration": 0.07232661515934032,
-        "mean_logZ": 0.29098626333467775
+        "mean_gap": 0.02611043675689742,
+        "gap_cv": 0.8479121445133877,
+        "mean_frustration": 0.10752721026809993,
+        "mean_logZ": 0.3584470637498081
       }
     }
   ],
   "summary": {
     "n_ok": 12,
     "n_total_ids": 12,
-    "mean_enrichment": 0.8548611111111112,
-    "mean_enrichment_std": 0.05640623167380577,
-    "probe_mean_enrichment": 0.8791666666666668,
-    "holdout_mean_enrichment": 0.8427083333333334,
+    "mean_enrichment": 0.8611111111111112,
+    "mean_enrichment_std": 0.048695691718011115,
+    "probe_mean_enrichment": 0.8833333333333334,
+    "holdout_mean_enrichment": 0.8500000000000001,
     "top20_count": 10,
     "n_seeds": 3,
     "n_decoys": 40,
