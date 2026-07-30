@@ -81,3 +81,46 @@ def parse_ca_trace(pdb_text: str, chain: str | None = None) -> np.ndarray:
 def load_ca(path: Path | str, chain: str | None = None) -> np.ndarray:
     text = Path(path).read_text(encoding="utf-8", errors="replace")
     return parse_ca_trace(text, chain=chain)
+
+
+def chain_ca_counts(pdb_text: str) -> dict[str, int]:
+    """Count CA atoms per chain in the first MODEL only."""
+    counts: dict[str, int] = {}
+    saw_model = False
+    for line in pdb_text.splitlines():
+        if line.startswith("MODEL"):
+            if saw_model:
+                break
+            saw_model = True
+            continue
+        if line.startswith("ENDMDL") and saw_model:
+            break
+        if not (line.startswith("ATOM") or line.startswith("HETATM")):
+            continue
+        if len(line) < 22 or line[12:16].strip() != "CA":
+            continue
+        ch = line[21].strip() or "_"
+        counts[ch] = counts.get(ch, 0) + 1
+    return counts
+
+
+def load_ca_cyclic_band(
+    path: Path | str,
+    lo: int = 6,
+    hi: int = 40,
+    chain: str | None = None,
+) -> tuple[np.ndarray, str]:
+    """Load CA trace preferring a chain with length in [lo, hi] (cyclic peptide band)."""
+    text = Path(path).read_text(encoding="utf-8", errors="replace")
+    if chain is not None:
+        return parse_ca_trace(text, chain=chain), chain
+    counts = chain_ca_counts(text)
+    # prefer shortest chain inside band
+    band = [(ch, n) for ch, n in counts.items() if lo <= n <= hi]
+    if band:
+        band.sort(key=lambda x: x[1])
+        ch = band[0][0]
+        return parse_ca_trace(text, chain=None if ch == "_" else ch), ch
+    # fallback: full first-model parse
+    xyz = parse_ca_trace(text, chain=None)
+    return xyz, "ALL"

@@ -1,0 +1,148 @@
+{
+  "rows": [
+    {
+      "pdb": "1CSA",
+      "status": "OK",
+      "n_ca": 11,
+      "chain": "A",
+      "N_scaffold": 11,
+      "native_dist": 0.39062529250173544,
+      "native_rank": 12,
+      "n_total": 41,
+      "enrichment": 0.725,
+      "top20": false,
+      "method": "CRIT_KABSCH_CYCLIC",
+      "n_templates": 6
+    },
+    {
+      "pdb": "1S4U",
+      "status": "SKIP_LENGTH",
+      "n_ca": 356,
+      "chain": "ALL",
+      "note": "no chain in cyclic peptide length band [6,40]"
+    },
+    {
+      "pdb": "1JBL",
+      "status": "OK",
+      "n_ca": 14,
+      "chain": "A",
+      "N_scaffold": 14,
+      "native_dist": 0.5274094032856128,
+      "native_rank": 19,
+      "n_total": 41,
+      "enrichment": 0.55,
+      "top20": false,
+      "method": "CRIT_KABSCH_CYCLIC",
+      "n_templates": 6
+    },
+    {
+      "pdb": "1IKF",
+      "status": "OK",
+      "n_ca": 11,
+      "chain": "C",
+      "N_scaffold": 11,
+      "native_dist": 0.3416180130603647,
+      "native_rank": 15,
+      "n_total": 41,
+      "enrichment": 0.65,
+      "top20": false,
+      "method": "CRIT_KABSCH_CYCLIC",
+      "n_templates": 6
+    },
+    {
+      "pdb": "2X2C",
+      "status": "OK",
+      "n_ca": 11,
+      "chain": "B",
+      "N_scaffold": 11,
+      "native_dist": 0.3914623557889451,
+      "native_rank": 11,
+      "n_total": 41,
+      "enrichment": 0.75,
+      "top20": false,
+      "method": "CRIT_KABSCH_CYCLIC",
+      "n_templates": 6
+    },
+    {
+      "pdb": "3WNE",
+      "status": "OK",
+      "n_ca": 6,
+      "chain": "C",
+      "N_scaffold": 7,
+      "native_dist": 0.2650463625178557,
+      "native_rank": 5,
+      "n_total": 41,
+      "enrichment": 0.9,
+      "top20": true,
+      "method": "CRIT_KABSCH_CYCLIC",
+      "n_templates": 6
+    },
+    {
+      "pdb": "4K8Y",
+      "status": "OK",
+      "n_ca": 13,
+      "chain": "B",
+      "N_scaffold": 13,
+      "native_dist": 0.5015933090618724,
+      "native_rank": 11,
+      "n_total": 41,
+      "enrichment": 0.75,
+      "top20": false,
+      "method": "CRIT_KABSCH_CYCLIC",
+      "n_templates": 6
+    },
+    {
+      "pdb": "5EOC",
+      "status": "OK",
+      "n_ca": 13,
+      "chain": "P",
+      "N_scaffold": 13,
+      "native_dist": 0.5096331884873393,
+      "native_rank": 13,
+      "n_total": 41,
+      "enrichment": 0.7,
+      "top20": false,
+      "method": "CRIT_KABSCH_CYCLIC",
+      "n_templates": 6
+    },
+    {
+      "pdb": "6B3F",
+      "status": "SKIP_LENGTH",
+      "n_ca": 199,
+      "chain": "ALL",
+      "note": "no chain in cyclic peptide length band [6,40]"
+    },
+    {
+      "pdb": "1TET",
+      "status": "OK",
+      "n_ca": 12,
+      "chain": "P",
+      "N_scaffold": 12,
+      "native_dist": 0.5878177016476399,
+      "native_rank": 17,
+      "n_total": 41,
+      "enrichment": 0.6,
+      "top20": false,
+      "method": "CRIT_KABSCH_CYCLIC",
+      "n_templates": 6
+    }
+  ],
+  "summary": {
+    "n_ok": 8,
+    "n_total_ids": 10,
+    "mean_enrichment": 0.703125,
+    "top20_count": 1
+  },
+  "knobs": {
+    "Lambda": 148.24406107426935,
+    "omega_scale": 1.6266375886816526,
+    "weight_power": 2.465471283415999,
+    "tier_split": 0.6074425095110438,
+    "low_boost": 0.5581294116355281,
+    "w1_mult": 0.907164761960651,
+    "w2_mult": 1.098869151860439,
+    "w3_mult": 0.8
+  },
+  "ontology": "structure_path_not_protein_lm_bench",
+  "note": "Curated cyclic PDB IDs only. HF language datasets (~400 repos) are out of band; use CPSea/RCSB for coords."
+}

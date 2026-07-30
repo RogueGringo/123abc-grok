@@ -3,410 +3,410 @@
   "path": "data\\pdb\\1CSA.pdb",
   "n_ca": 11,
   "native": {
-    "mean_dist": 0.44976325898202585,
-    "method": "CRIT_KABSCH",
+    "mean_dist": 0.39062529250173544,
+    "method": "CRIT_KABSCH_CYCLIC",
     "in_basin": false,
     "n_templates": 6,
     "label": "native",
     "closure": 3.8729107916397973,
-    "rank": 12
+    "rank": 20
   },
-  "native_rank": 12,
+  "native_rank": 20,
   "n_total": 49,
-  "enrichment": 0.7708333333333334,
+  "enrichment": 0.6041666666666666,
   "top20": false,
   "ranked": [
     {
-      "mean_dist": 0.41443778331377074,
-      "method": "CRIT_KABSCH",
+      "mean_dist": 0.3632096244269039,
+      "method": "CRIT_KABSCH_CYCLIC",
       "in_basin": false,
       "n_templates": 6,
-      "label": "decoy_1",
+      "label": "decoy_27",
       "rank": 1
     },
     {
-      "mean_dist": 0.41734190035356133,
-      "method": "CRIT_KABSCH",
+      "mean_dist": 0.36685194207393473,
+      "method": "CRIT_KABSCH_CYCLIC",
       "in_basin": false,
       "n_templates": 6,
-      "label": "decoy_12",
+      "label": "decoy_1",
       "rank": 2
     },
     {
-      "mean_dist": 0.4246006975479779,
-      "method": "CRIT_KABSCH",
+      "mean_dist": 0.3682553968264821,
+      "method": "CRIT_KABSCH_CYCLIC",
       "in_basin": false,
       "n_templates": 6,
-      "label": "decoy_15",
+      "label": "decoy_36",
       "rank": 3
     },
     {
-      "mean_dist": 0.4307609462847214,
-      "method": "CRIT_KABSCH",
+      "mean_dist": 0.3706968370031732,
+      "method": "CRIT_KABSCH_CYCLIC",
       "in_basin": false,
       "n_templates": 6,
       "label": "decoy_13",
       "rank": 4
     },
     {
-      "mean_dist": 0.4366470051731234,
-      "method": "CRIT_KABSCH",
+      "mean_dist": 0.37161925957569064,
+      "method": "CRIT_KABSCH_CYCLIC",
       "in_basin": false,
       "n_templates": 6,
-      "label": "decoy_35",
+      "label": "decoy_37",
       "rank": 5
     },
     {
-      "mean_dist": 0.4377514550630411,
-      "method": "CRIT_KABSCH",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_17",
-      "rank": 6
-    },
-    {
-      "mean_dist": 0.44056750527081595,
-      "method": "CRIT_KABSCH",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_18",
-      "rank": 7
-    },
-    {
-      "mean_dist": 0.4433441288483897,
-      "method": "CRIT_KABSCH",
+      "mean_dist": 0.3744133336838596,
+      "method": "CRIT_KABSCH_CYCLIC",
       "in_basin": false,
       "n_templates": 6,
       "label": "decoy_2",
+      "rank": 6
+    },
+    {
+      "mean_dist": 0.375585352370582,
+      "method": "CRIT_KABSCH_CYCLIC",
+      "in_basin": false,
+      "n_templates": 6,
+      "label": "decoy_35",
+      "rank": 7
+    },
+    {
+      "mean_dist": 0.3773947505954144,
+      "method": "CRIT_KABSCH_CYCLIC",
+      "in_basin": false,
+      "n_templates": 6,
+      "label": "decoy_15",
       "rank": 8
     },
     {
-      "mean_dist": 0.4489281989804415,
-      "method": "CRIT_KABSCH",
+      "mean_dist": 0.37765064595566666,
+      "method": "CRIT_KABSCH_CYCLIC",
       "in_basin": false,
       "n_templates": 6,
-      "label": "decoy_5",
+      "label": "decoy_39",
       "rank": 9
     },
     {
-      "mean_dist": 0.4492828615517332,
-      "method": "CRIT_KABSCH",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_28",
-      "rank": 10
-    },
-    {
-      "mean_dist": 0.44939428230285905,
-      "method": "CRIT_KABSCH",
+      "mean_dist": 0.37772116366378333,
+      "method": "CRIT_KABSCH_CYCLIC",
       "in_basin": false,
       "n_templates": 6,
       "label": "decoy_9",
+      "rank": 10
+    },
+    {
+      "mean_dist": 0.37840456024665053,
+      "method": "CRIT_KABSCH_CYCLIC",
+      "in_basin": false,
+      "n_templates": 6,
+      "label": "decoy_44",
       "rank": 11
     },
     {
-      "mean_dist": 0.44976325898202585,
-      "method": "CRIT_KABSCH",
+      "mean_dist": 0.3807156943644635,
+      "method": "CRIT_KABSCH_CYCLIC",
+      "in_basin": false,
+      "n_templates": 6,
+      "label": "decoy_12",
+      "rank": 12
+    },
+    {
+      "mean_dist": 0.38331668537834884,
+      "method": "CRIT_KABSCH_CYCLIC",
+      "in_basin": false,
+      "n_templates": 6,
+      "label": "decoy_47",
+      "rank": 13
+    },
+    {
+      "mean_dist": 0.3852468994223854,
+      "method": "CRIT_KABSCH_CYCLIC",
+      "in_basin": false,
+      "n_templates": 6,
+      "label": "decoy_20",
+      "rank": 14
+    },
+    {
+      "mean_dist": 0.38650791902852843,
+      "method": "CRIT_KABSCH_CYCLIC",
+      "in_basin": false,
+      "n_templates": 6,
+      "label": "decoy_24",
+      "rank": 15
+    },
+    {
+      "mean_dist": 0.38756793190471023,
+      "method": "CRIT_KABSCH_CYCLIC",
+      "in_basin": false,
+      "n_templates": 6,
+      "label": "decoy_5",
+      "rank": 16
+    },
+    {
+      "mean_dist": 0.3882207022796725,
+      "method": "CRIT_KABSCH_CYCLIC",
+      "in_basin": false,
+      "n_templates": 6,
+      "label": "decoy_34",
+      "rank": 17
+    },
+    {
+      "mean_dist": 0.39018054481146724,
+      "method": "CRIT_KABSCH_CYCLIC",
+      "in_basin": false,
+      "n_templates": 6,
+      "label": "decoy_17",
+      "rank": 18
+    },
+    {
+      "mean_dist": 0.39058747906815283,
+      "method": "CRIT_KABSCH_CYCLIC",
+      "in_basin": false,
+      "n_templates": 6,
+      "label": "decoy_26",
+      "rank": 19
+    },
+    {
+      "mean_dist": 0.39062529250173544,
+      "method": "CRIT_KABSCH_CYCLIC",
       "in_basin": false,
       "n_templates": 6,
       "label": "native",
       "closure": 3.8729107916397973,
-      "rank": 12
-    },
-    {
-      "mean_dist": 0.45255713390891655,
-      "method": "CRIT_KABSCH",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_41",
-      "rank": 13
-    },
-    {
-      "mean_dist": 0.45457612755799875,
-      "method": "CRIT_KABSCH",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_25",
-      "rank": 14
-    },
-    {
-      "mean_dist": 0.45464185198625195,
-      "method": "CRIT_KABSCH",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_38",
-      "rank": 15
-    },
-    {
-      "mean_dist": 0.454699403215945,
-      "method": "CRIT_KABSCH",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_7",
-      "rank": 16
-    },
-    {
-      "mean_dist": 0.45487450280491476,
-      "method": "CRIT_KABSCH",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_27",
-      "rank": 17
-    },
-    {
-      "mean_dist": 0.45526086974002994,
-      "method": "CRIT_KABSCH",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_22",
-      "rank": 18
-    },
-    {
-      "mean_dist": 0.4553954556988915,
-      "method": "CRIT_KABSCH",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_32",
-      "rank": 19
-    },
-    {
-      "mean_dist": 0.4576241540551653,
-      "method": "CRIT_KABSCH",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_16",
       "rank": 20
     },
     {
-      "mean_dist": 0.45941069024899134,
-      "method": "CRIT_KABSCH",
+      "mean_dist": 0.3912914382436227,
+      "method": "CRIT_KABSCH_CYCLIC",
       "in_basin": false,
       "n_templates": 6,
-      "label": "decoy_44",
+      "label": "decoy_18",
       "rank": 21
     },
     {
-      "mean_dist": 0.46093467232319724,
-      "method": "CRIT_KABSCH",
+      "mean_dist": 0.39372170827412717,
+      "method": "CRIT_KABSCH_CYCLIC",
       "in_basin": false,
       "n_templates": 6,
       "label": "decoy_0",
       "rank": 22
     },
     {
-      "mean_dist": 0.46270376212347003,
-      "method": "CRIT_KABSCH",
+      "mean_dist": 0.3966638187806393,
+      "method": "CRIT_KABSCH_CYCLIC",
       "in_basin": false,
       "n_templates": 6,
-      "label": "decoy_19",
+      "label": "decoy_22",
       "rank": 23
     },
     {
-      "mean_dist": 0.46346918624298356,
-      "method": "CRIT_KABSCH",
+      "mean_dist": 0.39668675731974196,
+      "method": "CRIT_KABSCH_CYCLIC",
       "in_basin": false,
       "n_templates": 6,
-      "label": "decoy_39",
+      "label": "decoy_38",
       "rank": 24
     },
     {
-      "mean_dist": 0.46387051643773763,
-      "method": "CRIT_KABSCH",
+      "mean_dist": 0.39682967880450715,
+      "method": "CRIT_KABSCH_CYCLIC",
       "in_basin": false,
       "n_templates": 6,
-      "label": "decoy_47",
+      "label": "decoy_41",
       "rank": 25
     },
     {
-      "mean_dist": 0.4645370167751939,
-      "method": "CRIT_KABSCH",
+      "mean_dist": 0.3970475822073024,
+      "method": "CRIT_KABSCH_CYCLIC",
       "in_basin": false,
       "n_templates": 6,
       "label": "decoy_8",
       "rank": 26
     },
     {
-      "mean_dist": 0.4679276446489869,
-      "method": "CRIT_KABSCH",
+      "mean_dist": 0.39781364866631885,
+      "method": "CRIT_KABSCH_CYCLIC",
       "in_basin": false,
       "n_templates": 6,
-      "label": "decoy_31",
+      "label": "decoy_7",
       "rank": 27
     },
     {
-      "mean_dist": 0.4691795541514339,
-      "method": "CRIT_KABSCH",
+      "mean_dist": 0.39884056547139163,
+      "method": "CRIT_KABSCH_CYCLIC",
       "in_basin": false,
       "n_templates": 6,
-      "label": "decoy_30",
+      "label": "decoy_19",
       "rank": 28
     },
     {
-      "mean_dist": 0.4722086096459397,
-      "method": "CRIT_KABSCH",
+      "mean_dist": 0.39966685018178766,
+      "method": "CRIT_KABSCH_CYCLIC",
       "in_basin": false,
       "n_templates": 6,
-      "label": "decoy_36",
+      "label": "decoy_43",
       "rank": 29
     },
     {
-      "mean_dist": 0.47335305050960086,
-      "method": "CRIT_KABSCH",
+      "mean_dist": 0.4006927933225296,
+      "method": "CRIT_KABSCH_CYCLIC",
       "in_basin": false,
       "n_templates": 6,
-      "label": "decoy_14",
+      "label": "decoy_28",
       "rank": 30
     },
     {
-      "mean_dist": 0.4767412932188059,
-      "method": "CRIT_KABSCH",
+      "mean_dist": 0.40075123515250577,
+      "method": "CRIT_KABSCH_CYCLIC",
       "in_basin": false,
       "n_templates": 6,
       "label": "decoy_29",
       "rank": 31
     },
     {
-      "mean_dist": 0.47749399717968144,
-      "method": "CRIT_KABSCH",
+      "mean_dist": 0.40111293719255836,
+      "method": "CRIT_KABSCH_CYCLIC",
       "in_basin": false,
       "n_templates": 6,
-      "label": "decoy_26",
+      "label": "decoy_16",
       "rank": 32
     },
     {
-      "mean_dist": 0.4777556852168174,
-      "method": "CRIT_KABSCH",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_24",
-      "rank": 33
-    },
-    {
-      "mean_dist": 0.4803726623289024,
-      "method": "CRIT_KABSCH",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_37",
-      "rank": 34
-    },
-    {
-      "mean_dist": 0.48037518566547033,
-      "method": "CRIT_KABSCH",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_34",
-      "rank": 35
-    },
-    {
-      "mean_dist": 0.48199651388299153,
-      "method": "CRIT_KABSCH",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_43",
-      "rank": 36
-    },
-    {
-      "mean_dist": 0.483459510459199,
-      "method": "CRIT_KABSCH",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_46",
-      "rank": 37
-    },
-    {
-      "mean_dist": 0.48410780177216617,
-      "method": "CRIT_KABSCH",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_4",
-      "rank": 38
-    },
-    {
-      "mean_dist": 0.48795926247650595,
-      "method": "CRIT_KABSCH",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_6",
-      "rank": 39
-    },
-    {
-      "mean_dist": 0.4883568364008525,
-      "method": "CRIT_KABSCH",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_45",
-      "rank": 40
-    },
-    {
-      "mean_dist": 0.48858848845774394,
-      "method": "CRIT_KABSCH",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_20",
-      "rank": 41
-    },
-    {
-      "mean_dist": 0.48932691792725236,
-      "method": "CRIT_KABSCH",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_23",
-      "rank": 42
-    },
-    {
-      "mean_dist": 0.49128851980760785,
-      "method": "CRIT_KABSCH",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_10",
-      "rank": 43
-    },
-    {
-      "mean_dist": 0.4953529369825934,
-      "method": "CRIT_KABSCH",
+      "mean_dist": 0.40514517543291845,
+      "method": "CRIT_KABSCH_CYCLIC",
       "in_basin": false,
       "n_templates": 6,
       "label": "decoy_40",
-      "rank": 44
+      "rank": 33
     },
     {
-      "mean_dist": 0.5007153903874363,
-      "method": "CRIT_KABSCH",
+      "mean_dist": 0.4055326145247544,
+      "method": "CRIT_KABSCH_CYCLIC",
       "in_basin": false,
       "n_templates": 6,
-      "label": "decoy_3",
-      "rank": 45
+      "label": "decoy_45",
+      "rank": 34
     },
     {
-      "mean_dist": 0.5065498343979824,
-      "method": "CRIT_KABSCH",
+      "mean_dist": 0.40626619163341726,
+      "method": "CRIT_KABSCH_CYCLIC",
       "in_basin": false,
       "n_templates": 6,
-      "label": "decoy_11",
-      "rank": 46
+      "label": "decoy_30",
+      "rank": 35
     },
     {
-      "mean_dist": 0.5173187232890031,
-      "method": "CRIT_KABSCH",
+      "mean_dist": 0.4067747772962347,
+      "method": "CRIT_KABSCH_CYCLIC",
       "in_basin": false,
       "n_templates": 6,
-      "label": "decoy_42",
-      "rank": 47
+      "label": "decoy_31",
+      "rank": 36
     },
     {
-      "mean_dist": 0.5190457123155151,
-      "method": "CRIT_KABSCH",
+      "mean_dist": 0.40839047661219874,
+      "method": "CRIT_KABSCH_CYCLIC",
       "in_basin": false,
       "n_templates": 6,
-      "label": "decoy_33",
-      "rank": 48
+      "label": "decoy_10",
+      "rank": 37
     },
     {
-      "mean_dist": 0.5255883424982697,
-      "method": "CRIT_KABSCH",
+      "mean_dist": 0.4103666645323589,
+      "method": "CRIT_KABSCH_CYCLIC",
+      "in_basin": false,
+      "n_templates": 6,
+      "label": "decoy_25",
+      "rank": 38
+    },
+    {
+      "mean_dist": 0.41189391719261675,
+      "method": "CRIT_KABSCH_CYCLIC",
       "in_basin": false,
       "n_templates": 6,
       "label": "decoy_21",
+      "rank": 39
+    },
+    {
+      "mean_dist": 0.41189980184431246,
+      "method": "CRIT_KABSCH_CYCLIC",
+      "in_basin": false,
+      "n_templates": 6,
+      "label": "decoy_6",
+      "rank": 40
+    },
+    {
+      "mean_dist": 0.41207079890617326,
+      "method": "CRIT_KABSCH_CYCLIC",
+      "in_basin": false,
+      "n_templates": 6,
+      "label": "decoy_23",
+      "rank": 41
+    },
+    {
+      "mean_dist": 0.41455776917924625,
+      "method": "CRIT_KABSCH_CYCLIC",
+      "in_basin": false,
+      "n_templates": 6,
+      "label": "decoy_42",
+      "rank": 42
+    },
+    {
+      "mean_dist": 0.4150633784229783,
+      "method": "CRIT_KABSCH_CYCLIC",
+      "in_basin": false,
+      "n_templates": 6,
+      "label": "decoy_3",
+      "rank": 43
+    },
+    {
+      "mean_dist": 0.4155392661937389,
+      "method": "CRIT_KABSCH_CYCLIC",
+      "in_basin": false,
+      "n_templates": 6,
+      "label": "decoy_11",
+      "rank": 44
+    },
+    {
+      "mean_dist": 0.416861850365477,
+      "method": "CRIT_KABSCH_CYCLIC",
+      "in_basin": false,
+      "n_templates": 6,
+      "label": "decoy_46",
+      "rank": 45
+    },
+    {
+      "mean_dist": 0.4172076288787271,
+      "method": "CRIT_KABSCH_CYCLIC",
+      "in_basin": false,
+      "n_templates": 6,
+      "label": "decoy_32",
+      "rank": 46
+    },
+    {
+      "mean_dist": 0.4172532330338675,
+      "method": "CRIT_KABSCH_CYCLIC",
+      "in_basin": false,
+      "n_templates": 6,
+      "label": "decoy_4",
+      "rank": 47
+    },
+    {
+      "mean_dist": 0.42606916007532974,
+      "method": "CRIT_KABSCH_CYCLIC",
+      "in_basin": false,
+      "n_templates": 6,
+      "label": "decoy_14",
+      "rank": 48
+    },
+    {
+      "mean_dist": 0.43364291479573536,
+      "method": "CRIT_KABSCH_CYCLIC",
+      "in_basin": false,
+      "n_templates": 6,
+      "label": "decoy_33",
       "rank": 49
     }
   ],

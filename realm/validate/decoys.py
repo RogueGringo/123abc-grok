@@ -89,23 +89,14 @@ def score_geometry_on_mold(
     }
 
 
-def _kabsch_rmsd(P: np.ndarray, Q: np.ndarray) -> float:
-    """RMSD after optimal rotation (Kabsch); centers both clouds."""
+def _kabsch_rmsd_fixed(P: np.ndarray, Q: np.ndarray) -> float:
+    """RMSD after optimal rotation (Kabsch); same length, already scaled/centered optional."""
     P = np.asarray(P, float)
     Q = np.asarray(Q, float)
-    n = min(P.shape[0], Q.shape[0])
-    if n < 3:
+    if P.shape[0] < 3 or P.shape != Q.shape:
         return 1e9
-    # resample Q to n points along index if lengths differ
-    if P.shape[0] != n:
-        idx = np.linspace(0, P.shape[0] - 1, n).astype(int)
-        P = P[idx]
-    if Q.shape[0] != n:
-        idx = np.linspace(0, Q.shape[0] - 1, n).astype(int)
-        Q = Q[idx]
     P = P - P.mean(axis=0)
     Q = Q - Q.mean(axis=0)
-    # scale to unit RMS so score is shape not size
     sp = np.sqrt(np.mean(np.sum(P**2, axis=1))) + 1e-15
     sq = np.sqrt(np.mean(np.sum(Q**2, axis=1))) + 1e-15
     P, Q = P / sp, Q / sq
@@ -113,10 +104,43 @@ def _kabsch_rmsd(P: np.ndarray, Q: np.ndarray) -> float:
     U, _, Vt = np.linalg.svd(H)
     R = Vt.T @ U.T
     if np.linalg.det(R) < 0:
+        Vt = Vt.copy()
         Vt[-1, :] *= -1
         R = Vt.T @ U.T
     P_aligned = P @ R
     return float(np.sqrt(np.mean(np.sum((P_aligned - Q) ** 2, axis=1))))
+
+
+def _resample_ring(xyz: np.ndarray, n: int) -> np.ndarray:
+    """Resample closed CA ring to n vertices along index (cyclic lerp)."""
+    xyz = np.asarray(xyz, float)
+    if xyz.shape[0] == n:
+        return xyz.copy()
+    # close the loop for interpolation
+    closed = np.vstack([xyz, xyz[0]])
+    t_src = np.linspace(0.0, 1.0, closed.shape[0])
+    t_dst = np.linspace(0.0, 1.0, n, endpoint=False)
+    out = np.column_stack([np.interp(t_dst, t_src, closed[:, i]) for i in range(3)])
+    return out
+
+
+def _kabsch_rmsd(P: np.ndarray, Q: np.ndarray, cyclic: bool = True) -> float:
+    """RMSD after Kabsch; optional best cyclic start index on P."""
+    P = np.asarray(P, float)
+    Q = np.asarray(Q, float)
+    n = min(P.shape[0], Q.shape[0])
+    if n < 3:
+        return 1e9
+    P = _resample_ring(P, n)
+    Q = _resample_ring(Q, n)
+    if not cyclic or n > 24:
+        return _kabsch_rmsd_fixed(P, Q)
+    best = 1e9
+    for s in range(n):
+        best = min(best, _kabsch_rmsd_fixed(np.roll(P, s, axis=0), Q))
+        # reverse orientation
+        best = min(best, _kabsch_rmsd_fixed(np.roll(P[::-1], s, axis=0), Q))
+    return float(best)
 
 
 def score_geometry_vs_crit(
@@ -125,12 +149,12 @@ def score_geometry_vs_crit(
 ) -> dict[str, Any]:
     """Min Kabsch RMSD to Crit-induced sector geometries (shape match)."""
     if not sector_points:
-        return {"mean_dist": 1e9, "method": "CRIT_KABSCH", "in_basin": False}
-    dists = [_kabsch_rmsd(xyz, sp) for sp in sector_points]
+        return {"mean_dist": 1e9, "method": "CRIT_KABSCH_CYCLIC", "in_basin": False}
+    dists = [_kabsch_rmsd(xyz, sp, cyclic=True) for sp in sector_points]
     dmin = float(min(dists))
     return {
         "mean_dist": dmin,
-        "method": "CRIT_KABSCH",
+        "method": "CRIT_KABSCH_CYCLIC",
         "in_basin": dmin < 0.35,
         "n_templates": len(sector_points),
     }

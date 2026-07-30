@@ -92,8 +92,10 @@ def main(argv=None) -> int:
         print(f"I/O fail: {exc}", file=sys.stderr)
         return 3
 
-    # ζ landscape + Crit sector templates from champion knobs
-    der = Keymaker(N=args.N, n_zeros=args.k, n_sectors=args.sectors).forge(**knobs)
+    # ζ landscape + Crit sector templates; N ≈ CA count when default 13
+    n_ca = int(xyz.shape[0])
+    N_use = args.N if args.N != 13 else max(n_ca, 7)
+    der = Keymaker(N=N_use, n_zeros=args.k, n_sectors=args.sectors).forge(**knobs)
     land = build_moduli_landscape(
         field=der.field, action=der.action, critical=der.critical
     )
