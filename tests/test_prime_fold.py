@@ -48,3 +48,24 @@ def test_prime_fold_engine_smoke():
     d = out.to_dict()
     assert d["never"] == ["lambda_eq_gamma"]
     assert "Coutsias" in d["pipeline"]
+
+
+def test_coutsias_mold_bank_and_blend():
+    from realm.prime_fold import (
+        blend_crit_coutsias_dist,
+        forge_coutsias_mold_bank,
+        score_geometry_vs_coutsias,
+    )
+
+    bank = forge_coutsias_mold_bank(
+        8, max_roots=3, n_starts=8, use_de=False, prefer_maxop=False, cache=False
+    )
+    assert not bank.get("empty")
+    assert len(bank["templates"]) >= 1
+    t = np.linspace(0, 2 * np.pi, 8, endpoint=False)
+    xyz = np.column_stack([np.cos(t), np.sin(t), 0.05 * np.sin(2 * t)])
+    sc = score_geometry_vs_coutsias(xyz, bank, soft_T=0.04)
+    assert sc["method"] == "COUTSIAS_KABSCH_SOFTMIN"
+    assert sc["mean_dist"] < 1e8
+    b = blend_crit_coutsias_dist(0.5, 0.3, alpha=0.2)
+    assert abs(b - (0.8 * 0.5 + 0.2 * 0.3)) < 1e-12

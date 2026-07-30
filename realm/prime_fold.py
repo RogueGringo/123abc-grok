@@ -283,3 +283,132 @@ def fold_sequence_length(
 ) -> PrimeFoldResult:
     """Convenience: fold an n-mer cyclic backbone (no sequence chemistry yet)."""
     return PrimeFoldingEngine(N=int(n_residues), **kwargs).execute_folding()
+
+
+# ---------------------------------------------------------------------------
+# Ranking bridge: Coutsias mold bank → Kabsch softmin (projection dual)
+# ---------------------------------------------------------------------------
+
+_COUTSIAS_BANK_CACHE: dict[tuple[Any, ...], dict[str, Any]] = {}
+
+
+def forge_coutsias_mold_bank(
+    N: int,
+    *,
+    max_roots: int = 6,
+    n_starts: int = 14,
+    use_de: bool = False,
+    prefer_maxop: bool = False,
+    s: float = 2.0,
+    rng_seed: int = 11,
+    residual_tol: float = 0.55,
+    cache: bool = True,
+) -> dict[str, Any]:
+    """Build a structure-free Coutsias mold bank scored by spectral action.
+
+    Templates are soft-closed CA rings from multi-start loop closure.
+    Softmin weights favor low S_L + residual (stable sheaf spectra).
+    Cached by (N, starts, roots, seed) for ranking batch reuse.
+    """
+    key = (int(N), int(max_roots), int(n_starts), bool(use_de), int(rng_seed), float(s))
+    if cache and key in _COUTSIAS_BANK_CACHE:
+        return _COUTSIAS_BANK_CACHE[key]
+
+    eng = PrimeFoldingEngine(
+        N=int(N),
+        s=float(s),
+        prefer_maxop=prefer_maxop,
+        n_starts=int(n_starts),
+        use_de=bool(use_de),
+        rng_seed=int(rng_seed),
+        residual_tol=float(residual_tol),
+    )
+    geoms = eng.generate_closures(max_roots=max_roots)
+    templates: list[np.ndarray] = []
+    scores: list[float] = []
+    twists: list[float] = []
+    residuals: list[float] = []
+    for g in geoms:
+        sc = eng.score_conformation(g)
+        templates.append(np.asarray(g.positions, dtype=float)[:, :3])
+        scores.append(float(sc["total"]))
+        twists.append(float(g.twist_so2))
+        residuals.append(float(g.residual))
+
+    sc_arr = np.asarray(scores, dtype=float)
+    if sc_arr.size == 0:
+        bank = {
+            "templates": [],
+            "weights": np.zeros(0),
+            "scores": sc_arr,
+            "twists": [],
+            "residuals": [],
+            "N": int(N),
+            "empty": True,
+        }
+    else:
+        m = float(np.min(sc_arr))
+        scale = 0.5 * float(np.std(sc_arr)) + 0.15
+        w = np.exp(-(sc_arr - m) / scale)
+        w = w / (float(np.mean(w)) + 1e-15)
+        bank = {
+            "templates": templates,
+            "weights": w,
+            "scores": sc_arr,
+            "twists": twists,
+            "residuals": residuals,
+            "N": int(N),
+            "empty": False,
+            "n_bank": len(templates),
+            "best_total": m,
+            "ontology": "coutsias_molds_spectral_action_not_lambda_eq_gamma",
+        }
+    if cache:
+        _COUTSIAS_BANK_CACHE[key] = bank
+    return bank
+
+
+def score_geometry_vs_coutsias(
+    xyz: np.ndarray,
+    bank: dict[str, Any] | None = None,
+    *,
+    N: int | None = None,
+    soft_T: float = 0.04,
+    **bank_kw: Any,
+) -> dict[str, Any]:
+    """Kabsch softmin of CA ring vs Coutsias spectral-action mold bank."""
+    from realm.validate.decoys import score_geometry_vs_crit
+
+    if bank is None:
+        if N is None:
+            N = int(np.asarray(xyz).shape[0])
+        bank = forge_coutsias_mold_bank(int(N), **bank_kw)
+    if bank.get("empty") or not bank.get("templates"):
+        return {
+            "mean_dist": 1e9,
+            "min_dist": 1e9,
+            "method": "COUTSIAS_EMPTY",
+            "n_templates": 0,
+        }
+    out = score_geometry_vs_crit(
+        xyz,
+        bank["templates"],
+        soft_T=soft_T,
+        aggregate="softmin_persist",
+        sector_weights=bank.get("weights"),
+    )
+    out["method"] = "COUTSIAS_KABSCH_SOFTMIN"
+    out["coutsias_n_bank"] = bank.get("n_bank")
+    out["coutsias_best_total"] = bank.get("best_total")
+    return out
+
+
+def blend_crit_coutsias_dist(
+    crit_dist: float,
+    coutsias_dist: float,
+    *,
+    alpha: float = 0.10,
+) -> float:
+    """Projection blend: (1-α)·Crit + α·Coutsias Kabsch (lower better)."""
+    a = float(np.clip(alpha, 0.0, 1.0))
+    return (1.0 - a) * float(crit_dist) + a * float(coutsias_dist)

@@ -21,6 +21,11 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from realm.validate.decoys import make_ca_decoys
+from realm.prime_fold import (
+    blend_crit_coutsias_dist,
+    forge_coutsias_mold_bank,
+    score_geometry_vs_coutsias,
+)
 from realm.validate.dual import (
     adaptive_defect_beta,
     dual_score_geometry,
@@ -77,11 +82,15 @@ def rank_one(
     multimode_mode: str = "adaptive_short",
     defect_beta: float = 0.0,
     holonomy_polish: bool = False,
+    coutsias_alpha: float = 0.0,
+    coutsias_starts: int = 12,
 ) -> dict:
     """Native-vs-decoy rank. Projection-primary; defect_beta blends sheaf energy.
 
     holonomy_polish: opt-in sheaf feedback on Crit θ for n≥12 (not production
     default — dual-gate preferred dense-superset molds without polish).
+    coutsias_alpha: blend Crit Kabsch with Coutsias spectral-action molds
+    (0=off; 0.08–0.15 typical probe). Bank cached per N.
     """
     path = fetch_pdb(pdb_id)
     xyz, chain_used = load_ca_cyclic_band(path, lo=6, hi=40)
@@ -236,8 +245,43 @@ def rank_one(
         aggregate=aggregate,
         defect_beta=float(eff_beta),
     )
-    # Ranking: projection (+ optional sheaf-defect blend). MaxOp dual diagnostic.
-    native = dual_score_geometry(xyz, pack, **sc_kw)
+    # Optional Coutsias mold bank (spectral-action weighted), cached by N
+    c_alpha_req = float(np.clip(coutsias_alpha, 0.0, 1.0))
+    # Scope Coutsias blend to soft floors only (global blend dual-gate
+    # improved probe but cost holdout/top20 on short + 4K8Y).
+    c_alpha = c_alpha_req if n_ca in (10, 12) else 0.0
+    c_bank = None
+    if c_alpha > 1e-12:
+        c_bank = forge_coutsias_mold_bank(
+            n_ca,
+            max_roots=max(4, min(n_sec, 6)),
+            n_starts=int(coutsias_starts),
+            use_de=False,
+            prefer_maxop=False,
+            cache=True,
+        )
+
+    def _score_xyz(pts: np.ndarray) -> dict:
+        sc = dual_score_geometry(pts, pack, **sc_kw)
+        if c_bank is not None and c_alpha > 1e-12 and not c_bank.get("empty"):
+            ck = score_geometry_vs_coutsias(pts, c_bank, soft_T=eff_soft_T)
+            blended = blend_crit_coutsias_dist(
+                float(sc["mean_dist"]),
+                float(ck["mean_dist"]),
+                alpha=c_alpha,
+            )
+            sc = {
+                **sc,
+                "mean_dist": blended,
+                "crit_dist": float(sc["mean_dist"]),
+                "coutsias_dist": float(ck["mean_dist"]),
+                "coutsias_alpha": c_alpha,
+                "method": f"{sc.get('method')}+COUTSIAS",
+            }
+        return sc
+
+    # Ranking: projection (+ optional sheaf-defect + Coutsias blend).
+    native = _score_xyz(xyz)
     native_dist = float(native["mean_dist"])
     op = pack.get("operator")
     op_diag = op.to_dict() if op is not None else None
@@ -260,7 +304,7 @@ def rank_one(
         decoys += make_ca_decoys(xyz, n_hard, sub, noise=noise * 1.8)
         rows = [{"label": "native", "mean_dist": native_dist}]
         for i, d in enumerate(decoys):
-            sc = dual_score_geometry(d, pack, **sc_kw)
+            sc = _score_xyz(d)
             sc["label"] = f"decoy_{i}"
             rows.append(sc)
         ranked = sorted(rows, key=lambda r: r["mean_dist"])
@@ -318,6 +362,9 @@ def rank_one(
         "defect_beta": float(defect_beta),
         "defect_beta_effective": float(eff_beta),
         "defect_dist": float(native.get("defect_dist") or 0.0),
+        "coutsias_alpha": c_alpha,
+        "coutsias_dist": native.get("coutsias_dist"),
+        "coutsias_n_bank": None if c_bank is None else c_bank.get("n_bank"),
         "maxop_dual": dual_diag,
         "operator": pack["operator"].to_dict() if a < 1.0 else op_diag,
     }
@@ -397,6 +444,18 @@ def main(argv=None) -> int:
         action="store_true",
         help="opt-in sheaf holonomy feedback on Crit θ for n≥12 (not dual-gate default)",
     )
+    p.add_argument(
+        "--coutsias-alpha",
+        type=float,
+        default=0.0,
+        help="blend Crit Kabsch with Coutsias spectral-action molds (0=off)",
+    )
+    p.add_argument(
+        "--coutsias-starts",
+        type=int,
+        default=12,
+        help="Coutsias multi-starts per length when --coutsias-alpha>0",
+    )
     p.add_argument("--null-json", type=Path, default=Path("null_battery_result.json"))
     p.add_argument("--force", action="store_true")
     p.add_argument("--json", type=Path, default=Path("pdb_batch_result.json"))
@@ -458,6 +517,8 @@ def main(argv=None) -> int:
                 multimode_mode=args.multimode_mode,
                 defect_beta=args.defect_beta,
                 holonomy_polish=bool(args.holonomy_polish),
+                coutsias_alpha=float(args.coutsias_alpha),
+                coutsias_starts=int(args.coutsias_starts),
             )
         except PdbIOError as exc:
             row = {"pdb": pid, "status": "IO_FAIL", "error": str(exc)}
@@ -519,6 +580,8 @@ def main(argv=None) -> int:
             "multimode_mode": args.multimode_mode,
             "defect_beta": args.defect_beta,
             "holonomy_polish": bool(args.holonomy_polish),
+            "coutsias_alpha": float(args.coutsias_alpha),
+            "coutsias_starts": int(args.coutsias_starts),
         },
         "knobs": knobs,
         "ontology": "substrate_crit_projection_sheaf_defect_maxop_dual_not_lambda_eq_gamma",
