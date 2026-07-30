@@ -26,6 +26,7 @@ from realm.handoff.generate import (
     merge_and_rank,
 )
 from realm.handoff.physics import get_physics_adapter
+from realm.handoff.pipeline import export_structure_batch, export_structure_handoff
 from realm.handoff.types import BackboneArtifact, DecorateRequest
 from realm.validate.pdb_write import write_mold_pair
 from realm.validate.report import load_knobs, write_json
@@ -79,15 +80,24 @@ def main(argv=None) -> int:
     )
     p.add_argument(
         "--mode",
-        choices=("proposal", "structure"),
+        choices=("proposal", "structure", "dual-gate"),
         default="proposal",
-        help="proposal: Crit×omega bank; structure: native CA self_fit pack",
+        help=(
+            "proposal: Crit×omega bank; structure: native self_fit; "
+            "dual-gate: production LengthPolicy stamp + structure export"
+        ),
     )
     p.add_argument(
         "--pdb",
         type=str,
         default=None,
-        help="PDB id for --mode structure (uses data/pdb cache / RCSB)",
+        help="PDB id for --mode structure|dual-gate (uses data/pdb cache / RCSB)",
+    )
+    p.add_argument(
+        "--pdb-ids",
+        type=str,
+        default=None,
+        help="comma-separated PDB ids for --mode dual-gate batch export",
     )
     p.add_argument(
         "--sequence",
@@ -108,6 +118,42 @@ def main(argv=None) -> int:
         knobs = knobs["best_knobs"]
 
     sources = {s.strip().lower() for s in args.sources.split(",") if s.strip()}
+    if args.mode == "dual-gate":
+        ids = []
+        if args.pdb_ids:
+            ids.extend(s.strip() for s in args.pdb_ids.split(",") if s.strip())
+        if args.pdb:
+            ids.append(args.pdb.strip())
+        if not ids:
+            logger.error("--mode dual-gate requires --pdb and/or --pdb-ids")
+            return 2
+        logger.info("dual-gate handoff ids=%s top_k=%d …", ids, int(args.top_k))
+        if len(ids) == 1:
+            idx = export_structure_handoff(
+                ids[0],
+                knobs,
+                out_dir=args.out_dir,
+                top_k=int(args.top_k),
+                n_zeros=int(args.k),
+                include_coutsias=("coutsias" in sources),
+                decorate=args.decorate,
+                physics=args.physics,
+            )
+            logger.info("wrote %s status=%s molds=%s", args.out_dir, idx.get("status"), idx.get("n_molds"))
+            return 0 if idx.get("status") == "OK" else 1
+        summary = export_structure_batch(
+            ids,
+            knobs,
+            out_root=args.out_dir,
+            top_k=int(args.top_k),
+            n_zeros=int(args.k),
+            include_coutsias=("coutsias" in sources),
+            decorate=args.decorate,
+            physics=args.physics,
+        )
+        logger.info("batch n_ok=%s / %s → %s", summary["n_ok"], summary["n_ids"], args.out_dir)
+        return 0 if summary["n_ok"] > 0 else 1
+
     if args.mode == "structure":
         if not args.pdb:
             logger.error("--mode structure requires --pdb")
@@ -124,6 +170,7 @@ def main(argv=None) -> int:
             n_zeros=int(args.k),
             top_k=int(args.top_k),
             include_coutsias=("coutsias" in sources),
+            soft_T=None,  # dual-gate LengthPolicy soft_T
         )
     else:
         molds = []

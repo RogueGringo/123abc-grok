@@ -199,10 +199,14 @@ def generate_structure_ensemble(
     n_zeros: int = 14,
     top_k: int = 8,
     include_coutsias: bool = True,
-    soft_T: float = 0.04,
+    soft_T: float | None = None,
     defect_beta: float = 0.20,
 ) -> list[MoldRecord]:
-    """Structure mode: self_fit_dense mold pack vs native CA; export pack templates."""
+    """Structure mode: self_fit_dense mold pack vs native CA; export pack templates.
+
+    Production path: ``soft_T=None`` uses ``policy_for(n_ca).soft_T`` for both pack
+    and Kabsch rank (dual-gate length table — do not hardcode 0.04).
+    """
     from realm.validate.length_policy import policy_for
     from realm.validate.mold_bank import forge_mold_pack
     from realm.validate.pdb_io import fetch_pdb
@@ -211,9 +215,9 @@ def generate_structure_ensemble(
     xyz, resnames, _chain = _load_native_ca(path, lo=6, hi=40)
     n_ca = int(xyz.shape[0])
     pol = policy_for(n_ca, base_beta=float(defect_beta), sectors_mode="adaptive")
-    score_T = float(soft_T) if soft_T is not None else float(pol.soft_T)
-    # Prefer policy soft_T for packing; score_T for Kabsch rank
+    # Dual-gate: pack and score at policy soft_T unless caller overrides
     pack_T = float(pol.soft_T)
+    score_T = float(soft_T) if soft_T is not None else pack_T
 
     mold_rw = None
     if (
