@@ -1,39 +1,39 @@
 {
-  "generation_time": "2026-07-30T02:29:04.660106+00:00",
+  "generation_time": "2026-07-30T03:18:54.463679+00:00",
   "n_generations": 3,
   "status": "EVOLVED_SEAL",
   "best_knobs": {
-    "Lambda": 168.78695073249213,
-    "omega_scale": 1.6269932038392327,
-    "weight_power": 2.0112793282732184,
-    "tier_split": 0.5874425095110438,
-    "low_boost": 0.6438012014911153,
-    "w1_mult": 0.9399563144790238,
-    "w2_mult": 1.0548999514537594,
-    "w3_mult": 0.881677493967387
+    "Lambda": 148.24406107426935,
+    "omega_scale": 1.6266375886816526,
+    "weight_power": 2.465471283415999,
+    "tier_split": 0.6074425095110438,
+    "low_boost": 0.5581294116355281,
+    "w1_mult": 0.907164761960651,
+    "w2_mult": 1.098869151860439,
+    "w3_mult": 0.8
   },
   "meet_knobs": {
-    "Lambda": 168.78695073249213,
-    "omega_scale": 1.6269932038392327,
-    "weight_power": 2.0112793282732184,
-    "tier_split": 0.5874425095110438,
-    "low_boost": 0.6438012014911153,
-    "w1_mult": 0.9399563144790238,
-    "w2_mult": 1.0548999514537594,
-    "w3_mult": 0.881677493967387
+    "Lambda": 148.24406107426935,
+    "omega_scale": 1.6266375886816526,
+    "weight_power": 2.465471283415999,
+    "tier_split": 0.6074425095110438,
+    "low_boost": 0.5581294116355281,
+    "w1_mult": 0.907164761960651,
+    "w2_mult": 1.098869151860439,
+    "w3_mult": 0.8
   },
-  "F": 0.0045321647898132885,
-  "R": 0.0045321647898132885,
+  "F": 0.004399402137809021,
+  "R": 0.004399402137809021,
   "occupancy": 1.0,
   "n_keys": 6,
   "n_valleys": 6,
-  "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4466). Affine projection signature a=0.8677, b=0.2059 is expected, not a cheat.",
+  "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4485). Affine projection signature a=0.8671, b=0.2098 is expected, not a cheat.",
   "breakdown": {
-    "stationarity": 1.7040783360156375e-13,
-    "corr_penalty": 8.982184976846774e-05,
+    "stationarity": 7.479827060361818e-14,
+    "corr_penalty": 6.837473632503865e-06,
     "crit_coverage": 0.0,
-    "return_map_err": 0.022548546636600247,
-    "total": 0.0045321647898132885,
+    "return_map_err": 0.02198846384689228,
+    "total": 0.004399402137809021,
     "weights": {
       "shape": 0.3,
       "corr": 0.25,
@@ -43,25 +43,25 @@
     "diagnostics": {
       "pin_align": 0.0,
       "theta_ladder_l1": 0.0,
-      "density_return_l1": 0.09019418654640099,
-      "corr_S_lambda": 0.9999101781502315
+      "density_return_l1": 0.08795385538756911,
+      "corr_S_lambda": 0.9999931625263675
     }
   },
   "thetas": [
-    5.428204437766438,
-    1.05188828901337,
-    4.53503806615296,
-    1.968654786998486,
-    3.6304187378441326,
-    2.8423392304588657
+    5.433555780648585,
+    1.0489706657018403,
+    4.536576501003697,
+    1.9785468400242057,
+    3.611560956982539,
+    2.8590845878535176
   ],
   "spectral_gaps": [
-    0.004323839283974422,
-    0.00654358236150513,
-    0.018055718331377372,
-    0.02288876257919367,
-    0.0414957711359102,
-    0.04761396368090285
+    0.004269901880840675,
+    0.006507352495919401,
+    0.018024000700160532,
+    0.02311891708594925,
+    0.042085746734377406,
+    0.04817437232427023
   ],
   "targets": {
     "R": 0.005,
@@ -69,26 +69,26 @@
   },
   "history_tail": [
     {
-      "Lambda": 186.431477771067,
-      "omega_scale": 1.6285442413882332,
-      "weight_power": 1.7230753278732212,
+      "Lambda": 148.71176944389558,
+      "omega_scale": 1.626668748437115,
+      "weight_power": 2.4778297197840926,
       "tier_split": 0.5874425095110438,
-      "low_boost": 0.6984365923082124,
-      "w1_mult": 0.9338777411748604,
-      "w2_mult": 1.0133123116438447,
-      "w3_mult": 0.9403903325537724,
-      "R": 0.004573717072090228,
-      "F": 0.004573717072090228,
+      "low_boost": 0.5573360280412718,
+      "w1_mult": 0.9079278292553624,
+      "w2_mult": 1.1004529536589345,
+      "w3_mult": 0.8,
+      "R": 0.004399430288659726,
+      "F": 0.004399430288659726,
       "occupancy": 1.0,
       "n_keys": 6,
       "n_valleys": 6,
       "mean_dist": 0.0,
       "breakdown": {
-        "stationarity": 1.3817857799299506e-13,
-        "corr_penalty": 5.822978181624361e-05,
+        "stationarity": 1.1791107466852455e-13,
+        "corr_penalty": 1.1024784251634223e-05,
         "crit_coverage": 0.0,
-        "return_map_err": 0.022795798132973565,
-        "total": 0.004573717072090228,
+        "return_map_err": 0.021983370462807218,
+        "total": 0.004399430288659726,
         "weights": {
           "shape": 0.3,
           "corr": 0.25,
@@ -98,33 +98,33 @@
         "diagnostics": {
           "pin_align": 0.0,
           "theta_ladder_l1": 0.0,
-          "density_return_l1": 0.09118319253189426,
-          "corr_S_lambda": 0.9999417702181838
+          "density_return_l1": 0.08793348185122887,
+          "corr_S_lambda": 0.9999889752157484
         }
       },
-      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4454). Affine projection signature a=0.8672, b=0.2037 is expected, not a cheat."
+      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4485). Affine projection signature a=0.8671, b=0.2098 is expected, not a cheat."
     },
     {
-      "Lambda": 182.78508100219858,
-      "omega_scale": 1.629066158008164,
-      "weight_power": 1.7229840909604242,
-      "tier_split": 0.5874425095110438,
-      "low_boost": 0.6894217981473691,
-      "w1_mult": 0.9439273525934836,
-      "w2_mult": 1.0333544060801378,
-      "w3_mult": 0.9322212885219606,
-      "R": 0.00455015849703509,
-      "F": 0.00455015849703509,
+      "Lambda": 148.71177066051808,
+      "omega_scale": 1.6266687479023827,
+      "weight_power": 2.477829719784269,
+      "tier_split": 0.6074425095110438,
+      "low_boost": 0.557336028042382,
+      "w1_mult": 0.9079278292478627,
+      "w2_mult": 1.1004529536679406,
+      "w3_mult": 0.8,
+      "R": 0.004399430280446969,
+      "F": 0.004399430280446969,
       "occupancy": 1.0,
       "n_keys": 6,
       "n_valleys": 6,
       "mean_dist": 0.0,
       "breakdown": {
-        "stationarity": 6.060915175773227e-16,
-        "corr_penalty": 1.5441379066505334e-06,
+        "stationarity": 1.1773747468896352e-13,
+        "corr_penalty": 1.1024775939061371e-05,
         "crit_coverage": 0.0,
-        "return_map_err": 0.022748862312791225,
-        "total": 0.00455015849703509,
+        "return_map_err": 0.02198337043213441,
+        "total": 0.004399430280446969,
         "weights": {
           "shape": 0.3,
           "corr": 0.25,
@@ -134,33 +134,33 @@
         "diagnostics": {
           "pin_align": 0.0,
           "theta_ladder_l1": 0.0,
-          "density_return_l1": 0.0909954492511649,
-          "corr_S_lambda": 0.9999984558620933
+          "density_return_l1": 0.08793348172853764,
+          "corr_S_lambda": 0.9999889752240609
         }
       },
-      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4453). Affine projection signature a=0.867, b=0.2034 is expected, not a cheat."
+      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4485). Affine projection signature a=0.8671, b=0.2098 is expected, not a cheat."
     },
     {
-      "Lambda": 168.78695073249213,
-      "omega_scale": 1.6269932038392327,
-      "weight_power": 2.0112793282732184,
-      "tier_split": 0.5874425095110438,
-      "low_boost": 0.6438012014911153,
-      "w1_mult": 0.9399563144790238,
-      "w2_mult": 1.0548999514537594,
-      "w3_mult": 0.881677493967387,
-      "R": 0.0045321647898132885,
-      "F": 0.0045321647898132885,
+      "Lambda": 148.24406107426935,
+      "omega_scale": 1.6266375886816526,
+      "weight_power": 2.465471283415999,
+      "tier_split": 0.6074425095110438,
+      "low_boost": 0.5581294116355281,
+      "w1_mult": 0.907164761960651,
+      "w2_mult": 1.098869151860439,
+      "w3_mult": 0.8,
+      "R": 0.004399402137809021,
+      "F": 0.004399402137809021,
       "occupancy": 1.0,
       "n_keys": 6,
       "n_valleys": 6,
       "mean_dist": 0.0,
       "breakdown": {
-        "stationarity": 1.7040783360156375e-13,
-        "corr_penalty": 8.982184976846774e-05,
+        "stationarity": 7.479827060361818e-14,
+        "corr_penalty": 6.837473632503865e-06,
         "crit_coverage": 0.0,
-        "return_map_err": 0.022548546636600247,
-        "total": 0.0045321647898132885,
+        "return_map_err": 0.02198846384689228,
+        "total": 0.004399402137809021,
         "weights": {
           "shape": 0.3,
           "corr": 0.25,
@@ -170,11 +170,11 @@
         "diagnostics": {
           "pin_align": 0.0,
           "theta_ladder_l1": 0.0,
-          "density_return_l1": 0.09019418654640099,
-          "corr_S_lambda": 0.9999101781502315
+          "density_return_l1": 0.08795385538756911,
+          "corr_S_lambda": 0.9999931625263675
         }
       },
-      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4466). Affine projection signature a=0.8677, b=0.2059 is expected, not a cheat."
+      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4485). Affine projection signature a=0.8671, b=0.2098 is expected, not a cheat."
     }
   ],
   "ontology": "projection_mold_plus_crit_seal",
@@ -187,7 +187,7 @@
   "compute": {
     "workers": 5,
     "cpu_count": 8,
-    "ram_avail_gb": 8.099786752,
-    "notes": "cpu=8 avail_ram=8.1GB \u2192 workers=5 (auto=6, by_cpu=7, by_ram=7)"
+    "ram_avail_gb": 6.651392,
+    "notes": "cpu=8 avail_ram=6.7GB \u2192 workers=5 (auto=5, by_cpu=7, by_ram=5)"
   }
 }

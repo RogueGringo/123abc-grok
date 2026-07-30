@@ -87,3 +87,50 @@ def score_geometry_on_mold(
         "method": "FALLBACK_THETA_PROXY",
         "basin": basin,
     }
+
+
+def _kabsch_rmsd(P: np.ndarray, Q: np.ndarray) -> float:
+    """RMSD after optimal rotation (Kabsch); centers both clouds."""
+    P = np.asarray(P, float)
+    Q = np.asarray(Q, float)
+    n = min(P.shape[0], Q.shape[0])
+    if n < 3:
+        return 1e9
+    # resample Q to n points along index if lengths differ
+    if P.shape[0] != n:
+        idx = np.linspace(0, P.shape[0] - 1, n).astype(int)
+        P = P[idx]
+    if Q.shape[0] != n:
+        idx = np.linspace(0, Q.shape[0] - 1, n).astype(int)
+        Q = Q[idx]
+    P = P - P.mean(axis=0)
+    Q = Q - Q.mean(axis=0)
+    # scale to unit RMS so score is shape not size
+    sp = np.sqrt(np.mean(np.sum(P**2, axis=1))) + 1e-15
+    sq = np.sqrt(np.mean(np.sum(Q**2, axis=1))) + 1e-15
+    P, Q = P / sp, Q / sq
+    H = P.T @ Q
+    U, _, Vt = np.linalg.svd(H)
+    R = Vt.T @ U.T
+    if np.linalg.det(R) < 0:
+        Vt[-1, :] *= -1
+        R = Vt.T @ U.T
+    P_aligned = P @ R
+    return float(np.sqrt(np.mean(np.sum((P_aligned - Q) ** 2, axis=1))))
+
+
+def score_geometry_vs_crit(
+    xyz: np.ndarray,
+    sector_points: list[np.ndarray],
+) -> dict[str, Any]:
+    """Min Kabsch RMSD to Crit-induced sector geometries (shape match)."""
+    if not sector_points:
+        return {"mean_dist": 1e9, "method": "CRIT_KABSCH", "in_basin": False}
+    dists = [_kabsch_rmsd(xyz, sp) for sp in sector_points]
+    dmin = float(min(dists))
+    return {
+        "mean_dist": dmin,
+        "method": "CRIT_KABSCH",
+        "in_basin": dmin < 0.35,
+        "n_templates": len(sector_points),
+    }

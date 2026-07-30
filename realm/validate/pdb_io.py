@@ -38,9 +38,24 @@ def fetch_pdb(pdb_id: str, cache_dir: Path | str = Path("data/pdb")) -> Path:
 
 
 def parse_ca_trace(pdb_text: str, chain: str | None = None) -> np.ndarray:
-    """Parse CA coordinates from PDB text. Optional chain filter."""
+    """Parse CA coordinates from PDB text. Optional chain filter.
+
+    Only the first MODEL block is used (NMR ensembles would otherwise stack).
+    """
     rows = []
+    in_model = False
+    saw_model = False
     for line in pdb_text.splitlines():
+        if line.startswith("MODEL"):
+            if saw_model:
+                break  # finished first model
+            saw_model = True
+            in_model = True
+            continue
+        if line.startswith("ENDMDL"):
+            if in_model or saw_model:
+                break
+            continue
         if not (line.startswith("ATOM") or line.startswith("HETATM")):
             continue
         if len(line) < 54:

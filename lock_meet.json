@@ -1,22 +1,22 @@
 {
   "locked": true,
-  "R": 0.0045321647898132885,
+  "R": 0.004399402137809021,
   "knobs": {
-    "Lambda": 168.78695073249213,
-    "omega_scale": 1.6269932038392327,
-    "weight_power": 2.0112793282732184,
-    "tier_split": 0.5874425095110438,
-    "low_boost": 0.6438012014911153,
-    "w1_mult": 0.9399563144790238,
-    "w2_mult": 1.0548999514537594,
-    "w3_mult": 0.881677493967387
+    "Lambda": 148.24406107426935,
+    "omega_scale": 1.6266375886816526,
+    "weight_power": 2.465471283415999,
+    "tier_split": 0.6074425095110438,
+    "low_boost": 0.5581294116355281,
+    "w1_mult": 0.907164761960651,
+    "w2_mult": 1.098869151860439,
+    "w3_mult": 0.8
   },
   "breakdown": {
-    "stationarity": 1.7040783360156375e-13,
-    "corr_penalty": 8.982184976846774e-05,
+    "stationarity": 7.479827060361818e-14,
+    "corr_penalty": 6.837473632503865e-06,
     "crit_coverage": 0.0,
-    "return_map_err": 0.022548546636600247,
-    "total": 0.0045321647898132885,
+    "return_map_err": 0.02198846384689228,
+    "total": 0.004399402137809021,
     "weights": {
       "shape": 0.3,
       "corr": 0.25,
@@ -26,26 +26,20 @@
     "diagnostics": {
       "pin_align": 0.0,
       "theta_ladder_l1": 0.0,
-      "density_return_l1": 0.09019418654640099,
-      "corr_S_lambda": 0.9999101781502315
+      "density_return_l1": 0.08795385538756911,
+      "corr_S_lambda": 0.9999931625263675
     }
   },
   "thetas": [
-    5.428204437766438,
-    1.05188828901337,
-    4.53503806615296,
-    1.968654786998486,
-    3.6304187378441326,
-    2.8423392304588657
+    5.433555780648585,
+    1.0489706657018403,
+    4.536576501003697,
+    1.9785468400242057,
+    3.611560956982539,
+    2.8590845878535176
   ],
-  "search_method": "parallel_8D_IR_micro_DE_LBFGS",
   "occupancy": 1.0,
   "n_keys": 6,
   "n_valleys": 6,
-  "compute": {
-    "workers": 5,
-    "cpu_count": 8,
-    "ram_avail_gb": 8.099786752,
-    "notes": "cpu=8 avail_ram=8.1GB \u2192 workers=5 (auto=6, by_cpu=7, by_ram=7)"
-  }
+  "search_method": "parallel_8D_IR_micro_DE_LBFGS"
 }

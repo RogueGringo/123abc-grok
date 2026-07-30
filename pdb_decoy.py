@@ -21,7 +21,11 @@ if str(ROOT) not in sys.path:
 
 from realm.lock_key import Keymaker
 from realm.projection import build_moduli_landscape
-from realm.validate.decoys import make_ca_decoys, score_geometry_on_mold
+from realm.validate.decoys import (
+    make_ca_decoys,
+    score_geometry_on_mold,
+    score_geometry_vs_crit,
+)
 from realm.validate.pdb_io import PdbIOError, fetch_pdb, load_ca
 from realm.validate.report import load_knobs, write_json
 
@@ -43,6 +47,12 @@ def main(argv=None) -> int:
     p.add_argument("--json", type=Path, default=Path("pdb_decoy_result.json"))
     p.add_argument("--plot", type=Path, default=Path("pdb_decoy.png"))
     p.add_argument("--allow-hf-fallback", action="store_true")
+    p.add_argument(
+        "--method",
+        choices=("crit_kabsch", "theta_proxy", "both"),
+        default="crit_kabsch",
+        help="Ranking score: Crit geometry RMSD (default) or theta proxy",
+    )
     p.add_argument("-v", action="store_true")
     args = p.parse_args(argv)
 
@@ -82,14 +92,32 @@ def main(argv=None) -> int:
         print(f"I/O fail: {exc}", file=sys.stderr)
         return 3
 
-    # ζ landscape from champion knobs
+    # ζ landscape + Crit sector templates from champion knobs
     der = Keymaker(N=args.N, n_zeros=args.k, n_sectors=args.sectors).forge(**knobs)
     land = build_moduli_landscape(
         field=der.field, action=der.action, critical=der.critical
     )
     basin = float(np.pi / max(len(land.valleys), 1))
+    templates = []
+    for s in der.sectors:
+        pts = getattr(s, "positions", None)
+        if pts is not None:
+            arr = np.asarray(pts, dtype=float)
+            if arr.ndim == 2 and arr.shape[1] >= 3:
+                templates.append(arr[:, :3])
 
-    native = score_geometry_on_mold(xyz, land, basin=basin)
+    def _score(cloud: np.ndarray) -> dict:
+        if args.method == "theta_proxy":
+            return score_geometry_on_mold(cloud, land, basin=basin)
+        if args.method == "both":
+            a = score_geometry_vs_crit(cloud, templates)
+            b = score_geometry_on_mold(cloud, land, basin=basin)
+            # lower is better: blend normalized ranks later — use kabsch primary
+            a["theta_proxy_dist"] = b["mean_dist"]
+            return a
+        return score_geometry_vs_crit(cloud, templates)
+
+    native = _score(xyz)
     native["label"] = "native"
     native["closure"] = float(np.linalg.norm(xyz[0] - xyz[-1]))
 
@@ -97,7 +125,7 @@ def main(argv=None) -> int:
     decoy_xyz = make_ca_decoys(xyz, args.n_decoys, rng, noise=0.45)
     decoy_scores = []
     for i, d in enumerate(decoy_xyz):
-        sc = score_geometry_on_mold(d, land, basin=basin)
+        sc = _score(d)
         sc["label"] = f"decoy_{i}"
         decoy_scores.append(sc)
 
@@ -130,9 +158,9 @@ def main(argv=None) -> int:
         "top20": top20,
         "ranked": ranked,
         "knobs": knobs,
-        "method": "FALLBACK_THETA_PROXY",
+        "method": args.method,
         "ontology": "mold_ranking_not_lambda_eq_gamma",
-        "note": "v1 uses theta_proxy from CA PCA plane — not full Coutsias holonomy",
+        "note": "crit_kabsch = min shape-RMSD to Crit sector embeddings; theta_proxy = FALLBACK",
     }
     write_json(args.json, payload)
 
