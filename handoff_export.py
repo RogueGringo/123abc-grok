@@ -26,6 +26,7 @@ from realm.handoff.generate import (
     merge_and_rank,
 )
 from realm.handoff.physics import get_physics_adapter
+from realm.handoff.package import build_partner_package
 from realm.handoff.pipeline import (
     DEFAULT_HANDOFF_IDS,
     export_structure_batch,
@@ -118,6 +119,17 @@ def main(argv=None) -> int:
         help="dual-gate: skip optional BioPython open check",
     )
     p.add_argument(
+        "--package",
+        action="store_true",
+        help="dual-gate: after export, build partner package (README + zip + checksums)",
+    )
+    p.add_argument(
+        "--package-dir",
+        type=Path,
+        default=None,
+        help="dual-gate: partner package output directory",
+    )
+    p.add_argument(
         "--sequence",
         type=str,
         default=None,
@@ -179,21 +191,33 @@ def main(argv=None) -> int:
                 idx.get("n_molds"),
                 Path(args.out_dir) / "manifest.tsv",
             )
-            return 0 if idx.get("status") == "OK" else 1
-        summary = export_structure_batch(
-            ids,
-            knobs,
-            out_root=args.out_dir,
-            **dg_kw,
-        )
-        logger.info(
-            "batch n_ok=%s / %s manifest=%s → %s",
-            summary["n_ok"],
-            summary["n_ids"],
-            summary.get("manifest"),
-            args.out_dir,
-        )
-        return 0 if summary["n_ok"] > 0 else 1
+            ok = idx.get("status") == "OK"
+        else:
+            summary = export_structure_batch(
+                ids,
+                knobs,
+                out_root=args.out_dir,
+                **dg_kw,
+            )
+            logger.info(
+                "batch n_ok=%s / %s manifest=%s → %s",
+                summary["n_ok"],
+                summary["n_ids"],
+                summary.get("manifest"),
+                args.out_dir,
+            )
+            ok = summary["n_ok"] > 0
+        if ok and args.package:
+            meta = build_partner_package(
+                args.out_dir,
+                dest_dir=args.package_dir,
+            )
+            logger.info(
+                "partner package dir=%s zip=%s",
+                meta.get("package_dir"),
+                meta.get("zip_path"),
+            )
+        return 0 if ok else 1
 
     if args.mode == "structure":
         if not args.pdb:
