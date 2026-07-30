@@ -1,426 +1,188 @@
 {
-  "pdb": "1CSA",
-  "path": "data\\pdb\\1CSA.pdb",
-  "n_ca": 11,
+  "pdb": "tests\\fixtures\\mini_cyclic.pdb",
+  "path": "tests\\fixtures\\mini_cyclic.pdb",
+  "n_ca": 5,
   "native": {
-    "mean_dist": 0.39062529250173544,
-    "method": "CRIT_KABSCH_CYCLIC",
-    "in_basin": false,
-    "n_templates": 6,
+    "theta_proxy": 3.1415926535897936,
+    "mean_dist": 0.29925342313092784,
+    "in_basin": true,
+    "method": "FALLBACK_THETA_PROXY",
+    "basin": 0.5235987755982988,
     "label": "native",
-    "closure": 3.8729107916397973,
-    "rank": 20
+    "closure": 0.7874007874011811,
+    "rank": 12
   },
-  "native_rank": 20,
-  "n_total": 49,
-  "enrichment": 0.6041666666666666,
+  "native_rank": 12,
+  "n_total": 17,
+  "enrichment": 0.3125,
   "top20": false,
   "ranked": [
     {
-      "mean_dist": 0.3632096244269039,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_27",
+      "theta_proxy": 1.084185466524986,
+      "mean_dist": 0.03229717751161587,
+      "in_basin": true,
+      "method": "FALLBACK_THETA_PROXY",
+      "basin": 0.5235987755982988,
+      "label": "decoy_4",
       "rank": 1
     },
     {
-      "mean_dist": 0.36685194207393473,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_1",
+      "theta_proxy": 2.0332487666811265,
+      "mean_dist": 0.06459397968264047,
+      "in_basin": true,
+      "method": "FALLBACK_THETA_PROXY",
+      "basin": 0.5235987755982988,
+      "label": "decoy_9",
       "rank": 2
     },
     {
-      "mean_dist": 0.3682553968264821,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_36",
+      "theta_proxy": 4.444082543355473,
+      "mean_dist": 0.09095552279748631,
+      "in_basin": true,
+      "method": "FALLBACK_THETA_PROXY",
+      "basin": 0.5235987755982988,
+      "label": "decoy_3",
       "rank": 3
     },
     {
-      "mean_dist": 0.3706968370031732,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_13",
+      "theta_proxy": 1.1738684539424171,
+      "mean_dist": 0.12198016492904706,
+      "in_basin": true,
+      "method": "FALLBACK_THETA_PROXY",
+      "basin": 0.5235987755982988,
+      "label": "decoy_15",
       "rank": 4
     },
     {
-      "mean_dist": 0.37161925957569064,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_37",
+      "theta_proxy": 2.70001719070139,
+      "mean_dist": 0.1423220397574756,
+      "in_basin": true,
+      "method": "FALLBACK_THETA_PROXY",
+      "basin": 0.5235987755982988,
+      "label": "decoy_8",
       "rank": 5
     },
     {
-      "mean_dist": 0.3744133336838596,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_2",
+      "theta_proxy": 2.1340534769551667,
+      "mean_dist": 0.1653986899566806,
+      "in_basin": true,
+      "method": "FALLBACK_THETA_PROXY",
+      "basin": 0.5235987755982988,
+      "label": "decoy_0",
       "rank": 6
     },
     {
-      "mean_dist": 0.375585352370582,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_35",
+      "theta_proxy": 3.4070069958832785,
+      "mean_dist": 0.22341174196085412,
+      "in_basin": true,
+      "method": "FALLBACK_THETA_PROXY",
+      "basin": 0.5235987755982988,
+      "label": "decoy_7",
       "rank": 7
     },
     {
-      "mean_dist": 0.3773947505954144,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_15",
+      "theta_proxy": 2.61621437557157,
+      "mean_dist": 0.2261248548872956,
+      "in_basin": true,
+      "method": "FALLBACK_THETA_PROXY",
+      "basin": 0.5235987755982988,
+      "label": "decoy_11",
       "rank": 8
     },
     {
-      "mean_dist": 0.37765064595566666,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_39",
+      "theta_proxy": 3.8758119959907225,
+      "mean_dist": 0.24539325814658985,
+      "in_basin": true,
+      "method": "FALLBACK_THETA_PROXY",
+      "basin": 0.5235987755982988,
+      "label": "decoy_2",
       "rank": 9
     },
     {
-      "mean_dist": 0.37772116366378333,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_9",
+      "theta_proxy": 3.37524145685783,
+      "mean_dist": 0.25517728098630243,
+      "in_basin": true,
+      "method": "FALLBACK_THETA_PROXY",
+      "basin": 0.5235987755982988,
+      "label": "decoy_6",
       "rank": 10
     },
     {
-      "mean_dist": 0.37840456024665053,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_44",
+      "theta_proxy": 1.689532643631992,
+      "mean_dist": 0.2791221433664941,
+      "in_basin": true,
+      "method": "FALLBACK_THETA_PROXY",
+      "basin": 0.5235987755982988,
+      "label": "decoy_14",
       "rank": 11
     },
     {
-      "mean_dist": 0.3807156943644635,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_12",
+      "theta_proxy": 3.1415926535897936,
+      "mean_dist": 0.29925342313092784,
+      "in_basin": true,
+      "method": "FALLBACK_THETA_PROXY",
+      "basin": 0.5235987755982988,
+      "label": "native",
+      "closure": 0.7874007874011811,
       "rank": 12
     },
     {
-      "mean_dist": 0.38331668537834884,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_47",
+      "theta_proxy": 3.1873359207621856,
+      "mean_dist": 0.3449966903033199,
+      "in_basin": true,
+      "method": "FALLBACK_THETA_PROXY",
+      "basin": 0.5235987755982988,
+      "label": "decoy_10",
       "rank": 13
     },
     {
-      "mean_dist": 0.3852468994223854,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_20",
+      "theta_proxy": 3.2459822845420345,
+      "mean_dist": 0.3844364533020981,
+      "in_basin": true,
+      "method": "FALLBACK_THETA_PROXY",
+      "basin": 0.5235987755982988,
+      "label": "decoy_12",
       "rank": 14
     },
     {
-      "mean_dist": 0.38650791902852843,
-      "method": "CRIT_KABSCH_CYCLIC",
+      "theta_proxy": 6.236569075325737,
+      "mean_dist": 0.8083646375592988,
       "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_24",
+      "method": "FALLBACK_THETA_PROXY",
+      "basin": 0.5235987755982988,
+      "label": "decoy_1",
       "rank": 15
     },
     {
-      "mean_dist": 0.38756793190471023,
-      "method": "CRIT_KABSCH_CYCLIC",
+      "theta_proxy": 6.277747706602264,
+      "mean_dist": 0.8495432688358262,
       "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_5",
+      "method": "FALLBACK_THETA_PROXY",
+      "basin": 0.5235987755982988,
+      "label": "decoy_13",
       "rank": 16
     },
     {
-      "mean_dist": 0.3882207022796725,
-      "method": "CRIT_KABSCH_CYCLIC",
+      "theta_proxy": 0.1762468913750356,
+      "mean_dist": 0.8756413976383345,
       "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_34",
+      "method": "FALLBACK_THETA_PROXY",
+      "basin": 0.5235987755982988,
+      "label": "decoy_5",
       "rank": 17
-    },
-    {
-      "mean_dist": 0.39018054481146724,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_17",
-      "rank": 18
-    },
-    {
-      "mean_dist": 0.39058747906815283,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_26",
-      "rank": 19
-    },
-    {
-      "mean_dist": 0.39062529250173544,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "native",
-      "closure": 3.8729107916397973,
-      "rank": 20
-    },
-    {
-      "mean_dist": 0.3912914382436227,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_18",
-      "rank": 21
-    },
-    {
-      "mean_dist": 0.39372170827412717,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_0",
-      "rank": 22
-    },
-    {
-      "mean_dist": 0.3966638187806393,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_22",
-      "rank": 23
-    },
-    {
-      "mean_dist": 0.39668675731974196,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_38",
-      "rank": 24
-    },
-    {
-      "mean_dist": 0.39682967880450715,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_41",
-      "rank": 25
-    },
-    {
-      "mean_dist": 0.3970475822073024,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_8",
-      "rank": 26
-    },
-    {
-      "mean_dist": 0.39781364866631885,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_7",
-      "rank": 27
-    },
-    {
-      "mean_dist": 0.39884056547139163,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_19",
-      "rank": 28
-    },
-    {
-      "mean_dist": 0.39966685018178766,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_43",
-      "rank": 29
-    },
-    {
-      "mean_dist": 0.4006927933225296,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_28",
-      "rank": 30
-    },
-    {
-      "mean_dist": 0.40075123515250577,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_29",
-      "rank": 31
-    },
-    {
-      "mean_dist": 0.40111293719255836,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_16",
-      "rank": 32
-    },
-    {
-      "mean_dist": 0.40514517543291845,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_40",
-      "rank": 33
-    },
-    {
-      "mean_dist": 0.4055326145247544,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_45",
-      "rank": 34
-    },
-    {
-      "mean_dist": 0.40626619163341726,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_30",
-      "rank": 35
-    },
-    {
-      "mean_dist": 0.4067747772962347,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_31",
-      "rank": 36
-    },
-    {
-      "mean_dist": 0.40839047661219874,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_10",
-      "rank": 37
-    },
-    {
-      "mean_dist": 0.4103666645323589,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_25",
-      "rank": 38
-    },
-    {
-      "mean_dist": 0.41189391719261675,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_21",
-      "rank": 39
-    },
-    {
-      "mean_dist": 0.41189980184431246,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_6",
-      "rank": 40
-    },
-    {
-      "mean_dist": 0.41207079890617326,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_23",
-      "rank": 41
-    },
-    {
-      "mean_dist": 0.41455776917924625,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_42",
-      "rank": 42
-    },
-    {
-      "mean_dist": 0.4150633784229783,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_3",
-      "rank": 43
-    },
-    {
-      "mean_dist": 0.4155392661937389,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_11",
-      "rank": 44
-    },
-    {
-      "mean_dist": 0.416861850365477,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_46",
-      "rank": 45
-    },
-    {
-      "mean_dist": 0.4172076288787271,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_32",
-      "rank": 46
-    },
-    {
-      "mean_dist": 0.4172532330338675,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_4",
-      "rank": 47
-    },
-    {
-      "mean_dist": 0.42606916007532974,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_14",
-      "rank": 48
-    },
-    {
-      "mean_dist": 0.43364291479573536,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "in_basin": false,
-      "n_templates": 6,
-      "label": "decoy_33",
-      "rank": 49
     }
   ],
   "knobs": {
-    "Lambda": 148.24406107426935,
-    "omega_scale": 1.6266375886816526,
-    "weight_power": 2.465471283415999,
-    "tier_split": 0.6074425095110438,
-    "low_boost": 0.5581294116355281,
-    "w1_mult": 0.907164761960651,
-    "w2_mult": 1.098869151860439,
-    "w3_mult": 0.8
+    "Lambda": 168.78695073249213,
+    "omega_scale": 1.6269932038392327,
+    "weight_power": 2.0112793282732184,
+    "tier_split": 0.5874425095110438,
+    "low_boost": 0.6438012014911153,
+    "w1_mult": 0.9399563144790238,
+    "w2_mult": 1.0548999514537594,
+    "w3_mult": 0.881677493967387
   },
-  "method": "crit_kabsch",
+  "method": "FALLBACK_THETA_PROXY",
   "ontology": "mold_ranking_not_lambda_eq_gamma",
-  "note": "crit_kabsch = min shape-RMSD to Crit sector embeddings; theta_proxy = FALLBACK"
+  "note": "v1 uses theta_proxy from CA PCA plane \u2014 not full Coutsias holonomy"
 }

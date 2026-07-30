@@ -609,26 +609,6 @@ def main(argv=None) -> int:
     gen_log[-1]["status"] = final_status
     gen_log[-1]["best"] = final
 
-    # Preserve stage / ranking_hparams from prior evolve_result if present
-    prior_meta: dict = {}
-    if args.json.is_file():
-        try:
-            old_payload = json.loads(args.json.read_text(encoding="utf-8"))
-            for k in (
-                "stage",
-                "ranking_hparams",
-                "ontology_note",
-                "defect_beta",
-                "fold_protocol",
-                "math_framing",
-                "tracks",
-                "commit_policy",
-            ):
-                if k in old_payload:
-                    prior_meta[k] = old_payload[k]
-        except Exception:  # noqa: BLE001
-            prior_meta = {}
-
     payload = {
         "generation_time": datetime.now(timezone.utc).isoformat(),
         "n_generations": len(gen_log),
@@ -646,7 +626,7 @@ def main(argv=None) -> int:
         "spectral_gaps": final["key"].spectral_gaps.tolist(),
         "targets": {"R": args.r_target, "occupancy": args.occ_target},
         "history_tail": [g["best"]["entry"] for g in gen_log if g.get("best")],
-        "ontology": prior_meta.get("ontology") or "projection_mold_plus_crit_seal",
+        "ontology": "projection_mold_plus_crit_seal",
         "search": "parallel_8D_IR_micro_DE_LBFGS",
         "config": {"N": args.N, "n_zeros": args.k, "n_sectors": args.sectors},
         "compute": {
@@ -655,7 +635,6 @@ def main(argv=None) -> int:
             "ram_avail_gb": profile.ram_avail_gb,
             "notes": profile.notes,
         },
-        **{k: v for k, v in prior_meta.items() if k != "ontology"},
     }
     print(
         json.dumps(

@@ -1,1225 +1,483 @@
 {
-  "zeta_preference_claim": "RETRACTED",
-  "seating_check": {
-    "passed": true,
-    "rule": "R_legacy_zeta < 0.8 * min(R_legacy_nulls) under frozen knobs",
-    "margin": 0.8,
-    "f_zeta_legacy": 0.004488356551514631,
-    "min_null_legacy": 0.056355188412049895,
-    "interpretation": "Self-consistency of lock\u2013key seating under \u03b6-fitted knobs; NOT spectrum discrimination"
-  },
-  "informative": {
-    "f_zeta": 0.08798125252386946,
-    "min_null": 0.11177495405822946,
-    "means_R": {
-      "zeta": 0.08798125252386946,
-      "scramble": 0.17355034321727272,
-      "gue": 0.15021116802116963,
-      "poisson": 0.16111828074684928,
-      "arith": 0.11177495405822946
-    },
-    "arith_beats_zeta": false,
-    "note": "Still frozen knobs \u2014 equal-budget required before preference claims"
+  "passed": true,
+  "gate": {
+    "rule": "F_zeta < 0.8 * min(F_nulls)",
+    "margin": 0.8
   },
   "means": {
     "zeta": {
-      "F": 0.08798125252386946,
-      "R": 0.08798125252386946,
-      "R_legacy": 0.004488356551514631,
-      "R_informative": 0.08798125252386946,
-      "dens_return": 0.08798125252386946,
+      "F": 0.0045321647898132885,
+      "R": 0.0045321647898132885,
+      "dens_return": 0.09019418654640099,
       "occupancy": 1.0,
-      "n": 3
+      "n": 2
     },
     "scramble": {
-      "F": 0.18188367655060603,
-      "R": 0.17355034321727272,
-      "R_legacy": 0.1329584673093527,
-      "R_informative": 0.17355034321727272,
-      "dens_return": 0.17355034321727272,
+      "F": 0.1462205661954555,
+      "R": 0.1462205661954555,
+      "dens_return": 0.17100316223320156,
       "occupancy": 1.0,
-      "n": 3
+      "n": 2
     },
-    "gue": {
-      "F": 0.16687783468783632,
-      "R": 0.15021116802116963,
-      "R_legacy": 0.23239630559376054,
-      "R_informative": 0.15021116802116963,
-      "dens_return": 0.15021116802116963,
+    "goe": {
+      "F": 0.16607740354824696,
+      "R": 0.15357740354824695,
+      "dens_return": 0.20760626994573148,
       "occupancy": 1.0,
-      "n": 3
+      "n": 2
     },
     "poisson": {
-      "F": 0.16111828074684928,
-      "R": 0.16111828074684928,
-      "R_legacy": 0.170816826484002,
-      "R_informative": 0.16111828074684928,
-      "dens_return": 0.16111828074684928,
+      "F": 0.1611366220969628,
+      "R": 0.1611366220969628,
+      "dens_return": 0.1357768602201079,
       "occupancy": 1.0,
-      "n": 3
-    },
-    "arith": {
-      "F": 0.11177495405822946,
-      "R": 0.11177495405822946,
-      "R_legacy": 0.056355188412049895,
-      "R_informative": 0.11177495405822946,
-      "dens_return": 0.11177495405822946,
-      "occupancy": 1.0,
-      "n": 3
+      "n": 2
     }
   },
+  "f_zeta": 0.0045321647898132885,
+  "min_null_F": 0.1462205661954555,
   "config": {
     "N": 13,
     "n_zeros": 14,
     "n_sectors": 6,
-    "reps": 3,
-    "workers": 4,
-    "fitness": "informative",
-    "kinds": [
-      "zeta",
-      "scramble",
-      "gue",
-      "poisson",
-      "arith"
-    ]
+    "reps": 2,
+    "workers": 1
   },
   "knobs": {
-    "Lambda": 148.24406176702522,
-    "omega_scale": 1.6266382846572585,
-    "weight_power": 2.4654712820414497,
-    "tier_split": 0.6045125635214004,
-    "low_boost": 0.5654344981351259,
-    "w1_mult": 0.9104975120540054,
-    "w2_mult": 1.100020119888288,
-    "w3_mult": 0.804552377339691
+    "Lambda": 168.78695073249213,
+    "omega_scale": 1.6269932038392327,
+    "weight_power": 2.0112793282732184,
+    "tier_split": 0.5874425095110438,
+    "low_boost": 0.6438012014911153,
+    "w1_mult": 0.9399563144790238,
+    "w2_mult": 1.0548999514537594,
+    "w3_mult": 0.881677493967387
   },
   "runs": [
     {
       "kind": "zeta",
       "rng_seed": 0,
-      "F": 0.08798125252386946,
-      "R": 0.08798125252386946,
-      "R_legacy": 0.004488356551514631,
-      "R_informative": 0.08798125252386946,
+      "F": 0.0045321647898132885,
+      "R": 0.0045321647898132885,
       "occupancy": 1.0,
       "n_keys": 6,
       "n_valleys": 6,
       "mean_dist": 0.0,
       "breakdown": {
-        "stationarity": 8.821642970554017e-14,
-        "corr_penalty": 0.00035717570117876907,
+        "stationarity": 1.7040783360156375e-13,
+        "corr_penalty": 8.982184976846774e-05,
         "crit_coverage": 0.0,
-        "return_map_err": 0.021995313130967364,
-        "total": 0.08798125252386946,
+        "return_map_err": 0.022548546636600247,
+        "total": 0.0045321647898132885,
         "weights": {
-          "density_return": 1.0
+          "shape": 0.3,
+          "corr": 0.25,
+          "coverage": 0.25,
+          "return": 0.2
         },
-        "fitness_mode": "informative",
         "diagnostics": {
           "pin_align": 0.0,
           "theta_ladder_l1": 0.0,
-          "density_return_l1": 0.08798125252386946,
-          "corr_S_lambda": 0.9996428242988212,
-          "legacy_total": 0.004488356551514631,
-          "informative_total": 0.08798125252386946,
-          "lock_key_coincidence": 0.0,
-          "n_minima": 6.0,
-          "n_keys": 6.0,
-          "tautological_weight_legacy": 0.7000000000000001,
-          "degenerate_seating": 1.0
+          "density_return_l1": 0.09019418654640099,
+          "corr_S_lambda": 0.9999101781502315
         }
       },
       "diagnostics": {
         "pin_align": 0.0,
         "theta_ladder_l1": 0.0,
-        "density_return_l1": 0.08798125252386946,
-        "corr_S_lambda": 0.9996428242988212,
-        "legacy_total": 0.004488356551514631,
-        "informative_total": 0.08798125252386946,
-        "lock_key_coincidence": 0.0,
-        "n_minima": 6.0,
-        "n_keys": 6.0,
-        "tautological_weight_legacy": 0.7000000000000001,
-        "degenerate_seating": 1.0
+        "density_return_l1": 0.09019418654640099,
+        "corr_S_lambda": 0.9999101781502315
       },
-      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4479). Affine projection signature a=0.867, b=0.2103 is expected, not a cheat.",
+      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4466). Affine projection signature a=0.8677, b=0.2059 is expected, not a cheat.",
       "thetas": [
-        5.432474869801521,
-        1.0496733145911454,
-        4.5367334485401125,
-        1.978363112015623,
-        3.6126368596460576,
-        2.8582465395835794
+        5.428204437766438,
+        1.05188828901337,
+        4.53503806615296,
+        1.968654786998486,
+        3.6304187378441326,
+        2.8423392304588657
       ],
       "spectral_gaps": [
-        0.004280769372592014,
-        0.006516068526344636,
-        0.01802076650165506,
-        0.02311463192584508,
-        0.04205197571914389,
-        0.0481462487849276
+        0.004323839283974422,
+        0.00654358236150513,
+        0.018055718331377372,
+        0.02288876257919367,
+        0.0414957711359102,
+        0.04761396368090285
       ],
-      "fitness_mode": "informative",
-      "dof": {
-        "n_knobs": 8,
-        "n_sectors": 6,
-        "n_zeros": 14,
-        "note": "8 knobs vs 6 sectors is under-constrained for corr terms"
-      },
-      "ontology": "projection_mold_plus_crit_seal_not_lambda_eq_gamma",
-      "instrument_note": "informative R = density_return only; legacy R is retracted as \u03b6-preference evidence (Crit seating degeneracy)"
+      "ontology": "projection_mold_plus_crit_seal_not_lambda_eq_gamma"
     },
     {
       "kind": "zeta",
       "rng_seed": 1,
-      "F": 0.08798125252386946,
-      "R": 0.08798125252386946,
-      "R_legacy": 0.004488356551514631,
-      "R_informative": 0.08798125252386946,
+      "F": 0.0045321647898132885,
+      "R": 0.0045321647898132885,
       "occupancy": 1.0,
       "n_keys": 6,
       "n_valleys": 6,
       "mean_dist": 0.0,
       "breakdown": {
-        "stationarity": 8.821642970554017e-14,
-        "corr_penalty": 0.00035717570117876907,
+        "stationarity": 1.7040783360156375e-13,
+        "corr_penalty": 8.982184976846774e-05,
         "crit_coverage": 0.0,
-        "return_map_err": 0.021995313130967364,
-        "total": 0.08798125252386946,
+        "return_map_err": 0.022548546636600247,
+        "total": 0.0045321647898132885,
         "weights": {
-          "density_return": 1.0
+          "shape": 0.3,
+          "corr": 0.25,
+          "coverage": 0.25,
+          "return": 0.2
         },
-        "fitness_mode": "informative",
         "diagnostics": {
           "pin_align": 0.0,
           "theta_ladder_l1": 0.0,
-          "density_return_l1": 0.08798125252386946,
-          "corr_S_lambda": 0.9996428242988212,
-          "legacy_total": 0.004488356551514631,
-          "informative_total": 0.08798125252386946,
-          "lock_key_coincidence": 0.0,
-          "n_minima": 6.0,
-          "n_keys": 6.0,
-          "tautological_weight_legacy": 0.7000000000000001,
-          "degenerate_seating": 1.0
+          "density_return_l1": 0.09019418654640099,
+          "corr_S_lambda": 0.9999101781502315
         }
       },
       "diagnostics": {
         "pin_align": 0.0,
         "theta_ladder_l1": 0.0,
-        "density_return_l1": 0.08798125252386946,
-        "corr_S_lambda": 0.9996428242988212,
-        "legacy_total": 0.004488356551514631,
-        "informative_total": 0.08798125252386946,
-        "lock_key_coincidence": 0.0,
-        "n_minima": 6.0,
-        "n_keys": 6.0,
-        "tautological_weight_legacy": 0.7000000000000001,
-        "degenerate_seating": 1.0
+        "density_return_l1": 0.09019418654640099,
+        "corr_S_lambda": 0.9999101781502315
       },
-      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4479). Affine projection signature a=0.867, b=0.2103 is expected, not a cheat.",
+      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4466). Affine projection signature a=0.8677, b=0.2059 is expected, not a cheat.",
       "thetas": [
-        5.432474869801521,
-        1.0496733145911454,
-        4.5367334485401125,
-        1.978363112015623,
-        3.6126368596460576,
-        2.8582465395835794
+        5.428204437766438,
+        1.05188828901337,
+        4.53503806615296,
+        1.968654786998486,
+        3.6304187378441326,
+        2.8423392304588657
       ],
       "spectral_gaps": [
-        0.004280769372592014,
-        0.006516068526344636,
-        0.01802076650165506,
-        0.02311463192584508,
-        0.04205197571914389,
-        0.0481462487849276
+        0.004323839283974422,
+        0.00654358236150513,
+        0.018055718331377372,
+        0.02288876257919367,
+        0.0414957711359102,
+        0.04761396368090285
       ],
-      "fitness_mode": "informative",
-      "dof": {
-        "n_knobs": 8,
-        "n_sectors": 6,
-        "n_zeros": 14,
-        "note": "8 knobs vs 6 sectors is under-constrained for corr terms"
-      },
-      "ontology": "projection_mold_plus_crit_seal_not_lambda_eq_gamma",
-      "instrument_note": "informative R = density_return only; legacy R is retracted as \u03b6-preference evidence (Crit seating degeneracy)"
+      "ontology": "projection_mold_plus_crit_seal_not_lambda_eq_gamma"
     },
     {
       "kind": "scramble",
       "rng_seed": 200,
-      "F": 0.21617881071817163,
-      "R": 0.21617881071817163,
-      "R_legacy": 0.0779281257363518,
-      "R_informative": 0.21617881071817163,
+      "F": 0.07653377927951467,
+      "R": 0.07653377927951467,
       "occupancy": 1.0,
       "n_keys": 6,
       "n_valleys": 6,
       "mean_dist": 0.0,
       "breakdown": {
-        "stationarity": 2.3250664793691494e-13,
-        "corr_penalty": 0.26847674080149386,
+        "stationarity": 5.1361581821654416e-14,
+        "corr_penalty": 0.26475024499407296,
         "crit_coverage": 0.0,
-        "return_map_err": 0.05404470267954291,
-        "total": 0.21617881071817163,
+        "return_map_err": 0.05173109015490514,
+        "total": 0.07653377927951467,
         "weights": {
-          "density_return": 1.0
+          "shape": 0.3,
+          "corr": 0.25,
+          "coverage": 0.25,
+          "return": 0.2
         },
-        "fitness_mode": "informative",
         "diagnostics": {
           "pin_align": 0.0,
           "theta_ladder_l1": 0.0,
-          "density_return_l1": 0.21617881071817163,
-          "corr_S_lambda": 0.7315232591985061,
-          "legacy_total": 0.0779281257363518,
-          "informative_total": 0.21617881071817163,
-          "lock_key_coincidence": 0.0,
-          "n_minima": 6.0,
-          "n_keys": 6.0,
-          "tautological_weight_legacy": 0.7000000000000001,
-          "degenerate_seating": 1.0
+          "density_return_l1": 0.20692436061962055,
+          "corr_S_lambda": 0.735249755005927
         }
       },
       "diagnostics": {
         "pin_align": 0.0,
         "theta_ladder_l1": 0.0,
-        "density_return_l1": 0.21617881071817163,
-        "corr_S_lambda": 0.7315232591985061,
-        "legacy_total": 0.0779281257363518,
-        "informative_total": 0.21617881071817163,
-        "lock_key_coincidence": 0.0,
-        "n_minima": 6.0,
-        "n_keys": 6.0,
-        "tautological_weight_legacy": 0.7000000000000001,
-        "degenerate_seating": 1.0
+        "density_return_l1": 0.20692436061962055,
+        "corr_S_lambda": 0.735249755005927
       },
-      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4807). Affine projection signature a=0.9428, b=0.06579 is expected, not a cheat.",
+      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4768). Affine projection signature a=0.9404, b=0.06864 is expected, not a cheat.",
       "thetas": [
-        3.8429360704848503,
-        2.8423067141537635,
-        1.9836385824824179,
-        5.776186537569763,
-        1.0223090586298729,
-        4.726436134218827
+        2.8407534692711485,
+        3.847425486905576,
+        1.9755295417683558,
+        5.760797187941016,
+        1.0220119737513071,
+        4.71284191490615
       ],
       "spectral_gaps": [
-        0.03513225878033789,
-        0.047612878624686154,
-        0.023237830886481837,
-        0.001520799842560668,
-        0.006180930941680469,
-        0.014322919039571724
+        0.04756106168600528,
+        0.03500348751932905,
+        0.02304859346619123,
+        0.0016145125969406057,
+        0.006177340934182571,
+        0.014573853743778158
       ],
-      "fitness_mode": "informative",
-      "dof": {
-        "n_knobs": 8,
-        "n_sectors": 6,
-        "n_zeros": 14,
-        "note": "8 knobs vs 6 sectors is under-constrained for corr terms"
-      },
-      "ontology": "projection_mold_plus_crit_seal_not_lambda_eq_gamma",
-      "instrument_note": "informative R = density_return only; legacy R is retracted as \u03b6-preference evidence (Crit seating degeneracy)"
-    },
-    {
-      "kind": "zeta",
-      "rng_seed": 2,
-      "F": 0.08798125252386946,
-      "R": 0.08798125252386946,
-      "R_legacy": 0.004488356551514631,
-      "R_informative": 0.08798125252386946,
-      "occupancy": 1.0,
-      "n_keys": 6,
-      "n_valleys": 6,
-      "mean_dist": 0.0,
-      "breakdown": {
-        "stationarity": 8.821642970554017e-14,
-        "corr_penalty": 0.00035717570117876907,
-        "crit_coverage": 0.0,
-        "return_map_err": 0.021995313130967364,
-        "total": 0.08798125252386946,
-        "weights": {
-          "density_return": 1.0
-        },
-        "fitness_mode": "informative",
-        "diagnostics": {
-          "pin_align": 0.0,
-          "theta_ladder_l1": 0.0,
-          "density_return_l1": 0.08798125252386946,
-          "corr_S_lambda": 0.9996428242988212,
-          "legacy_total": 0.004488356551514631,
-          "informative_total": 0.08798125252386946,
-          "lock_key_coincidence": 0.0,
-          "n_minima": 6.0,
-          "n_keys": 6.0,
-          "tautological_weight_legacy": 0.7000000000000001,
-          "degenerate_seating": 1.0
-        }
-      },
-      "diagnostics": {
-        "pin_align": 0.0,
-        "theta_ladder_l1": 0.0,
-        "density_return_l1": 0.08798125252386946,
-        "corr_S_lambda": 0.9996428242988212,
-        "legacy_total": 0.004488356551514631,
-        "informative_total": 0.08798125252386946,
-        "lock_key_coincidence": 0.0,
-        "n_minima": 6.0,
-        "n_keys": 6.0,
-        "tautological_weight_legacy": 0.7000000000000001,
-        "degenerate_seating": 1.0
-      },
-      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4479). Affine projection signature a=0.867, b=0.2103 is expected, not a cheat.",
-      "thetas": [
-        5.432474869801521,
-        1.0496733145911454,
-        4.5367334485401125,
-        1.978363112015623,
-        3.6126368596460576,
-        2.8582465395835794
-      ],
-      "spectral_gaps": [
-        0.004280769372592014,
-        0.006516068526344636,
-        0.01802076650165506,
-        0.02311463192584508,
-        0.04205197571914389,
-        0.0481462487849276
-      ],
-      "fitness_mode": "informative",
-      "dof": {
-        "n_knobs": 8,
-        "n_sectors": 6,
-        "n_zeros": 14,
-        "note": "8 knobs vs 6 sectors is under-constrained for corr terms"
-      },
-      "ontology": "projection_mold_plus_crit_seal_not_lambda_eq_gamma",
-      "instrument_note": "informative R = density_return only; legacy R is retracted as \u03b6-preference evidence (Crit seating degeneracy)"
+      "ontology": "projection_mold_plus_crit_seal_not_lambda_eq_gamma"
     },
     {
       "kind": "scramble",
       "rng_seed": 201,
-      "F": 0.12101021563713484,
-      "R": 0.12101021563713484,
-      "R_legacy": 0.2187744613271441,
-      "R_informative": 0.12101021563713484,
+      "F": 0.21590735311139636,
+      "R": 0.21590735311139636,
       "occupancy": 1.0,
       "n_keys": 6,
       "n_valleys": 7,
       "mean_dist": 0.0,
       "breakdown": {
-        "stationarity": 3.842282216727963e-14,
-        "corr_penalty": 0.8023913240371938,
-        "crit_coverage": 0.026867442195182917,
-        "return_map_err": 0.05729884884519202,
-        "total": 0.12101021563713484,
+        "stationarity": 1.9228336168844495e-13,
+        "corr_penalty": 0.7389002071974171,
+        "crit_coverage": 0.02969926919459002,
+        "return_map_err": 0.11878742006668452,
+        "total": 0.21590735311139636,
         "weights": {
-          "density_return": 1.0
+          "shape": 0.3,
+          "corr": 0.25,
+          "coverage": 0.25,
+          "return": 0.2
         },
-        "fitness_mode": "informative",
         "diagnostics": {
-          "pin_align": 0.013433721097591458,
-          "theta_ladder_l1": 0.06192230427677636,
-          "density_return_l1": 0.12101021563713484,
-          "corr_S_lambda": 0.19760867596280618,
-          "legacy_total": 0.2187744613271441,
-          "informative_total": 0.12101021563713484,
-          "lock_key_coincidence": 0.5908459131479455,
-          "n_minima": 7.0,
-          "n_keys": 6.0,
-          "tautological_weight_legacy": 0.7000000000000001,
-          "degenerate_seating": 1.0
+          "pin_align": 0.01484963459729501,
+          "theta_ladder_l1": 0.22593450076020255,
+          "density_return_l1": 0.1350819638467826,
+          "corr_S_lambda": 0.2610997928025829
         }
       },
       "diagnostics": {
-        "pin_align": 0.013433721097591458,
-        "theta_ladder_l1": 0.06192230427677636,
-        "density_return_l1": 0.12101021563713484,
-        "corr_S_lambda": 0.19760867596280618,
-        "legacy_total": 0.2187744613271441,
-        "informative_total": 0.12101021563713484,
-        "lock_key_coincidence": 0.5908459131479455,
-        "n_minima": 7.0,
-        "n_keys": 6.0,
-        "tautological_weight_legacy": 0.7000000000000001,
-        "degenerate_seating": 1.0
+        "pin_align": 0.01484963459729501,
+        "theta_ladder_l1": 0.22593450076020255,
+        "density_return_l1": 0.1350819638467826,
+        "corr_S_lambda": 0.2610997928025829
       },
-      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4805). Affine projection signature a=0.8997, b=0.1309 is expected, not a cheat.",
+      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4735). Affine projection signature a=0.9904, b=-0.07898 is expected, not a cheat.",
       "thetas": [
-        3.6835113677034017,
-        2.046849824648306,
-        4.624764157876148,
-        1.0662011670539897,
-        2.6478897495983054,
-        5.610254790459395
+        3.6931755291000923,
+        2.0347397109681498,
+        4.61993226289466,
+        1.067589198973936,
+        2.6653596047457926,
+        6.2436960213857375
       ],
       "spectral_gaps": [
-        0.039856879053129395,
-        0.02473932648748643,
-        0.016252264553918983,
-        0.0067227683583662625,
-        0.04134386791120123,
-        0.0026789016270965405
+        0.03956207687297703,
+        0.024448049908956517,
+        0.0163469767178049,
+        0.006740273953180098,
+        0.0418892938204221,
+        9.227233688896864e-06
       ],
-      "fitness_mode": "informative",
-      "dof": {
-        "n_knobs": 8,
-        "n_sectors": 6,
-        "n_zeros": 14,
-        "note": "8 knobs vs 6 sectors is under-constrained for corr terms"
-      },
-      "ontology": "projection_mold_plus_crit_seal_not_lambda_eq_gamma",
-      "instrument_note": "informative R = density_return only; legacy R is retracted as \u03b6-preference evidence (Crit seating degeneracy)"
+      "ontology": "projection_mold_plus_crit_seal_not_lambda_eq_gamma"
     },
     {
-      "kind": "scramble",
-      "rng_seed": 202,
-      "F": 0.20846200329651168,
-      "R": 0.1834620032965117,
-      "R_legacy": 0.10217281486456227,
-      "R_informative": 0.1834620032965117,
-      "occupancy": 1.0,
-      "n_keys": 6,
-      "n_valleys": 5,
-      "mean_dist": 0.06362676796928508,
-      "breakdown": {
-        "stationarity": 9.131329671357527e-15,
-        "corr_penalty": 0.32725343235335336,
-        "crit_coverage": 0.0,
-        "return_map_err": 0.101797283881106,
-        "total": 0.1834620032965117,
-        "weights": {
-          "density_return": 1.0
-        },
-        "fitness_mode": "informative",
-        "diagnostics": {
-          "pin_align": 0.010126514635272798,
-          "theta_ladder_l1": 0.1482319348653399,
-          "density_return_l1": 0.1834620032965117,
-          "corr_S_lambda": 0.6727465676466466,
-          "legacy_total": 0.10217281486456227,
-          "informative_total": 0.1834620032965117,
-          "lock_key_coincidence": 0.38176060781571053,
-          "n_minima": 5.0,
-          "n_keys": 6.0,
-          "tautological_weight_legacy": 0.7000000000000001,
-          "degenerate_seating": 0.0
-        }
-      },
-      "diagnostics": {
-        "pin_align": 0.010126514635272798,
-        "theta_ladder_l1": 0.1482319348653399,
-        "density_return_l1": 0.1834620032965117,
-        "corr_S_lambda": 0.6727465676466466,
-        "legacy_total": 0.10217281486456227,
-        "informative_total": 0.1834620032965117,
-        "lock_key_coincidence": 0.38176060781571053,
-        "n_minima": 5.0,
-        "n_keys": 6.0,
-        "tautological_weight_legacy": 0.7000000000000001,
-        "degenerate_seating": 0.0
-      },
-      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0636 \u2264 basin 0.4945). Affine projection signature a=0.9722, b=0.381 is expected, not a cheat.",
-      "thetas": [
-        3.674953047989041,
-        1.1179610992005493,
-        2.1740003225202558,
-        5.425301725040054,
-        4.503491430971395,
-        5.8070623328557645
-      ],
-      "spectral_gaps": [
-        0.04011885230206986,
-        0.0073909286779407215,
-        0.027901023793304988,
-        0.004353237850562635,
-        0.01871222904397964,
-        0.0013412292763046747
-      ],
-      "fitness_mode": "informative",
-      "dof": {
-        "n_knobs": 8,
-        "n_sectors": 6,
-        "n_zeros": 14,
-        "note": "8 knobs vs 6 sectors is under-constrained for corr terms"
-      },
-      "ontology": "projection_mold_plus_crit_seal_not_lambda_eq_gamma",
-      "instrument_note": "informative R = density_return only; legacy R is retracted as \u03b6-preference evidence (Crit seating degeneracy)"
-    },
-    {
-      "kind": "gue",
+      "kind": "goe",
       "rng_seed": 300,
-      "F": 0.09918826671834198,
-      "R": 0.07418826671834199,
-      "R_legacy": 0.2125304454580805,
-      "R_informative": 0.07418826671834199,
+      "F": 0.10061218807650975,
+      "R": 0.10061218807650975,
       "occupancy": 1.0,
       "n_keys": 6,
-      "n_valleys": 5,
-      "mean_dist": 0.08334498911372323,
+      "n_valleys": 6,
+      "mean_dist": 0.0,
       "breakdown": {
-        "stationarity": 3.27356796301543e-16,
-        "corr_penalty": 0.7272911330435368,
+        "stationarity": 4.805613199107522e-14,
+        "corr_penalty": 0.37722325423090064,
         "crit_coverage": 0.0,
-        "return_map_err": 0.15353831098598097,
-        "total": 0.07418826671834199,
+        "return_map_err": 0.03153187259385083,
+        "total": 0.10061218807650975,
         "weights": {
-          "density_return": 1.0
+          "shape": 0.3,
+          "corr": 0.25,
+          "coverage": 0.25,
+          "return": 0.2
         },
-        "fitness_mode": "informative",
         "diagnostics": {
-          "pin_align": 0.013264766999389258,
-          "theta_ladder_l1": 0.37052953573325653,
-          "density_return_l1": 0.07418826671834199,
-          "corr_S_lambda": 0.27270886695646324,
-          "legacy_total": 0.2125304454580805,
-          "informative_total": 0.07418826671834199,
-          "lock_key_coincidence": 0.5000699346823394,
-          "n_minima": 5.0,
-          "n_keys": 6.0,
-          "tautological_weight_legacy": 0.7000000000000001,
-          "degenerate_seating": 0.0
+          "pin_align": 0.0,
+          "theta_ladder_l1": 0.0,
+          "density_return_l1": 0.12612749037540333,
+          "corr_S_lambda": 0.6227767457690994
         }
       },
       "diagnostics": {
-        "pin_align": 0.013264766999389258,
-        "theta_ladder_l1": 0.37052953573325653,
-        "density_return_l1": 0.07418826671834199,
-        "corr_S_lambda": 0.27270886695646324,
-        "legacy_total": 0.2125304454580805,
-        "informative_total": 0.07418826671834199,
-        "lock_key_coincidence": 0.5000699346823394,
-        "n_minima": 5.0,
-        "n_keys": 6.0,
-        "tautological_weight_legacy": 0.7000000000000001,
-        "degenerate_seating": 0.0
+        "pin_align": 0.0,
+        "theta_ladder_l1": 0.0,
+        "density_return_l1": 0.12612749037540333,
+        "corr_S_lambda": 0.6227767457690994
       },
-      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0833 \u2264 basin 0.5044). Affine projection signature a=0.7978, b=0.3141 is expected, not a cheat.",
+      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4747). Affine projection signature a=0.898, b=0.1877 is expected, not a cheat.",
       "thetas": [
-        2.885257946278885,
-        3.948919738742071,
-        1.08139983057795,
-        5.342871940281204,
-        1.931387679018195,
-        3.4488498040597317
+        2.951944363444019,
+        2.0025886764364067,
+        1.0416512537631442,
+        3.7834890570707294,
+        5.600893333854719,
+        4.6031532332760605
       ],
       "spectral_gaps": [
-        0.0490567896904715,
-        0.03215486235004708,
-        0.00691568882667835,
-        0.00522960826551382,
-        0.022031964841120976,
-        0.047347251011823605
+        0.05134081260012124,
+        0.02368306038245348,
+        0.006416904929239006,
+        0.0368594841778499,
+        0.002753937793991644,
+        0.01667799808549918
       ],
-      "fitness_mode": "informative",
-      "dof": {
-        "n_knobs": 8,
-        "n_sectors": 6,
-        "n_zeros": 14,
-        "note": "8 knobs vs 6 sectors is under-constrained for corr terms"
-      },
-      "ontology": "projection_mold_plus_crit_seal_not_lambda_eq_gamma",
-      "instrument_note": "informative R = density_return only; legacy R is retracted as \u03b6-preference evidence (Crit seating degeneracy)"
+      "ontology": "projection_mold_plus_crit_seal_not_lambda_eq_gamma"
     },
     {
-      "kind": "gue",
+      "kind": "goe",
       "rng_seed": 301,
-      "F": 0.2139377877702023,
-      "R": 0.18893778777020231,
-      "R_legacy": 0.22962051348717255,
-      "R_informative": 0.18893778777020231,
+      "F": 0.23154261901998416,
+      "R": 0.20654261901998416,
       "occupancy": 1.0,
       "n_keys": 6,
       "n_valleys": 5,
-      "mean_dist": 0.08545051409908629,
+      "mean_dist": 0.03793863414541206,
       "breakdown": {
-        "stationarity": 3.749043740959487e-15,
-        "corr_penalty": 0.7505177922648438,
+        "stationarity": 2.423952903926249e-13,
+        "corr_penalty": 0.6752678423322247,
         "crit_coverage": 0.0,
-        "return_map_err": 0.2099553271048023,
-        "total": 0.18893778777020231,
+        "return_map_err": 0.18862829218427635,
+        "total": 0.20654261901998416,
         "weights": {
-          "density_return": 1.0
+          "shape": 0.3,
+          "corr": 0.25,
+          "coverage": 0.25,
+          "return": 0.2
         },
-        "fitness_mode": "informative",
         "diagnostics": {
-          "pin_align": 0.013599871708613279,
-          "theta_ladder_l1": 0.44937408993944694,
-          "density_return_l1": 0.18893778777020231,
-          "corr_S_lambda": 0.24948220773515617,
-          "legacy_total": 0.22962051348717255,
-          "informative_total": 0.18893778777020231,
-          "lock_key_coincidence": 0.5127030845945177,
-          "n_minima": 5.0,
-          "n_keys": 6.0,
-          "tautological_weight_legacy": 0.7000000000000001,
-          "degenerate_seating": 0.0
+          "pin_align": 0.006038121158397294,
+          "theta_ladder_l1": 0.32554794669115006,
+          "density_return_l1": 0.2890850495160596,
+          "corr_S_lambda": 0.3247321576677753
         }
       },
       "diagnostics": {
-        "pin_align": 0.013599871708613279,
-        "theta_ladder_l1": 0.44937408993944694,
-        "density_return_l1": 0.18893778777020231,
-        "corr_S_lambda": 0.24948220773515617,
-        "legacy_total": 0.22962051348717255,
-        "informative_total": 0.18893778777020231,
-        "lock_key_coincidence": 0.5127030845945177,
-        "n_minima": 5.0,
-        "n_keys": 6.0,
-        "tautological_weight_legacy": 0.7000000000000001,
-        "degenerate_seating": 0.0
+        "pin_align": 0.006038121158397294,
+        "theta_ladder_l1": 0.32554794669115006,
+        "density_return_l1": 0.2890850495160596,
+        "corr_S_lambda": 0.3247321576677753
       },
-      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0855 \u2264 basin 0.6317). Affine projection signature a=0.9651, b=0.3781 is expected, not a cheat.",
+      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0379 \u2264 basin 0.5207). Affine projection signature a=0.8033, b=0.4699 is expected, not a cheat.",
       "thetas": [
-        3.868458290148493,
-        2.7457729127123276,
-        6.254016348182928,
-        5.272647120472462,
-        1.136383271579746,
-        3.2584759973068453
+        3.111192352891333,
+        2.0849675511282544,
+        5.296142604297389,
+        1.0885870515251708,
+        4.167864757654255,
+        3.9402329527817823
       ],
       "spectral_gaps": [
-        0.034403318406437844,
-        0.04444545938666572,
-        5.034484090948846e-06,
-        0.006039487085525584,
-        0.007636360043112368,
-        0.05389152520363202
+        0.05700240374714052,
+        0.025667334524715438,
+        0.00576204352041049,
+        0.007007866783995657,
+        0.026418443886309508,
+        0.0323939818966155
       ],
-      "fitness_mode": "informative",
-      "dof": {
-        "n_knobs": 8,
-        "n_sectors": 6,
-        "n_zeros": 14,
-        "note": "8 knobs vs 6 sectors is under-constrained for corr terms"
-      },
-      "ontology": "projection_mold_plus_crit_seal_not_lambda_eq_gamma",
-      "instrument_note": "informative R = density_return only; legacy R is retracted as \u03b6-preference evidence (Crit seating degeneracy)"
-    },
-    {
-      "kind": "gue",
-      "rng_seed": 302,
-      "F": 0.1875074495749646,
-      "R": 0.1875074495749646,
-      "R_legacy": 0.2550379578360285,
-      "R_informative": 0.1875074495749646,
-      "occupancy": 1.0,
-      "n_keys": 6,
-      "n_valleys": 6,
-      "mean_dist": 0.0,
-      "breakdown": {
-        "stationarity": 1.621483936335749e-13,
-        "corr_penalty": 0.9826503414289265,
-        "crit_coverage": 0.0,
-        "return_map_err": 0.04687686239374115,
-        "total": 0.1875074495749646,
-        "weights": {
-          "density_return": 1.0
-        },
-        "fitness_mode": "informative",
-        "diagnostics": {
-          "pin_align": 0.0,
-          "theta_ladder_l1": 0.0,
-          "density_return_l1": 0.1875074495749646,
-          "corr_S_lambda": 0.017349658571073512,
-          "legacy_total": 0.2550379578360285,
-          "informative_total": 0.1875074495749646,
-          "lock_key_coincidence": 0.0,
-          "n_minima": 6.0,
-          "n_keys": 6.0,
-          "tautological_weight_legacy": 0.7000000000000001,
-          "degenerate_seating": 1.0
-        }
-      },
-      "diagnostics": {
-        "pin_align": 0.0,
-        "theta_ladder_l1": 0.0,
-        "density_return_l1": 0.1875074495749646,
-        "corr_S_lambda": 0.017349658571073512,
-        "legacy_total": 0.2550379578360285,
-        "informative_total": 0.1875074495749646,
-        "lock_key_coincidence": 0.0,
-        "n_minima": 6.0,
-        "n_keys": 6.0,
-        "tautological_weight_legacy": 0.7000000000000001,
-        "degenerate_seating": 1.0
-      },
-      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4425). Affine projection signature a=0.9837, b=-0.0152 is expected, not a cheat.",
-      "thetas": [
-        6.230563016282899,
-        2.9148625952005855,
-        3.734711720553792,
-        1.102760308065622,
-        4.619711352314376,
-        1.963206629946796
-      ],
-      "spectral_gaps": [
-        1.6385217266988624e-05,
-        0.05006442181143111,
-        0.038307365456186626,
-        0.007191427546266073,
-        0.016351313437187463,
-        0.02276249131574831
-      ],
-      "fitness_mode": "informative",
-      "dof": {
-        "n_knobs": 8,
-        "n_sectors": 6,
-        "n_zeros": 14,
-        "note": "8 knobs vs 6 sectors is under-constrained for corr terms"
-      },
-      "ontology": "projection_mold_plus_crit_seal_not_lambda_eq_gamma",
-      "instrument_note": "informative R = density_return only; legacy R is retracted as \u03b6-preference evidence (Crit seating degeneracy)"
-    },
-    {
-      "kind": "poisson",
-      "rng_seed": 401,
-      "F": 0.15232407353868996,
-      "R": 0.15232407353868996,
-      "R_legacy": 0.20883811967139995,
-      "R_informative": 0.15232407353868996,
-      "occupancy": 1.0,
-      "n_keys": 6,
-      "n_valleys": 6,
-      "mean_dist": 0.0,
-      "breakdown": {
-        "stationarity": 2.6029101390555866e-13,
-        "corr_penalty": 0.8048876639775495,
-        "crit_coverage": 0.0,
-        "return_map_err": 0.03808101838467249,
-        "total": 0.15232407353868996,
-        "weights": {
-          "density_return": 1.0
-        },
-        "fitness_mode": "informative",
-        "diagnostics": {
-          "pin_align": 0.0,
-          "theta_ladder_l1": 0.0,
-          "density_return_l1": 0.15232407353868996,
-          "corr_S_lambda": 0.19511233602245048,
-          "legacy_total": 0.20883811967139995,
-          "informative_total": 0.15232407353868996,
-          "lock_key_coincidence": 0.0,
-          "n_minima": 6.0,
-          "n_keys": 6.0,
-          "tautological_weight_legacy": 0.7000000000000001,
-          "degenerate_seating": 1.0
-        }
-      },
-      "diagnostics": {
-        "pin_align": 0.0,
-        "theta_ladder_l1": 0.0,
-        "density_return_l1": 0.15232407353868996,
-        "corr_S_lambda": 0.19511233602245048,
-        "legacy_total": 0.20883811967139995,
-        "informative_total": 0.15232407353868996,
-        "lock_key_coincidence": 0.0,
-        "n_minima": 6.0,
-        "n_keys": 6.0,
-        "tautological_weight_legacy": 0.7000000000000001,
-        "degenerate_seating": 1.0
-      },
-      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4550). Affine projection signature a=0.8721, b=0.1835 is expected, not a cheat.",
-      "thetas": [
-        5.459577553942444,
-        3.5824851433510623,
-        2.672395749664134,
-        2.114945648736892,
-        1.0121411057153147,
-        4.574124950171647
-      ],
-      "spectral_gaps": [
-        0.004012443031849229,
-        0.0430034716801272,
-        0.04210996809302172,
-        0.026409101032857332,
-        0.00605865230280006,
-        0.017258478295837043
-      ],
-      "fitness_mode": "informative",
-      "dof": {
-        "n_knobs": 8,
-        "n_sectors": 6,
-        "n_zeros": 14,
-        "note": "8 knobs vs 6 sectors is under-constrained for corr terms"
-      },
-      "ontology": "projection_mold_plus_crit_seal_not_lambda_eq_gamma",
-      "instrument_note": "informative R = density_return only; legacy R is retracted as \u03b6-preference evidence (Crit seating degeneracy)"
+      "ontology": "projection_mold_plus_crit_seal_not_lambda_eq_gamma"
     },
     {
       "kind": "poisson",
       "rng_seed": 400,
-      "F": 0.12545478301021865,
-      "R": 0.12545478301021865,
-      "R_legacy": 0.10593211236857963,
-      "R_informative": 0.12545478301021865,
+      "F": 0.10850657591981058,
+      "R": 0.10850657591981058,
       "occupancy": 1.0,
       "n_keys": 6,
       "n_valleys": 7,
       "mean_dist": 0.0,
       "breakdown": {
-        "stationarity": 1.7159917603464182e-13,
-        "corr_penalty": 0.2810788402193054,
-        "crit_coverage": 0.03727507266699455,
-        "return_map_err": 0.1317181707347658,
-        "total": 0.12545478301021865,
+        "stationarity": 1.9729359717640996e-13,
+        "corr_penalty": 0.2918197540815459,
+        "crit_coverage": 0.03721336385114571,
+        "return_map_err": 0.1312414821828924,
+        "total": 0.10850657591981058,
         "weights": {
-          "density_return": 1.0
+          "shape": 0.3,
+          "corr": 0.25,
+          "coverage": 0.25,
+          "return": 0.2
         },
-        "fitness_mode": "informative",
         "diagnostics": {
-          "pin_align": 0.018637536333497275,
-          "theta_ladder_l1": 0.2654270298537492,
-          "density_return_l1": 0.12545478301021865,
-          "corr_S_lambda": 0.7189211597806946,
-          "legacy_total": 0.10593211236857963,
-          "informative_total": 0.12545478301021865,
-          "lock_key_coincidence": 0.8197216611685905,
-          "n_minima": 7.0,
-          "n_keys": 6.0,
-          "tautological_weight_legacy": 0.7000000000000001,
-          "degenerate_seating": 1.0
+          "pin_align": 0.018606681925572854,
+          "theta_ladder_l1": 0.2665409933748404,
+          "density_return_l1": 0.12203784692587645,
+          "corr_S_lambda": 0.7081802459184541
         }
       },
       "diagnostics": {
-        "pin_align": 0.018637536333497275,
-        "theta_ladder_l1": 0.2654270298537492,
-        "density_return_l1": 0.12545478301021865,
-        "corr_S_lambda": 0.7189211597806946,
-        "legacy_total": 0.10593211236857963,
-        "informative_total": 0.12545478301021865,
-        "lock_key_coincidence": 0.8197216611685905,
-        "n_minima": 7.0,
-        "n_keys": 6.0,
-        "tautological_weight_legacy": 0.7000000000000001,
-        "degenerate_seating": 1.0
+        "pin_align": 0.018606681925572854,
+        "theta_ladder_l1": 0.2665409933748404,
+        "density_return_l1": 0.12203784692587645,
+        "corr_S_lambda": 0.7081802459184541
       },
-      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4153). Affine projection signature a=1.016, b=-0.1993 is expected, not a cheat.",
+      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4167). Affine projection signature a=1.016, b=-0.2015 is expected, not a cheat.",
       "thetas": [
-        2.8395382570965535,
-        4.617674313408737,
-        3.5852399599524696,
-        6.2789871757549225,
-        1.813749735392025,
-        1.000063506948861
+        2.837633189837917,
+        4.614183486647421,
+        3.5844008994871084,
+        6.280925448430332,
+        1.8097998991980662,
+        1.0006310691441163
       ],
       "spectral_gaps": [
-        0.04752054110194423,
-        0.016391329760712326,
-        0.04291610102909276,
-        1.0428584262811569e-07,
-        0.019434054724435375,
-        0.005914993451456408
+        0.047457052016148055,
+        0.016460018060791615,
+        0.04294270302485492,
+        3.02187070898329e-08,
+        0.0193496396941043,
+        0.005921705867542545
       ],
-      "fitness_mode": "informative",
-      "dof": {
-        "n_knobs": 8,
-        "n_sectors": 6,
-        "n_zeros": 14,
-        "note": "8 knobs vs 6 sectors is under-constrained for corr terms"
-      },
-      "ontology": "projection_mold_plus_crit_seal_not_lambda_eq_gamma",
-      "instrument_note": "informative R = density_return only; legacy R is retracted as \u03b6-preference evidence (Crit seating degeneracy)"
+      "ontology": "projection_mold_plus_crit_seal_not_lambda_eq_gamma"
     },
     {
       "kind": "poisson",
-      "rng_seed": 402,
-      "F": 0.20557598569163926,
-      "R": 0.20557598569163926,
-      "R_legacy": 0.1976802474120265,
-      "R_informative": 0.20557598569163926,
+      "rng_seed": 401,
+      "F": 0.21376666827411503,
+      "R": 0.21376666827411503,
       "occupancy": 1.0,
       "n_keys": 6,
       "n_valleys": 6,
       "mean_dist": 0.0,
       "breakdown": {
-        "stationarity": 4.0019951766421824e-13,
-        "corr_penalty": 0.7496057925092978,
+        "stationarity": 5.578563962963176e-13,
+        "corr_penalty": 0.8251634983929228,
         "crit_coverage": 0.0,
-        "return_map_err": 0.051393996422909816,
-        "total": 0.20557598569163926,
+        "return_map_err": 0.03737896837858484,
+        "total": 0.21376666827411503,
         "weights": {
-          "density_return": 1.0
+          "shape": 0.3,
+          "corr": 0.25,
+          "coverage": 0.25,
+          "return": 0.2
         },
-        "fitness_mode": "informative",
         "diagnostics": {
           "pin_align": 0.0,
           "theta_ladder_l1": 0.0,
-          "density_return_l1": 0.20557598569163926,
-          "corr_S_lambda": 0.2503942074907022,
-          "legacy_total": 0.1976802474120265,
-          "informative_total": 0.20557598569163926,
-          "lock_key_coincidence": 0.0,
-          "n_minima": 6.0,
-          "n_keys": 6.0,
-          "tautological_weight_legacy": 0.7000000000000001,
-          "degenerate_seating": 1.0
+          "density_return_l1": 0.14951587351433937,
+          "corr_S_lambda": 0.1748365016070772
         }
       },
       "diagnostics": {
         "pin_align": 0.0,
         "theta_ladder_l1": 0.0,
-        "density_return_l1": 0.20557598569163926,
-        "corr_S_lambda": 0.2503942074907022,
-        "legacy_total": 0.1976802474120265,
-        "informative_total": 0.20557598569163926,
-        "lock_key_coincidence": 0.0,
-        "n_minima": 6.0,
-        "n_keys": 6.0,
-        "tautological_weight_legacy": 0.7000000000000001,
-        "degenerate_seating": 1.0
+        "density_return_l1": 0.14951587351433937,
+        "corr_S_lambda": 0.1748365016070772
       },
-      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4403). Affine projection signature a=0.859, b=0.191 is expected, not a cheat.",
+      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4595). Affine projection signature a=0.8725, b=0.1821 is expected, not a cheat.",
       "thetas": [
-        5.438597260378309,
-        2.81028526188141,
-        3.5037125404440923,
-        4.434301042157087,
-        1.9296967302538122,
-        1.067348774645384
+        5.453643600080222,
+        3.592672758169007,
+        2.6736327596184073,
+        2.1050752275625806,
+        1.012931056675812,
+        4.576524725049019
       ],
       "spectral_gaps": [
-        0.0042193970276887816,
-        0.046550265400456446,
-        0.04553896003078559,
-        0.020192987807518794,
-        0.02199347415968117,
-        0.0067372401401119275
+        0.004070449565359089,
+        0.04268080386052018,
+        0.04214882365925309,
+        0.02616371205823104,
+        0.006068108461183302,
+        0.017210114964868205
       ],
-      "fitness_mode": "informative",
-      "dof": {
-        "n_knobs": 8,
-        "n_sectors": 6,
-        "n_zeros": 14,
-        "note": "8 knobs vs 6 sectors is under-constrained for corr terms"
-      },
-      "ontology": "projection_mold_plus_crit_seal_not_lambda_eq_gamma",
-      "instrument_note": "informative R = density_return only; legacy R is retracted as \u03b6-preference evidence (Crit seating degeneracy)"
-    },
-    {
-      "kind": "arith",
-      "rng_seed": 500,
-      "F": 0.11177495405822946,
-      "R": 0.11177495405822946,
-      "R_legacy": 0.056355188412049895,
-      "R_informative": 0.11177495405822946,
-      "occupancy": 1.0,
-      "n_keys": 6,
-      "n_valleys": 6,
-      "mean_dist": 0.0,
-      "breakdown": {
-        "stationarity": 3.0248646184492045e-13,
-        "corr_penalty": 0.2030657628361907,
-        "crit_coverage": 0.0,
-        "return_map_err": 0.027943738514557365,
-        "total": 0.11177495405822946,
-        "weights": {
-          "density_return": 1.0
-        },
-        "fitness_mode": "informative",
-        "diagnostics": {
-          "pin_align": 0.0,
-          "theta_ladder_l1": 0.0,
-          "density_return_l1": 0.11177495405822946,
-          "corr_S_lambda": 0.7969342371638093,
-          "legacy_total": 0.056355188412049895,
-          "informative_total": 0.11177495405822946,
-          "lock_key_coincidence": 0.0,
-          "n_minima": 6.0,
-          "n_keys": 6.0,
-          "tautological_weight_legacy": 0.7000000000000001,
-          "degenerate_seating": 1.0
-        }
-      },
-      "diagnostics": {
-        "pin_align": 0.0,
-        "theta_ladder_l1": 0.0,
-        "density_return_l1": 0.11177495405822946,
-        "corr_S_lambda": 0.7969342371638093,
-        "legacy_total": 0.056355188412049895,
-        "informative_total": 0.11177495405822946,
-        "lock_key_coincidence": 0.0,
-        "n_minima": 6.0,
-        "n_keys": 6.0,
-        "tautological_weight_legacy": 0.7000000000000001,
-        "degenerate_seating": 1.0
-      },
-      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4291). Affine projection signature a=0.8608, b=0.2598 is expected, not a cheat.",
-      "thetas": [
-        3.67566155582241,
-        2.817414248116917,
-        1.0829490552786736,
-        2.055649819517561,
-        4.585131322281729,
-        5.419396911396105
-      ],
-      "spectral_gaps": [
-        0.04009713237149668,
-        0.046785811271414915,
-        0.006935506528057761,
-        0.02495206231703165,
-        0.017037219521203663,
-        0.0044133486448163315
-      ],
-      "fitness_mode": "informative",
-      "dof": {
-        "n_knobs": 8,
-        "n_sectors": 6,
-        "n_zeros": 14,
-        "note": "8 knobs vs 6 sectors is under-constrained for corr terms"
-      },
-      "ontology": "projection_mold_plus_crit_seal_not_lambda_eq_gamma",
-      "instrument_note": "informative R = density_return only; legacy R is retracted as \u03b6-preference evidence (Crit seating degeneracy)"
-    },
-    {
-      "kind": "arith",
-      "rng_seed": 501,
-      "F": 0.11177495405822946,
-      "R": 0.11177495405822946,
-      "R_legacy": 0.056355188412049895,
-      "R_informative": 0.11177495405822946,
-      "occupancy": 1.0,
-      "n_keys": 6,
-      "n_valleys": 6,
-      "mean_dist": 0.0,
-      "breakdown": {
-        "stationarity": 3.0248646184492045e-13,
-        "corr_penalty": 0.2030657628361907,
-        "crit_coverage": 0.0,
-        "return_map_err": 0.027943738514557365,
-        "total": 0.11177495405822946,
-        "weights": {
-          "density_return": 1.0
-        },
-        "fitness_mode": "informative",
-        "diagnostics": {
-          "pin_align": 0.0,
-          "theta_ladder_l1": 0.0,
-          "density_return_l1": 0.11177495405822946,
-          "corr_S_lambda": 0.7969342371638093,
-          "legacy_total": 0.056355188412049895,
-          "informative_total": 0.11177495405822946,
-          "lock_key_coincidence": 0.0,
-          "n_minima": 6.0,
-          "n_keys": 6.0,
-          "tautological_weight_legacy": 0.7000000000000001,
-          "degenerate_seating": 1.0
-        }
-      },
-      "diagnostics": {
-        "pin_align": 0.0,
-        "theta_ladder_l1": 0.0,
-        "density_return_l1": 0.11177495405822946,
-        "corr_S_lambda": 0.7969342371638093,
-        "legacy_total": 0.056355188412049895,
-        "informative_total": 0.11177495405822946,
-        "lock_key_coincidence": 0.0,
-        "n_minima": 6.0,
-        "n_keys": 6.0,
-        "tautological_weight_legacy": 0.7000000000000001,
-        "degenerate_seating": 1.0
-      },
-      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4291). Affine projection signature a=0.8608, b=0.2598 is expected, not a cheat.",
-      "thetas": [
-        3.67566155582241,
-        2.817414248116917,
-        1.0829490552786736,
-        2.055649819517561,
-        4.585131322281729,
-        5.419396911396105
-      ],
-      "spectral_gaps": [
-        0.04009713237149668,
-        0.046785811271414915,
-        0.006935506528057761,
-        0.02495206231703165,
-        0.017037219521203663,
-        0.0044133486448163315
-      ],
-      "fitness_mode": "informative",
-      "dof": {
-        "n_knobs": 8,
-        "n_sectors": 6,
-        "n_zeros": 14,
-        "note": "8 knobs vs 6 sectors is under-constrained for corr terms"
-      },
-      "ontology": "projection_mold_plus_crit_seal_not_lambda_eq_gamma",
-      "instrument_note": "informative R = density_return only; legacy R is retracted as \u03b6-preference evidence (Crit seating degeneracy)"
-    },
-    {
-      "kind": "arith",
-      "rng_seed": 502,
-      "F": 0.11177495405822946,
-      "R": 0.11177495405822946,
-      "R_legacy": 0.056355188412049895,
-      "R_informative": 0.11177495405822946,
-      "occupancy": 1.0,
-      "n_keys": 6,
-      "n_valleys": 6,
-      "mean_dist": 0.0,
-      "breakdown": {
-        "stationarity": 3.0248646184492045e-13,
-        "corr_penalty": 0.2030657628361907,
-        "crit_coverage": 0.0,
-        "return_map_err": 0.027943738514557365,
-        "total": 0.11177495405822946,
-        "weights": {
-          "density_return": 1.0
-        },
-        "fitness_mode": "informative",
-        "diagnostics": {
-          "pin_align": 0.0,
-          "theta_ladder_l1": 0.0,
-          "density_return_l1": 0.11177495405822946,
-          "corr_S_lambda": 0.7969342371638093,
-          "legacy_total": 0.056355188412049895,
-          "informative_total": 0.11177495405822946,
-          "lock_key_coincidence": 0.0,
-          "n_minima": 6.0,
-          "n_keys": 6.0,
-          "tautological_weight_legacy": 0.7000000000000001,
-          "degenerate_seating": 1.0
-        }
-      },
-      "diagnostics": {
-        "pin_align": 0.0,
-        "theta_ladder_l1": 0.0,
-        "density_return_l1": 0.11177495405822946,
-        "corr_S_lambda": 0.7969342371638093,
-        "legacy_total": 0.056355188412049895,
-        "informative_total": 0.11177495405822946,
-        "lock_key_coincidence": 0.0,
-        "n_minima": 6.0,
-        "n_keys": 6.0,
-        "tautological_weight_legacy": 0.7000000000000001,
-        "degenerate_seating": 1.0
-      },
-      "verdict": "MOLDED \u2014 100% of conformations sit in projected zeta valleys (mean dist 0.0000 \u2264 basin 0.4291). Affine projection signature a=0.8608, b=0.2598 is expected, not a cheat.",
-      "thetas": [
-        3.67566155582241,
-        2.817414248116917,
-        1.0829490552786736,
-        2.055649819517561,
-        4.585131322281729,
-        5.419396911396105
-      ],
-      "spectral_gaps": [
-        0.04009713237149668,
-        0.046785811271414915,
-        0.006935506528057761,
-        0.02495206231703165,
-        0.017037219521203663,
-        0.0044133486448163315
-      ],
-      "fitness_mode": "informative",
-      "dof": {
-        "n_knobs": 8,
-        "n_sectors": 6,
-        "n_zeros": 14,
-        "note": "8 knobs vs 6 sectors is under-constrained for corr terms"
-      },
-      "ontology": "projection_mold_plus_crit_seal_not_lambda_eq_gamma",
-      "instrument_note": "informative R = density_return only; legacy R is retracted as \u03b6-preference evidence (Crit seating degeneracy)"
+      "ontology": "projection_mold_plus_crit_seal_not_lambda_eq_gamma"
     }
   ],
-  "ontology": "null_battery_not_lambda_eq_gamma",
-  "instrument": "post_falsification_2026-07-29"
+  "ontology": "null_battery_not_lambda_eq_gamma"
 }

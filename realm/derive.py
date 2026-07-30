@@ -144,15 +144,6 @@ class SpectralAction:
         ir = np.clip(ir, 1e-6, None)
         n_ir = min(3, k)
         weights[:n_ir] *= ir[:n_ir]
-        # Multi-scale harmonic envelope (Witten–Morse landscape aid): mild
-        # mid-band boost so intermediate-length Crit structure is not washed
-        # out by pure IR or pure UV heat weighting. Scale-free, sum-normalized.
-        if k >= 6:
-            idx = np.arange(k, dtype=float)
-            mid = 0.5 * (k - 1)
-            width = max(0.25 * k, 1.0)
-            envelope = 1.0 + 0.12 * np.exp(-((idx - mid) ** 2) / (2.0 * width**2))
-            weights = weights * envelope
         weights = weights / (np.sum(weights) + 1e-15)
         return cls(omega=omega, weights=weights, cutoff_Lambda=Lambda)
 
@@ -461,14 +452,7 @@ class Deriver:
         for i, c in enumerate(pool):
             th = float(c["theta"])
             if self.multimode:
-                # Longer scaffolds: more Fourier modes (steric mid-length floors)
-                if self.N >= 12:
-                    n_modes = min(8, int(field.gammas.size))
-                elif self.N >= 10:
-                    n_modes = min(6, int(field.gammas.size))  # 4M6E-class
-                else:
-                    n_modes = min(4, int(field.gammas.size))
-                pts = embed_multimode_cycle(self.N, th, field, n_modes=n_modes)
+                pts = embed_multimode_cycle(self.N, th, field, n_modes=min(4, field.gammas.size))
             else:
                 pts = embed_cycle_from_twist(self.N, th)
             # seed label: nearest γ (bookkeeping only)

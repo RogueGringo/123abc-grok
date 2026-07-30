@@ -69,8 +69,7 @@ def score_vec(
 
     lock = build_lock(der)
     key = build_key(der)
-    # informative residual only (density-return); legacy seating score retracted
-    res = residual(lock, key, action=der.action, fitness="informative")
+    res = residual(lock, key, action=der.action)
     landscape = build_moduli_landscape(
         field=der.field,
         action=der.action,
