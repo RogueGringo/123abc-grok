@@ -25,8 +25,8 @@ def test_scramble_preserves_gap_multiset():
     assert np.allclose(sorted(np.diff(z)), sorted(np.diff(s)))
 
 
-def test_goe_poisson_length_and_positive():
-    for kind in ("goe", "poisson"):
+def test_gue_poisson_arith_length_and_positive():
+    for kind in ("gue", "goe", "poisson", "arith"):
         g = make_seed(kind, 14, np.random.default_rng(2))
         assert g.shape == (14,)
         assert np.all(np.diff(g) > 0)
