@@ -246,11 +246,21 @@ def density_return_error(key: KeyState, lock: LockState) -> float:
 
 
 def theta_ladder_l1(key: KeyState, lock: LockState) -> float:
-    """Shape L1 between sorted key θ spacings and sorted lock-minima spacings."""
+    """Shape L1 between sorted key θ spacings and sorted lock-minima spacings.
+
+    Returns NaN when a ladder has fewer than two entries, because the comparison
+    is then *undefined* — there are no spacings to compare. It previously returned
+    0.0 there, i.e. a perfect score for absence of evidence, which is the same
+    defect Axiom 6.1 rules out and which silently masked under-determined
+    configurations. NaN propagates so callers must handle or exclude it.
+
+    Unaffected in the published configuration: with n_sectors=6 and a same-block
+    lock, both ladders always carry 6 entries, so this branch never fired there.
+    """
     kt = np.sort(key.thetas)
     lt = np.sort(lock.minima_theta)
     if kt.size < 2 or lt.size < 2:
-        return 0.0 if kt.size and lt.size else 1.0
+        return float("nan")
     return _shape_l1(np.diff(kt), np.diff(lt))
 
 
@@ -399,6 +409,11 @@ class Keymaker:
             w2_mult=float(knobs.get("w2_mult", 1.0)),
             w3_mult=float(knobs.get("w3_mult", 1.0)),
             gammas=gammas,
+            omega_span=(
+                float(knobs["omega_span"])
+                if knobs.get("omega_span") is not None
+                else None
+            ),
         ).run()
 
 

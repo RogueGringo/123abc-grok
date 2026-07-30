@@ -1,54 +1,189 @@
-"""Genuine Riemann zero ordinates (mpmath) — not mean-gap extrapolation.
+"""Verified real ζ ordinates — computed, never recalled.
 
-Used by transfer / held-out windows so off-table scores test ζ, not
-extrapolation of ZETA_ZEROS_IMAG.
+`realm.zeta_field.ZETA_ZEROS_IMAG` carries only 15 hardcoded ordinates, and
+`realm.validate.seeds.make_seed` silently mean-gap-extrapolates past the end of
+that table. Held-out-window tests need *genuine* zeros beyond γ_15, so we compute
+them with mpmath and cache to disk.
+
+Every generated table is checked three independent ways before it is trusted:
+
+1. agreement with the repo's hardcoded table on the overlap,
+2. each ordinate is a root of the Riemann-Siegel Z function,
+3. the count matches the Riemann-von Mangoldt asymptotic N(T).
 """
 
 from __future__ import annotations
 
-from functools import lru_cache
+import json
+from pathlib import Path
+from typing import Any
 
 import numpy as np
 
 from realm.zeta_field import ZETA_ZEROS_IMAG
 
+CACHE = Path(__file__).resolve().parents[2] / "data" / "zeta_zeros.json"
 
-@lru_cache(maxsize=4)
-def riemann_zeros_imag(n: int) -> np.ndarray:
-    """First n positive imaginary parts of non-trivial zeros (sorted)."""
+# Tolerances for the three verification checks
+TOL_OVERLAP = 1e-8  # repo table is rounded to 10 dp
+TOL_SIEGELZ = 1e-6
+TOL_COUNT = 2.0  # N(T) asymptotic has O(log T) error
+
+
+class ZeroVerificationError(RuntimeError):
+    """Raised when a generated ordinate table fails a verification check."""
+
+
+def _riemann_von_mangoldt(T: float) -> float:
+    """Asymptotic count of zeros with 0 < Im(ρ) < T."""
+    import mpmath as mp
+
+    t = mp.mpf(T)
+    return float(t / (2 * mp.pi) * mp.log(t / (2 * mp.pi)) - t / (2 * mp.pi) + 0.875)
+
+
+def verify_zeros(g: np.ndarray, *, dps: int = 30) -> dict[str, Any]:
+    """Run all three checks. Raises ZeroVerificationError on failure.
+
+    Precision is set explicitly rather than inherited from ambient mpmath state,
+    so a caller that lowered `mp.mp.dps` elsewhere cannot cause a precision-driven
+    false failure as n grows. Matches the precision used by `_compute`.
+    """
+    import mpmath as mp
+
+    mp.mp.dps = int(dps)
+    g = np.asarray(g, dtype=float)
+    report: dict[str, Any] = {"n": int(g.size)}
+
+    if not np.all(np.diff(g) > 0):
+        raise ZeroVerificationError("ordinates are not strictly increasing")
+
+    # 1. overlap with the repo's hardcoded table
+    m = min(g.size, ZETA_ZEROS_IMAG.size)
+    overlap = float(np.max(np.abs(g[:m] - ZETA_ZEROS_IMAG[:m]))) if m else 0.0
+    report["max_overlap_diff"] = overlap
+    if overlap > TOL_OVERLAP:
+        raise ZeroVerificationError(
+            f"disagrees with ZETA_ZEROS_IMAG on first {m}: max diff {overlap:.3e}"
+        )
+
+    # 2. every ordinate is a root of the Riemann-Siegel Z function
+    worst = 0.0
+    for t in g:
+        worst = max(worst, abs(float(mp.siegelz(t))))
+    report["max_abs_siegelz"] = worst
+    if worst > TOL_SIEGELZ:
+        raise ZeroVerificationError(f"not all ordinates are Z roots: max |Z| {worst:.3e}")
+
+    # 3. Riemann-von Mangoldt count
+    T = float(g[-1]) + 0.5
+    n_asym = _riemann_von_mangoldt(T)
+    report["N_T_asymptotic"] = n_asym
+    report["N_T_expected"] = int(g.size)
+    if abs(n_asym - g.size) > TOL_COUNT:
+        raise ZeroVerificationError(
+            f"count mismatch at T={T:.3f}: asymptotic {n_asym:.2f} vs {g.size}"
+        )
+
+    report["verified"] = True
+    return report
+
+
+def _compute(n: int) -> np.ndarray:
+    import mpmath as mp
+
+    mp.mp.dps = 30
+    return np.array([float(mp.im(mp.zetazero(i))) for i in range(1, n + 1)], dtype=float)
+
+
+def real_zeros(n: int, *, cache: Path | None = CACHE, verify: bool = True) -> np.ndarray:
+    """First `n` genuine ζ ordinates, cached on disk.
+
+    Never extrapolates: if mpmath is unavailable and the cache is short, raises.
+    """
     n = int(n)
-    if n < 1:
-        raise ValueError("n >= 1")
-    # Prefer mpmath for extension past the hardcoded seed table
-    try:
-        from mpmath import zetazero
-    except ImportError as exc:  # pragma: no cover
-        if n <= ZETA_ZEROS_IMAG.size:
-            return ZETA_ZEROS_IMAG[:n].copy()
-        raise ImportError("mpmath required for zeros beyond the seed table") from exc
+    if n < 2:
+        raise ValueError("need at least 2 ordinates")
 
-    g = np.array([float(zetazero(k).imag) for k in range(1, n + 1)], dtype=float)
-    return g
+    path = Path(cache) if cache is not None else None
+    if path is not None and path.is_file():
+        try:
+            blob = json.loads(path.read_text(encoding="utf-8"))
+            cached = np.asarray(blob["gammas"], dtype=float)
+            if cached.size >= n:
+                out = cached[:n].copy()
+                if verify:
+                    # `verify=True` must mean verified, including on a cache hit.
+                    # Otherwise correctness silently depends on the cache file never
+                    # having been edited or truncated — which defeats the point of a
+                    # module whose contract is "computed and checked, never recalled".
+                    if not (blob.get("verification") or {}).get("verified"):
+                        raise ZeroVerificationError("cache lacks a verified stamp")
+                    verify_zeros(out)
+                return out
+        except Exception:  # noqa: BLE001 - a bad cache is rebuilt, never trusted
+            pass
+
+    # Compute a little extra so the next request is likely a cache hit
+    g = _compute(max(n, 40))
+    report = verify_zeros(g) if verify else {"verified": False}
+
+    if path is not None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(
+                {
+                    "source": "mpmath.zetazero",
+                    "gammas": g.tolist(),
+                    "verification": report,
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+    return g[:n].copy()
+
+
+def window(start: int, k: int, **kw: Any) -> np.ndarray:
+    """Ordinates γ_start .. γ_{start+k-1}, 1-indexed (window(1, 14) == first 14)."""
+    start = int(start)
+    if start < 1:
+        raise ValueError("start is 1-indexed")
+    return real_zeros(start + int(k) - 1, **kw)[start - 1 :].copy()
+
+
+# --- compatibility with the API that landed on main -------------------------
+#
+# `main` grew an independent implementation of the same idea (PR #11 lineage).
+# Both are kept: the names below are main's, delegating to the verified path
+# above so there is one source of ordinates rather than two that can drift.
+
+
+def riemann_zeros_imag(n: int) -> np.ndarray:
+    """First `n` positive imaginary parts of non-trivial zeros (main's API name).
+
+    Delegates to `real_zeros`, which additionally verifies the table three ways
+    and caches it to disk.
+    """
+    if int(n) < 1:
+        raise ValueError("n >= 1")
+    if int(n) == 1:
+        # real_zeros requires >= 2 (a single ordinate has no gaps to check).
+        return real_zeros(2)[:1].copy()
+    return real_zeros(int(n))
 
 
 def zeros_window(start: int, count: int) -> np.ndarray:
-    """1-based inclusive start index; return `count` consecutive ordinates."""
-    start = int(start)
-    count = int(count)
+    """1-based inclusive start, `count` consecutive ordinates (main's API name)."""
+    start, count = int(start), int(count)
     if start < 1 or count < 2:
         raise ValueError("need start>=1 and count>=2")
-    full = riemann_zeros_imag(start + count - 1)
-    return full[start - 1 : start - 1 + count].copy()
+    return window(start, count)
 
 
-def verify_seed_table(atol: float = 1e-9) -> dict:
-    """Cross-check hardcoded ZETA_ZEROS_IMAG against mpmath."""
+def verify_seed_table(atol: float = 1e-9) -> dict[str, Any]:
+    """Cross-check the hardcoded `ZETA_ZEROS_IMAG` against mpmath (main's API name)."""
     n = int(ZETA_ZEROS_IMAG.size)
-    mp = riemann_zeros_imag(n)
-    err = float(np.max(np.abs(mp - ZETA_ZEROS_IMAG[:n])))
-    return {
-        "n": n,
-        "max_abs_err": err,
-        "ok": err <= atol,
-        "atol": atol,
-    }
+    computed = real_zeros(n)
+    err = float(np.max(np.abs(computed - ZETA_ZEROS_IMAG[:n])))
+    return {"n": n, "max_abs_err": err, "ok": err <= atol, "atol": atol}

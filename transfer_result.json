@@ -1,0 +1,644 @@
+{
+  "rows": [
+    {
+      "window": "g_1..14",
+      "variant": "rescaled",
+      "trained": true,
+      "F_zeta": 0.004532164787834222,
+      "min_F_plausible_null": 0.17455111589169683,
+      "advantage_ratio": 38.51385023780419
+    },
+    {
+      "window": "g_1..14",
+      "variant": "raw",
+      "trained": true,
+      "F_zeta": 0.004532164787834222,
+      "min_F_plausible_null": 0.17455111589169683,
+      "advantage_ratio": 38.51385023780419
+    },
+    {
+      "window": "g_15..28",
+      "variant": "rescaled",
+      "trained": false,
+      "F_zeta": 0.42914038123754816,
+      "min_F_plausible_null": 0.42856850151793446,
+      "advantage_ratio": 0.9986673831114086
+    },
+    {
+      "window": "g_15..28",
+      "variant": "raw",
+      "trained": false,
+      "F_zeta": 0.42649733577739757,
+      "min_F_plausible_null": 0.42642632954403714,
+      "advantage_ratio": 0.9998335130670136
+    },
+    {
+      "window": "g_29..42",
+      "variant": "rescaled",
+      "trained": false,
+      "F_zeta": 0.5756795813272009,
+      "min_F_plausible_null": 0.575782452138,
+      "advantage_ratio": 1.0001786945622804
+    },
+    {
+      "window": "g_29..42",
+      "variant": "raw",
+      "trained": false,
+      "F_zeta": 0.5762534203507144,
+      "min_F_plausible_null": 0.5764114468772216,
+      "advantage_ratio": 1.0002742309562536
+    }
+  ],
+  "blocks": [
+    {
+      "variant": "rescaled",
+      "g_last": 60.83177852460981,
+      "span": 46.69705338287511,
+      "Lambda_used": 168.78695073249213,
+      "by_kind": {
+        "zeta": {
+          "F_mean": 0.004532164787834222,
+          "F_best": 0.004532164787834222,
+          "R_mean": 0.004532164787834222,
+          "occupancy_mean": 1.0,
+          "n": 1,
+          "deterministic": true
+        },
+        "arith": {
+          "F_mean": 0.041590066166760364,
+          "F_best": 0.041590066166760364,
+          "R_mean": 0.041590066166760364,
+          "occupancy_mean": 1.0,
+          "n": 1,
+          "deterministic": true
+        },
+        "geometric": {
+          "F_mean": 0.3516565027835878,
+          "F_best": 0.3516565027835878,
+          "R_mean": 0.12665650278358775,
+          "occupancy_mean": 0.6666666666666666,
+          "n": 1,
+          "deterministic": true
+        },
+        "primes": {
+          "F_mean": 0.09571113633321635,
+          "F_best": 0.09571113633321635,
+          "R_mean": 0.09571113633321635,
+          "occupancy_mean": 1.0,
+          "n": 1,
+          "deterministic": true
+        },
+        "reversed": {
+          "F_mean": 0.08201916081616173,
+          "F_best": 0.08201916081616173,
+          "R_mean": 0.05701916081616174,
+          "occupancy_mean": 1.0,
+          "n": 1,
+          "deterministic": true
+        },
+        "outlier": {
+          "F_mean": 0.11598255491037786,
+          "F_best": 0.11598255491037786,
+          "R_mean": 0.11598255491037786,
+          "occupancy_mean": 1.0,
+          "n": 1,
+          "deterministic": true
+        },
+        "sorted_uniform": {
+          "F_mean": 0.20536802467957238,
+          "F_best": 0.047314103067426325,
+          "R_mean": 0.17936802467957236,
+          "occupancy_mean": 0.9866666666666667,
+          "n": 25,
+          "deterministic": false
+        },
+        "scramble": {
+          "F_mean": 0.1837045196446683,
+          "F_best": 0.08116833584081613,
+          "R_mean": 0.16570451964466826,
+          "occupancy_mean": 0.9866666666666667,
+          "n": 25,
+          "deterministic": false
+        },
+        "goe": {
+          "F_mean": 0.17455111589169683,
+          "F_best": 0.042128083822078305,
+          "R_mean": 0.15955111589169685,
+          "occupancy_mean": 0.9933333333333334,
+          "n": 25,
+          "deterministic": false
+        },
+        "poisson": {
+          "F_mean": 0.20444191031409273,
+          "F_best": 0.024087822843739014,
+          "R_mean": 0.18444191031409274,
+          "occupancy_mean": 0.9933333333333334,
+          "n": 25,
+          "deterministic": false
+        }
+      },
+      "window_start": 1,
+      "window_end": 14,
+      "is_trained_window": true
+    },
+    {
+      "variant": "raw",
+      "g_last": 60.83177852460981,
+      "span": 46.69705338287511,
+      "Lambda_used": 168.78695073249213,
+      "by_kind": {
+        "zeta": {
+          "F_mean": 0.004532164787834222,
+          "F_best": 0.004532164787834222,
+          "R_mean": 0.004532164787834222,
+          "occupancy_mean": 1.0,
+          "n": 1,
+          "deterministic": true
+        },
+        "arith": {
+          "F_mean": 0.041590066166760364,
+          "F_best": 0.041590066166760364,
+          "R_mean": 0.041590066166760364,
+          "occupancy_mean": 1.0,
+          "n": 1,
+          "deterministic": true
+        },
+        "geometric": {
+          "F_mean": 0.3516565027835878,
+          "F_best": 0.3516565027835878,
+          "R_mean": 0.12665650278358775,
+          "occupancy_mean": 0.6666666666666666,
+          "n": 1,
+          "deterministic": true
+        },
+        "primes": {
+          "F_mean": 0.09571113633321635,
+          "F_best": 0.09571113633321635,
+          "R_mean": 0.09571113633321635,
+          "occupancy_mean": 1.0,
+          "n": 1,
+          "deterministic": true
+        },
+        "reversed": {
+          "F_mean": 0.08201916081616173,
+          "F_best": 0.08201916081616173,
+          "R_mean": 0.05701916081616174,
+          "occupancy_mean": 1.0,
+          "n": 1,
+          "deterministic": true
+        },
+        "outlier": {
+          "F_mean": 0.11598255491037786,
+          "F_best": 0.11598255491037786,
+          "R_mean": 0.11598255491037786,
+          "occupancy_mean": 1.0,
+          "n": 1,
+          "deterministic": true
+        },
+        "sorted_uniform": {
+          "F_mean": 0.20536802467957238,
+          "F_best": 0.047314103067426325,
+          "R_mean": 0.17936802467957236,
+          "occupancy_mean": 0.9866666666666667,
+          "n": 25,
+          "deterministic": false
+        },
+        "scramble": {
+          "F_mean": 0.1837045196446683,
+          "F_best": 0.08116833584081613,
+          "R_mean": 0.16570451964466826,
+          "occupancy_mean": 0.9866666666666667,
+          "n": 25,
+          "deterministic": false
+        },
+        "goe": {
+          "F_mean": 0.17455111589169683,
+          "F_best": 0.042128083822078305,
+          "R_mean": 0.15955111589169685,
+          "occupancy_mean": 0.9933333333333334,
+          "n": 25,
+          "deterministic": false
+        },
+        "poisson": {
+          "F_mean": 0.20444191031409273,
+          "F_best": 0.024087822843739014,
+          "R_mean": 0.18444191031409274,
+          "occupancy_mean": 0.9933333333333334,
+          "n": 25,
+          "deterministic": false
+        }
+      },
+      "window_start": 1,
+      "window_end": 14,
+      "is_trained_window": true
+    },
+    {
+      "variant": "rescaled",
+      "g_last": 95.87063422824531,
+      "span": 30.758090180163705,
+      "Lambda_used": 266.0075442250833,
+      "by_kind": {
+        "zeta": {
+          "F_mean": 0.42914038123754816,
+          "F_best": 0.42914038123754816,
+          "R_mean": 0.13330704790421488,
+          "occupancy_mean": 0.75,
+          "n": 1,
+          "deterministic": true
+        },
+        "arith": {
+          "F_mean": 0.4392877234987046,
+          "F_best": 0.4392877234987046,
+          "R_mean": 0.14345439016537123,
+          "occupancy_mean": 0.75,
+          "n": 1,
+          "deterministic": true
+        },
+        "geometric": {
+          "F_mean": 0.5955424238899661,
+          "F_best": 0.5955424238899661,
+          "R_mean": 0.04554242388996611,
+          "occupancy_mean": 0.3333333333333333,
+          "n": 1,
+          "deterministic": true
+        },
+        "primes": {
+          "F_mean": 0.40841085686758904,
+          "F_best": 0.40841085686758904,
+          "R_mean": 0.11257752353425571,
+          "occupancy_mean": 0.75,
+          "n": 1,
+          "deterministic": true
+        },
+        "reversed": {
+          "F_mean": 0.42542571558097875,
+          "F_best": 0.42542571558097875,
+          "R_mean": 0.12959238224764538,
+          "occupancy_mean": 0.75,
+          "n": 1,
+          "deterministic": true
+        },
+        "outlier": {
+          "F_mean": 0.4187406816602439,
+          "F_best": 0.4187406816602439,
+          "R_mean": 0.1229073483269106,
+          "occupancy_mean": 0.75,
+          "n": 1,
+          "deterministic": true
+        },
+        "sorted_uniform": {
+          "F_mean": 0.43289668216653604,
+          "F_best": 0.41293850481816197,
+          "R_mean": 0.12689668216653602,
+          "occupancy_mean": 0.7333333333333333,
+          "n": 25,
+          "deterministic": false
+        },
+        "scramble": {
+          "F_mean": 0.4312690885832942,
+          "F_best": 0.42183953189020573,
+          "R_mean": 0.135435755249961,
+          "occupancy_mean": 0.75,
+          "n": 25,
+          "deterministic": false
+        },
+        "goe": {
+          "F_mean": 0.42856850151793446,
+          "F_best": 0.41956161846975193,
+          "R_mean": 0.13273516818460115,
+          "occupancy_mean": 0.75,
+          "n": 25,
+          "deterministic": false
+        },
+        "poisson": {
+          "F_mean": 0.4587605864313521,
+          "F_best": 0.3001195063389295,
+          "R_mean": 0.12109391976468538,
+          "occupancy_mean": 0.6866666666666665,
+          "n": 25,
+          "deterministic": false
+        }
+      },
+      "window_start": 15,
+      "window_end": 28,
+      "is_trained_window": false
+    },
+    {
+      "variant": "raw",
+      "g_last": 95.87063422824531,
+      "span": 30.758090180163705,
+      "Lambda_used": 168.78695073249213,
+      "by_kind": {
+        "zeta": {
+          "F_mean": 0.42649733577739757,
+          "F_best": 0.42649733577739757,
+          "R_mean": 0.13066400244406423,
+          "occupancy_mean": 0.75,
+          "n": 1,
+          "deterministic": true
+        },
+        "arith": {
+          "F_mean": 0.4368651592433431,
+          "F_best": 0.4368651592433431,
+          "R_mean": 0.14103182591000984,
+          "occupancy_mean": 0.75,
+          "n": 1,
+          "deterministic": true
+        },
+        "geometric": {
+          "F_mean": 0.5967164119888324,
+          "F_best": 0.5967164119888324,
+          "R_mean": 0.04671641198883231,
+          "occupancy_mean": 0.3333333333333333,
+          "n": 1,
+          "deterministic": true
+        },
+        "primes": {
+          "F_mean": 0.4068778321437577,
+          "F_best": 0.4068778321437577,
+          "R_mean": 0.11104449881042434,
+          "occupancy_mean": 0.75,
+          "n": 1,
+          "deterministic": true
+        },
+        "reversed": {
+          "F_mean": 0.4230899285131511,
+          "F_best": 0.4230899285131511,
+          "R_mean": 0.12725659517981777,
+          "occupancy_mean": 0.75,
+          "n": 1,
+          "deterministic": true
+        },
+        "outlier": {
+          "F_mean": 0.4116795672866119,
+          "F_best": 0.4116795672866119,
+          "R_mean": 0.1158462339532786,
+          "occupancy_mean": 0.75,
+          "n": 1,
+          "deterministic": true
+        },
+        "sorted_uniform": {
+          "F_mean": 0.4258877020688033,
+          "F_best": 0.30663787753302785,
+          "R_mean": 0.12438770206880329,
+          "occupancy_mean": 0.7433333333333333,
+          "n": 25,
+          "deterministic": false
+        },
+        "scramble": {
+          "F_mean": 0.4290169972143704,
+          "F_best": 0.4191922374259781,
+          "R_mean": 0.1331836638810371,
+          "occupancy_mean": 0.75,
+          "n": 25,
+          "deterministic": false
+        },
+        "goe": {
+          "F_mean": 0.42642632954403714,
+          "F_best": 0.41723763847682493,
+          "R_mean": 0.13059299621070383,
+          "occupancy_mean": 0.75,
+          "n": 25,
+          "deterministic": false
+        },
+        "poisson": {
+          "F_mean": 0.4515627614577552,
+          "F_best": 0.30052906356213405,
+          "R_mean": 0.11839609479108859,
+          "occupancy_mean": 0.6966666666666665,
+          "n": 25,
+          "deterministic": false
+        }
+      },
+      "window_start": 15,
+      "window_end": 28,
+      "is_trained_window": false
+    },
+    {
+      "variant": "rescaled",
+      "g_last": 127.5166838795965,
+      "span": 28.685489661402812,
+      "Lambda_used": 353.8142852563307,
+      "by_kind": {
+        "zeta": {
+          "F_mean": 0.5756795813272009,
+          "F_best": 0.5756795813272009,
+          "R_mean": 0.02567958132720087,
+          "occupancy_mean": 0.3333333333333333,
+          "n": 1,
+          "deterministic": true
+        },
+        "arith": {
+          "F_mean": 0.5868039068638284,
+          "F_best": 0.5868039068638284,
+          "R_mean": 0.036803906863828374,
+          "occupancy_mean": 0.3333333333333333,
+          "n": 1,
+          "deterministic": true
+        },
+        "geometric": {
+          "F_mean": 0.6000806389475636,
+          "F_best": 0.6000806389475636,
+          "R_mean": 0.05008063894756355,
+          "occupancy_mean": 0.3333333333333333,
+          "n": 1,
+          "deterministic": true
+        },
+        "primes": {
+          "F_mean": 0.5808321108834024,
+          "F_best": 0.5808321108834024,
+          "R_mean": 0.030832110883402302,
+          "occupancy_mean": 0.3333333333333333,
+          "n": 1,
+          "deterministic": true
+        },
+        "reversed": {
+          "F_mean": 0.5755634691220705,
+          "F_best": 0.5755634691220705,
+          "R_mean": 0.025563469122070442,
+          "occupancy_mean": 0.3333333333333333,
+          "n": 1,
+          "deterministic": true
+        },
+        "outlier": {
+          "F_mean": 0.5869091868897307,
+          "F_best": 0.5869091868897307,
+          "R_mean": 0.03690918688973073,
+          "occupancy_mean": 0.3333333333333333,
+          "n": 1,
+          "deterministic": true
+        },
+        "sorted_uniform": {
+          "F_mean": 0.5777625664269366,
+          "F_best": 0.5722521914521191,
+          "R_mean": 0.027762566426936478,
+          "occupancy_mean": 0.33333333333333337,
+          "n": 25,
+          "deterministic": false
+        },
+        "scramble": {
+          "F_mean": 0.575782452138,
+          "F_best": 0.5744148208842771,
+          "R_mean": 0.02578245213799991,
+          "occupancy_mean": 0.33333333333333337,
+          "n": 25,
+          "deterministic": false
+        },
+        "goe": {
+          "F_mean": 0.5771962889900446,
+          "F_best": 0.5745709066637775,
+          "R_mean": 0.027196288990044507,
+          "occupancy_mean": 0.33333333333333337,
+          "n": 25,
+          "deterministic": false
+        },
+        "poisson": {
+          "F_mean": 0.582339398484617,
+          "F_best": 0.572375429949872,
+          "R_mean": 0.032339398484616956,
+          "occupancy_mean": 0.33333333333333337,
+          "n": 25,
+          "deterministic": false
+        }
+      },
+      "window_start": 29,
+      "window_end": 42,
+      "is_trained_window": false
+    },
+    {
+      "variant": "raw",
+      "g_last": 127.5166838795965,
+      "span": 28.685489661402812,
+      "Lambda_used": 168.78695073249213,
+      "by_kind": {
+        "zeta": {
+          "F_mean": 0.5762534203507144,
+          "F_best": 0.5762534203507144,
+          "R_mean": 0.026253420350714388,
+          "occupancy_mean": 0.3333333333333333,
+          "n": 1,
+          "deterministic": true
+        },
+        "arith": {
+          "F_mean": 0.5876501327398879,
+          "F_best": 0.5876501327398879,
+          "R_mean": 0.03765013273988779,
+          "occupancy_mean": 0.3333333333333333,
+          "n": 1,
+          "deterministic": true
+        },
+        "geometric": {
+          "F_mean": 0.6017954900120784,
+          "F_best": 0.6017954900120784,
+          "R_mean": 0.05179549001207841,
+          "occupancy_mean": 0.3333333333333333,
+          "n": 1,
+          "deterministic": true
+        },
+        "primes": {
+          "F_mean": 0.5822054186308503,
+          "F_best": 0.5822054186308503,
+          "R_mean": 0.032205418630850295,
+          "occupancy_mean": 0.3333333333333333,
+          "n": 1,
+          "deterministic": true
+        },
+        "reversed": {
+          "F_mean": 0.5762052566631766,
+          "F_best": 0.5762052566631766,
+          "R_mean": 0.02620525666317646,
+          "occupancy_mean": 0.3333333333333333,
+          "n": 1,
+          "deterministic": true
+        },
+        "outlier": {
+          "F_mean": 0.5894388895834466,
+          "F_best": 0.5894388895834466,
+          "R_mean": 0.039438889583446615,
+          "occupancy_mean": 0.3333333333333333,
+          "n": 1,
+          "deterministic": true
+        },
+        "sorted_uniform": {
+          "F_mean": 0.5789293866353943,
+          "F_best": 0.5729663317736081,
+          "R_mean": 0.028929386635394256,
+          "occupancy_mean": 0.33333333333333337,
+          "n": 25,
+          "deterministic": false
+        },
+        "scramble": {
+          "F_mean": 0.5764114468772216,
+          "F_best": 0.5748707581922093,
+          "R_mean": 0.02641144687722159,
+          "occupancy_mean": 0.33333333333333337,
+          "n": 25,
+          "deterministic": false
+        },
+        "goe": {
+          "F_mean": 0.5779956561731985,
+          "F_best": 0.5754220689980571,
+          "R_mean": 0.02799565617319842,
+          "occupancy_mean": 0.33333333333333337,
+          "n": 25,
+          "deterministic": false
+        },
+        "poisson": {
+          "F_mean": 0.5836909050362261,
+          "F_best": 0.5732613447130661,
+          "R_mean": 0.03369090503622611,
+          "occupancy_mean": 0.33333333333333337,
+          "n": 25,
+          "deterministic": false
+        }
+      },
+      "window_start": 29,
+      "window_end": 42,
+      "is_trained_window": false
+    }
+  ],
+  "trained_window_start": 1,
+  "best_advantage_trained": 38.51385023780419,
+  "best_advantage_heldout": 1.0002742309562536,
+  "survives_transfer": false,
+  "knobs": {
+    "Lambda": 168.78695073249213,
+    "omega_scale": 1.6269932038392327,
+    "weight_power": 2.0112793282732184,
+    "tier_split": 0.5874425095110438,
+    "low_boost": 0.6438012014911153,
+    "w1_mult": 0.9399563144790238,
+    "w2_mult": 1.0548999514537594,
+    "w3_mult": 0.881677493967387
+  },
+  "v_train_dimensionless": [
+    2.774650927955501,
+    1.6269932038392327,
+    2.0112793282732184,
+    0.5874425095110438,
+    0.6438012014911153,
+    0.9399563144790238,
+    1.0548999514537594,
+    0.881677493967387
+  ],
+  "config": {
+    "N": 13,
+    "k": 14,
+    "n_sectors": 6,
+    "windows": [
+      1,
+      15,
+      29
+    ],
+    "reps": 25,
+    "master_seed": 20260730
+  },
+  "notes": {
+    "zeros_source": "mpmath.zetazero, verified (see realm/validate/zeros.py)",
+    "transfer_variants": {
+      "rescaled": "preserve dimensionless v[0]; Lambda = v[0]*g_last(window)",
+      "raw": "preserve absolute Lambda from the trained window"
+    }
+  },
+  "ontology": "frozen_knob_transfer_not_lambda_eq_gamma"
+}
