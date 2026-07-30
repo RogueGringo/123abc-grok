@@ -57,12 +57,15 @@
     "internal_seal": "EVOLVED_SEAL",
     "R": 0.004488356551514631,
     "null_battery": "PASS",
-    "probe_enrichment": 0.8958333333333333,
-    "holdout_enrichment": 0.7261904761904762,
-    "batch_mean_enrichment": 0.7227272727272727,
+    "probe_enrichment": 0.8125,
+    "holdout_enrichment": 0.7297619047619047,
+    "batch_mean_enrichment": 0.7598484848484848,
+    "batch_mean_enrichment_std": 0.05911569382813167,
     "batch_top20": 3,
     "batch_n_ok": 11,
+    "batch_n_seeds": 3,
+    "batch_n_decoys": 40,
     "path": "geometry_off_zeta_external_cyclic_ranking",
-    "method": "CRIT_KABSCH_CYCLIC + joint_polish holdout"
+    "method": "CRIT_KABSCH_TOPK (k=3) + multi-seed + joint_polish holdout"
   }
 }

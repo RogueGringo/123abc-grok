@@ -6,13 +6,15 @@
       "n_ca": 11,
       "chain": "A",
       "N_scaffold": 11,
-      "native_dist": 0.39068231544835247,
-      "native_rank": 8,
+      "native_dist": 0.39779634690017507,
+      "native_rank": 8.666666666666666,
       "n_total": 41,
-      "enrichment": 0.825,
+      "enrichment": 0.8083333333333332,
+      "enrichment_std": 0.05892556509887896,
       "top20": true,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "n_templates": 6
+      "method": "CRIT_KABSCH_TOPK",
+      "n_templates": 6,
+      "n_seeds": 3
     },
     {
       "pdb": "1IKF",
@@ -20,13 +22,15 @@
       "n_ca": 11,
       "chain": "C",
       "N_scaffold": 11,
-      "native_dist": 0.3416836002177788,
-      "native_rank": 11,
+      "native_dist": 0.34837555103420986,
+      "native_rank": 6.666666666666667,
       "n_total": 41,
-      "enrichment": 0.75,
-      "top20": false,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "n_templates": 6
+      "enrichment": 0.8583333333333334,
+      "enrichment_std": 0.05137011669140814,
+      "top20": true,
+      "method": "CRIT_KABSCH_TOPK",
+      "n_templates": 6,
+      "n_seeds": 3
     },
     {
       "pdb": "2X2C",
@@ -34,13 +38,15 @@
       "n_ca": 11,
       "chain": "B",
       "N_scaffold": 11,
-      "native_dist": 0.39146723893883545,
-      "native_rank": 21,
+      "native_dist": 0.4002760775942266,
+      "native_rank": 8.666666666666666,
       "n_total": 41,
-      "enrichment": 0.5,
+      "enrichment": 0.8083333333333335,
+      "enrichment_std": 0.03118047822311616,
       "top20": false,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "n_templates": 6
+      "method": "CRIT_KABSCH_TOPK",
+      "n_templates": 6,
+      "n_seeds": 3
     },
     {
       "pdb": "4M6E",
@@ -48,13 +54,15 @@
       "n_ca": 11,
       "chain": "A",
       "N_scaffold": 11,
-      "native_dist": 0.4610316732648725,
-      "native_rank": 8,
+      "native_dist": 0.5225641449588042,
+      "native_rank": 11.0,
       "n_total": 41,
-      "enrichment": 0.825,
-      "top20": true,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "n_templates": 6
+      "enrichment": 0.75,
+      "enrichment_std": 0.03535533905932741,
+      "top20": false,
+      "method": "CRIT_KABSCH_TOPK",
+      "n_templates": 6,
+      "n_seeds": 3
     },
     {
       "pdb": "3WNE",
@@ -62,13 +70,15 @@
       "n_ca": 6,
       "chain": "C",
       "N_scaffold": 7,
-      "native_dist": 0.2650140300707616,
-      "native_rank": 5,
+      "native_dist": 0.29968507579656295,
+      "native_rank": 5.666666666666667,
       "n_total": 41,
-      "enrichment": 0.9,
+      "enrichment": 0.8833333333333334,
+      "enrichment_std": 0.05892556509887896,
       "top20": true,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "n_templates": 6
+      "method": "CRIT_KABSCH_TOPK",
+      "n_templates": 6,
+      "n_seeds": 3
     },
     {
       "pdb": "4K8Y",
@@ -76,13 +86,15 @@
       "n_ca": 13,
       "chain": "B",
       "N_scaffold": 13,
-      "native_dist": 0.5015765762577676,
-      "native_rank": 11,
+      "native_dist": 0.5102109432953384,
+      "native_rank": 12.333333333333334,
       "n_total": 41,
-      "enrichment": 0.75,
+      "enrichment": 0.7166666666666668,
+      "enrichment_std": 0.05892556509887896,
       "top20": false,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "n_templates": 6
+      "method": "CRIT_KABSCH_TOPK",
+      "n_templates": 6,
+      "n_seeds": 3
     },
     {
       "pdb": "1JBL",
@@ -90,13 +102,15 @@
       "n_ca": 14,
       "chain": "A",
       "N_scaffold": 14,
-      "native_dist": 0.5274993724050799,
-      "native_rank": 11,
+      "native_dist": 0.5385925027628057,
+      "native_rank": 11.333333333333334,
       "n_total": 41,
-      "enrichment": 0.75,
+      "enrichment": 0.7416666666666667,
+      "enrichment_std": 0.011785113019775802,
       "top20": false,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "n_templates": 6
+      "method": "CRIT_KABSCH_TOPK",
+      "n_templates": 6,
+      "n_seeds": 3
     },
     {
       "pdb": "5EOC",
@@ -104,13 +118,15 @@
       "n_ca": 13,
       "chain": "P",
       "N_scaffold": 13,
-      "native_dist": 0.5095940736227075,
-      "native_rank": 9,
+      "native_dist": 0.541974253080442,
+      "native_rank": 12.333333333333334,
       "n_total": 41,
-      "enrichment": 0.8,
+      "enrichment": 0.7166666666666668,
+      "enrichment_std": 0.14337208778404378,
       "top20": false,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "n_templates": 6
+      "method": "CRIT_KABSCH_TOPK",
+      "n_templates": 6,
+      "n_seeds": 3
     },
     {
       "pdb": "3AVB",
@@ -118,13 +134,15 @@
       "n_ca": 8,
       "chain": "Y",
       "N_scaffold": 8,
-      "native_dist": 0.48504824193677737,
-      "native_rank": 17,
+      "native_dist": 0.5079630441445059,
+      "native_rank": 11.0,
       "n_total": 41,
-      "enrichment": 0.6,
+      "enrichment": 0.75,
+      "enrichment_std": 0.02041241452319317,
       "top20": false,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "n_templates": 6
+      "method": "CRIT_KABSCH_TOPK",
+      "n_templates": 6,
+      "n_seeds": 3
     },
     {
       "pdb": "5LSO",
@@ -132,13 +150,15 @@
       "n_ca": 6,
       "chain": "C",
       "N_scaffold": 7,
-      "native_dist": 0.4586570213827564,
-      "native_rank": 12,
+      "native_dist": 0.5136508700074934,
+      "native_rank": 12.666666666666666,
       "n_total": 41,
-      "enrichment": 0.725,
+      "enrichment": 0.7083333333333334,
+      "enrichment_std": 0.10274023338281628,
       "top20": false,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "n_templates": 6
+      "method": "CRIT_KABSCH_TOPK",
+      "n_templates": 6,
+      "n_seeds": 3
     },
     {
       "pdb": "1TET",
@@ -146,20 +166,27 @@
       "n_ca": 12,
       "chain": "P",
       "N_scaffold": 12,
-      "native_dist": 0.5878125948035228,
-      "native_rank": 20,
+      "native_dist": 0.5919521732640268,
+      "native_rank": 16.333333333333332,
       "n_total": 41,
-      "enrichment": 0.525,
+      "enrichment": 0.6166666666666666,
+      "enrichment_std": 0.07728015412913085,
       "top20": false,
-      "method": "CRIT_KABSCH_CYCLIC",
-      "n_templates": 6
+      "method": "CRIT_KABSCH_TOPK",
+      "n_templates": 6,
+      "n_seeds": 3
     }
   ],
   "summary": {
     "n_ok": 11,
     "n_total_ids": 11,
-    "mean_enrichment": 0.7227272727272727,
-    "top20_count": 3
+    "mean_enrichment": 0.7598484848484848,
+    "mean_enrichment_std": 0.05911569382813167,
+    "probe_mean_enrichment": 0.8125,
+    "holdout_mean_enrichment": 0.7297619047619047,
+    "top20_count": 3,
+    "n_seeds": 3,
+    "n_decoys": 40
   },
   "knobs": {
     "Lambda": 148.24406176702522,
@@ -172,5 +199,5 @@
     "w3_mult": 0.804552377339691
   },
   "ontology": "structure_path_not_protein_lm_bench",
-  "note": "Curated cyclic PDB IDs only. HF language datasets (~400 repos) are out of band; use CPSea/RCSB for coords."
+  "note": "Curated cyclic PDB IDs only. HF language datasets (~400 repos) are out of band; use CPSea/RCSB for coords. Multi-seed averages enrichment over independent decoy RNG draws."
 }

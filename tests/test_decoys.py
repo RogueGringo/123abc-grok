@@ -1,6 +1,11 @@
 import numpy as np
 
-from realm.validate.decoys import closure_residual, make_ca_decoys, theta_proxy_from_ca
+from realm.validate.decoys import (
+    closure_residual,
+    make_ca_decoys,
+    score_geometry_vs_crit,
+    theta_proxy_from_ca,
+)
 
 
 def test_decoys_shape():
@@ -26,3 +31,17 @@ def test_closure_closed_ring():
     xyz = np.array([[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]], float)
     # open chain first-last
     assert closure_residual(xyz) > 0.5
+
+
+def test_score_geometry_topk_mean():
+    # native-like ring and three templates; top-3 mean uses ensemble
+    ring = np.array(
+        [[1.0, 0, 0], [0, 1, 0], [-1, 0, 0], [0, -1, 0], [0.7, -0.7, 0]],
+        dtype=float,
+    )
+    tpls = [ring + 0.01 * i for i in range(4)]
+    sc = score_geometry_vs_crit(ring, tpls, top_k=3)
+    assert sc["method"] == "CRIT_KABSCH_TOPK"
+    assert sc["top_k"] == 3
+    assert sc["mean_dist"] >= sc["min_dist"]
+    assert sc["mean_dist"] < 0.2

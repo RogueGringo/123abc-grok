@@ -146,15 +146,35 @@ def _kabsch_rmsd(P: np.ndarray, Q: np.ndarray, cyclic: bool = True) -> float:
 def score_geometry_vs_crit(
     xyz: np.ndarray,
     sector_points: list[np.ndarray],
+    top_k: int = 3,
 ) -> dict[str, Any]:
-    """Min Kabsch RMSD to Crit-induced sector geometries (shape match)."""
+    """Cyclic Kabsch distance to Crit sector ensemble.
+
+    Uses mean of the *top_k* nearest sector templates (not hard min). The
+    Crit mold is a multi-valley sheaf section; averaging the nearest few
+    sectors is more stable for native-vs-decoy ranking than a single match.
+    """
     if not sector_points:
-        return {"mean_dist": 1e9, "method": "CRIT_KABSCH_CYCLIC", "in_basin": False}
-    dists = [_kabsch_rmsd(xyz, sp, cyclic=True) for sp in sector_points]
-    dmin = float(min(dists))
+        return {
+            "mean_dist": 1e9,
+            "method": "CRIT_KABSCH_TOPK",
+            "in_basin": False,
+            "n_templates": 0,
+        }
+    dists = np.sort(
+        np.asarray(
+            [_kabsch_rmsd(xyz, sp, cyclic=True) for sp in sector_points],
+            dtype=float,
+        )
+    )
+    k = max(1, min(int(top_k), dists.size))
+    dmean = float(np.mean(dists[:k]))
+    dmin = float(dists[0])
     return {
-        "mean_dist": dmin,
-        "method": "CRIT_KABSCH_CYCLIC",
-        "in_basin": dmin < 0.35,
+        "mean_dist": dmean,
+        "min_dist": dmin,
+        "method": "CRIT_KABSCH_TOPK",
+        "in_basin": dmean < 0.35,
         "n_templates": len(sector_points),
+        "top_k": k,
     }

@@ -45,7 +45,7 @@ DEFAULT_CYCLIC_IDS = [
 
 # Default joint-polish train probe (never sole success metric)
 PROBE_IDS = ["1CSA", "2X2C", "4M6E", "3WNE"]
-HOLDOUT_IDS = ["1IKF", "1JBL", "4K8Y", "5EOC", "3AVB", "5LSO"]
+HOLDOUT_IDS = ["1IKF", "1JBL", "4K8Y", "5EOC", "3AVB", "5LSO", "1TET"]
 
 
 def rank_one(
@@ -56,6 +56,7 @@ def rank_one(
     n_sectors: int,
     noise: float,
     rng: np.random.Generator,
+    n_seeds: int = 1,
 ) -> dict:
     path = fetch_pdb(pdb_id)
     xyz, chain_used = load_ca_cyclic_band(path, lo=6, hi=40)
@@ -80,26 +81,43 @@ def rank_one(
             if arr.ndim == 2 and arr.shape[1] >= 3:
                 templates.append(arr[:, :3])
 
-    # Pure Crit-Kabsch (dual mold blend regressed full-batch enrichment)
     native = score_geometry_vs_crit(xyz, templates)
-    native["label"] = "native"
-    n_soft = max(n_decoys // 2, 1)
-    n_hard = n_decoys - n_soft
-    decoys = make_ca_decoys(xyz, n_soft, rng, noise=noise)
-    decoys += make_ca_decoys(xyz, n_hard, rng, noise=noise * 1.8)
-    rows = [native]
-    for i, d in enumerate(decoys):
-        sc = score_geometry_vs_crit(d, templates)
-        sc["label"] = f"decoy_{i}"
-        rows.append(sc)
+    native_dist = float(native["mean_dist"])
+    n_seeds = max(1, int(n_seeds))
+    seed_metrics = []
+    last_ranked = []
+    for si in range(n_seeds):
+        sub = np.random.default_rng(int(rng.integers(0, 2**31 - 1)))
+        n_soft = max(n_decoys // 2, 1)
+        n_hard = n_decoys - n_soft
+        decoys = make_ca_decoys(xyz, n_soft, sub, noise=noise)
+        decoys += make_ca_decoys(xyz, n_hard, sub, noise=noise * 1.8)
+        rows = [{"label": "native", "mean_dist": native_dist}]
+        for i, d in enumerate(decoys):
+            sc = score_geometry_vs_crit(d, templates)
+            sc["label"] = f"decoy_{i}"
+            rows.append(sc)
+        ranked = sorted(rows, key=lambda r: r["mean_dist"])
+        for i, r in enumerate(ranked, start=1):
+            r["rank"] = i
+        native_rank = next(r["rank"] for r in ranked if r["label"] == "native")
+        worse = sum(
+            1
+            for r in ranked
+            if r["label"] != "native" and r["mean_dist"] > native_dist
+        )
+        enrichment = worse / max(n_decoys, 1)
+        top20 = native_rank <= max(1, int(0.2 * len(ranked)))
+        seed_metrics.append(
+            {"enrichment": enrichment, "native_rank": native_rank, "top20": top20}
+        )
+        last_ranked = ranked
 
-    ranked = sorted(rows, key=lambda r: r["mean_dist"])
-    for i, r in enumerate(ranked, start=1):
-        r["rank"] = i
-    native_rank = next(r["rank"] for r in ranked if r["label"] == "native")
-    worse = sum(1 for r in ranked if r["label"] != "native" and r["mean_dist"] > native["mean_dist"])
-    enrichment = worse / max(n_decoys, 1)
-    top20 = native_rank <= max(1, int(0.2 * len(ranked)))
+    enrichments = [m["enrichment"] for m in seed_metrics]
+    ranks = [m["native_rank"] for m in seed_metrics]
+    enrichment = float(np.mean(enrichments))
+    native_rank = float(np.mean(ranks))
+    top20 = bool(np.mean([1.0 if m["top20"] else 0.0 for m in seed_metrics]) >= 0.5)
 
     return {
         "pdb": pdb_id,
@@ -107,13 +125,15 @@ def rank_one(
         "n_ca": n_ca,
         "chain": chain_used,
         "N_scaffold": N,
-        "native_dist": native["mean_dist"],
+        "native_dist": native_dist,
         "native_rank": native_rank,
-        "n_total": len(ranked),
+        "n_total": len(last_ranked) if last_ranked else n_decoys + 1,
         "enrichment": enrichment,
+        "enrichment_std": float(np.std(enrichments)) if len(enrichments) > 1 else 0.0,
         "top20": top20,
         "method": native.get("method"),
         "n_templates": len(templates),
+        "n_seeds": n_seeds,
     }
 
 
@@ -125,6 +145,12 @@ def main(argv=None) -> int:
     p.add_argument("-k", type=int, default=14)
     p.add_argument("--sectors", type=int, default=6)
     p.add_argument("--noise", type=float, default=0.45)
+    p.add_argument(
+        "--n-seeds",
+        type=int,
+        default=3,
+        help="Average enrichment over this many decoy RNG seeds (stability)",
+    )
     p.add_argument("--null-json", type=Path, default=Path("null_battery_result.json"))
     p.add_argument("--force", action="store_true")
     p.add_argument("--json", type=Path, default=Path("pdb_batch_result.json"))
@@ -149,7 +175,14 @@ def main(argv=None) -> int:
     for pid in ids:
         try:
             row = rank_one(
-                pid, knobs, args.n_decoys, args.k, args.sectors, args.noise, rng
+                pid,
+                knobs,
+                args.n_decoys,
+                args.k,
+                args.sectors,
+                args.noise,
+                rng,
+                n_seeds=args.n_seeds,
             )
         except PdbIOError as exc:
             row = {"pdb": pid, "status": "IO_FAIL", "error": str(exc)}
@@ -160,17 +193,35 @@ def main(argv=None) -> int:
 
     ok = [r for r in rows if r.get("status") == "OK"]
     mean_enr = float(np.mean([r["enrichment"] for r in ok])) if ok else 0.0
+    mean_std = float(np.mean([r.get("enrichment_std", 0.0) for r in ok])) if ok else 0.0
     n_top20 = sum(1 for r in ok if r.get("top20"))
-    print("\n=== PDB BATCH (structure path) ===")
+    probe_set = set(PROBE_IDS)
+    hold_set = set(HOLDOUT_IDS)
+    probe_ok = [r for r in ok if r["pdb"] in probe_set]
+    hold_ok = [r for r in ok if r["pdb"] in hold_set]
+    probe_enr = (
+        float(np.mean([r["enrichment"] for r in probe_ok])) if probe_ok else 0.0
+    )
+    hold_enr = float(np.mean([r["enrichment"] for r in hold_ok])) if hold_ok else 0.0
+    print("\n=== PDB BATCH (structure path, multi-seed) ===")
     for r in rows:
         if r.get("status") == "OK":
+            std = r.get("enrichment_std", 0.0)
+            split = "probe" if r["pdb"] in probe_set else (
+                "hold" if r["pdb"] in hold_set else "extra"
+            )
             print(
-                f"  {r['pdb']:5s}  CA={r['n_ca']:2d}  rank={r['native_rank']:2d}/{r['n_total']}  "
-                f"enrich={r['enrichment']:.0%}  top20={r['top20']}"
+                f"  {r['pdb']:5s}  [{split:5s}]  CA={r['n_ca']:2d}  "
+                f"rank={r['native_rank']:.1f}/{r['n_total']}  "
+                f"enrich={r['enrichment']:.0%}±{std:.0%}  top20={r['top20']}"
             )
         else:
             print(f"  {r['pdb']:5s}  {r['status']}  {r.get('error') or r.get('note', '')}")
-    print(f"\nOK={len(ok)}/{len(rows)}  mean_enrichment={mean_enr:.1%}  top20_count={n_top20}")
+    print(
+        f"\nOK={len(ok)}/{len(rows)}  mean_enrich={mean_enr:.1%}±{mean_std:.1%}  "
+        f"probe={probe_enr:.1%}  holdout={hold_enr:.1%}  "
+        f"top20={n_top20}  n_seeds={args.n_seeds}"
+    )
 
     payload = {
         "rows": rows,
@@ -178,13 +229,19 @@ def main(argv=None) -> int:
             "n_ok": len(ok),
             "n_total_ids": len(rows),
             "mean_enrichment": mean_enr,
+            "mean_enrichment_std": mean_std,
+            "probe_mean_enrichment": probe_enr,
+            "holdout_mean_enrichment": hold_enr,
             "top20_count": n_top20,
+            "n_seeds": args.n_seeds,
+            "n_decoys": args.n_decoys,
         },
         "knobs": knobs,
         "ontology": "structure_path_not_protein_lm_bench",
         "note": (
             "Curated cyclic PDB IDs only. HF language datasets (~400 repos) "
-            "are out of band; use CPSea/RCSB for coords."
+            "are out of band; use CPSea/RCSB for coords. Multi-seed averages "
+            "enrichment over independent decoy RNG draws."
         ),
     }
     write_json(args.json, payload)

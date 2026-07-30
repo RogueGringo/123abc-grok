@@ -95,7 +95,14 @@ def main(argv=None) -> int:
         for pid in probe:
             try:
                 row = rank_one(
-                    pid, kn, args.n_decoys, args.k, args.sectors, 0.45, rng
+                    pid,
+                    kn,
+                    args.n_decoys,
+                    args.k,
+                    args.sectors,
+                    0.45,
+                    rng,
+                    n_seeds=1,  # fast objective; multi-seed only on holdout/batch
                 )
             except Exception as exc:  # noqa: BLE001
                 row = {"pdb": pid, "status": "ERROR", "error": str(exc)}
@@ -181,6 +188,7 @@ def main(argv=None) -> int:
                     args.sectors,
                     0.45,
                     rng,
+                    n_seeds=3,
                 )
             except Exception as exc:  # noqa: BLE001
                 row = {"pdb": pid, "status": "ERROR", "error": str(exc)}
