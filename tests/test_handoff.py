@@ -32,6 +32,21 @@ def test_decorate_polyala_writes_file(tmp_path: Path):
     assert res.status == "OK"
     assert res.path_decorated is not None
     assert res.path_decorated.is_file()
+    assert res.path_decorated.parent == tmp_path / "decorated"
+    text = res.path_decorated.read_text(encoding="utf-8")
+    assert "CB" in text or " CB " in text
+
+
+def test_decorate_polyala_non_molds_path(tmp_path: Path):
+    """PolyAla writes under path_bb.parent/decorated when not under molds/."""
+    paths = write_mold_pair(tmp_path, "m", _ring(8), source="crit", rank_score=0.1)
+    art = BackboneArtifact(Path(paths["path_ca"]), Path(paths["path_bb"]))
+    res = PolyAlaStubAdapter().decorate(DecorateRequest(backbone=art, poly_ala=True))
+    assert res.status == "OK"
+    assert res.path_decorated is not None
+    assert res.path_decorated.is_file()
+    assert res.path_decorated.parent == Path(paths["path_bb"]).parent / "decorated"
+    assert res.path_decorated.parent == tmp_path / "decorated"
     text = res.path_decorated.read_text(encoding="utf-8")
     assert "CB" in text or " CB " in text
 
