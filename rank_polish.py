@@ -142,7 +142,7 @@ def main(argv=None) -> int:
         n_seeds=args.n_seeds,
         k=args.k,
         sectors=args.sectors,
-        soft_T=0.08,
+        soft_T=0.04,
         aggregate="softmin",
         rng=np.random.default_rng(902),
     )
@@ -153,7 +153,7 @@ def main(argv=None) -> int:
         n_seeds=max(2, args.n_seeds),
         k=args.k,
         sectors=args.sectors,
-        soft_T=0.08,
+        soft_T=0.04,
         aggregate="softmin",
         rng=np.random.default_rng(903),
     )
@@ -193,7 +193,7 @@ def main(argv=None) -> int:
         if accept
         else {
             "aggregate": "softmin",
-            "soft_T": 0.08,
+            "soft_T": 0.04,
             "probe_enrichment": base_enr,
             "holdout_enrichment": base_hold,
             "note": "baseline retained — candidate failed full continuity policy",
@@ -210,7 +210,7 @@ def main(argv=None) -> int:
         "chosen": chosen,
         "baseline": {
             "aggregate": "softmin",
-            "soft_T": 0.08,
+            "soft_T": 0.04,
             "probe_enrichment": base_enr,
             "holdout_enrichment": base_hold,
         },

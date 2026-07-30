@@ -64,7 +64,7 @@ def rank_one(
     rng: np.random.Generator,
     n_seeds: int = 1,
     alpha_proj: float = 1.0,
-    soft_T: float = 0.08,
+    soft_T: float = 0.04,
     aggregate: str = "softmin",
     sectors_mode: str = "fixed",
     multimode: bool | None = None,
@@ -195,7 +195,7 @@ def main(argv=None) -> int:
     p.add_argument(
         "--soft-T",
         type=float,
-        default=0.08,
+        default=0.04,
         help="softmin temperature for Crit ensemble Kabsch",
     )
     p.add_argument(
@@ -247,14 +247,16 @@ def main(argv=None) -> int:
         ) or {}
     except Exception:  # noqa: BLE001
         rh = {}
-    if rh.get("accepted") and args.soft_T == 0.08 and args.aggregate == "softmin":
-        args.soft_T = float(rh.get("soft_T", args.soft_T))
-        args.aggregate = str(rh.get("aggregate", args.aggregate))
-        logger.info(
-            "using evolve ranking_hparams soft_T=%.3f aggregate=%s",
-            args.soft_T,
-            args.aggregate,
-        )
+    # Prefer confirmed ranking_hparams when CLI left at code defaults
+    if rh.get("accepted") and rh.get("confirmed_full_batch"):
+        if abs(float(args.soft_T) - 0.04) < 1e-12 and args.aggregate == "softmin":
+            args.soft_T = float(rh.get("soft_T", args.soft_T))
+            args.aggregate = str(rh.get("aggregate", args.aggregate))
+            logger.info(
+                "using evolve ranking_hparams soft_T=%.3f aggregate=%s",
+                args.soft_T,
+                args.aggregate,
+            )
     ids = [x.strip().upper() for x in args.ids.split(",") if x.strip()]
     rng = np.random.default_rng(11)
     rows = []

@@ -148,7 +148,7 @@ def score_geometry_vs_crit(
     sector_points: list[np.ndarray],
     top_k: int = 3,
     aggregate: str = "softmin",
-    soft_T: float = 0.08,
+    soft_T: float = 0.04,
 ) -> dict[str, Any]:
     """Cyclic Kabsch distance to Crit sector ensemble (projection side).
 

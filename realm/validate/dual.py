@@ -216,7 +216,7 @@ def dual_score_geometry(
     *,
     alpha_proj: float = 0.85,
     prefer_maxop: bool = True,
-    soft_T: float = 0.08,
+    soft_T: float = 0.04,
     aggregate: str = "softmin",
 ) -> dict[str, Any]:
     """Joint score: α·projection + (1-α)·operator distance (lower better).

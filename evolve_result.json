@@ -59,16 +59,16 @@
     "R_note": "legacy R is Crit seating self-consistency; not \u03b6 evidence (RETRACTED 2026-07-29)",
     "null_battery_zeta_preference": "RETRACTED",
     "residual_fitness": "informative_density_return",
-    "probe_enrichment": 0.8354166666666667,
-    "holdout_enrichment": 0.8125,
-    "batch_mean_enrichment": 0.8201388888888888,
-    "batch_mean_enrichment_std": 0.05027935317155524,
+    "probe_enrichment": 0.8333333333333334,
+    "holdout_enrichment": 0.8208333333333333,
+    "batch_mean_enrichment": 0.8249999999999998,
+    "batch_mean_enrichment_std": 0.04805086157281994,
     "batch_top20": 8,
     "batch_n_ok": 12,
     "batch_n_seeds": 3,
     "batch_n_decoys": 40,
     "path": "geometry_off_zeta_external_cyclic_ranking",
-    "method": "CRIT_KABSCH_SOFTMIN + adaptive sectors(4/6) + multimode adaptive_short + multi-seed",
+    "method": "CRIT_KABSCH_SOFTMIN T=0.04 + adaptive sectors(4/6) + multimode adaptive_short + multi-seed",
     "dual": "realm/validate/dual.py + dual_probe.py (substrate\u2192L vs projection)",
     "axiomz": "01-DEVELOPMENT-AXiomZ + realm/axiomz.py CTS + stage_ledger.py",
     "commit_policy": {
@@ -78,14 +78,14 @@
     "instrument": "see docs/RETRACTION_residual_instrument.md",
     "ranking_hparams": {
       "aggregate": "softmin",
-      "soft_T": 0.08,
+      "soft_T": 0.04,
       "accepted": true,
       "confirmed_full_batch": true,
-      "note": "40x3 confirmed: mean 82.0% probe 83.5% hold 81.2% top20=8; 1TET 76%",
       "sectors_mode": "adaptive",
       "sectors_rule": "n<=8->4 else 6",
       "multimode_mode": "adaptive_short",
-      "multimode_rule": "multimode iff CA<=8"
+      "multimode_rule": "multimode iff CA<=8",
+      "note": "40x3: mean 82.5% probe 83.3% hold 82.1% top20=8; T=0.04 sharper Crit softmin"
     },
     "rank_polish": "softmin_min T=0.04 probe-win rejected by full-batch continuity (76.7->74.1)",
     "sectors_mode": "adaptive_cap6",
@@ -94,13 +94,13 @@
   },
   "ranking_hparams": {
     "aggregate": "softmin",
-    "soft_T": 0.08,
+    "soft_T": 0.04,
     "accepted": true,
     "confirmed_full_batch": true,
-    "note": "40x3 confirmed: mean 82.0% probe 83.5% hold 81.2% top20=8; 1TET 76%",
     "sectors_mode": "adaptive",
     "sectors_rule": "n<=8->4 else 6",
     "multimode_mode": "adaptive_short",
-    "multimode_rule": "multimode iff CA<=8"
+    "multimode_rule": "multimode iff CA<=8",
+    "note": "40x3: mean 82.5% probe 83.3% hold 82.1% top20=8; T=0.04 sharper Crit softmin"
   }
 }
