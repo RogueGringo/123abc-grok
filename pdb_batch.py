@@ -29,16 +29,22 @@ logger = logging.getLogger("pdb_batch")
 # Curated cyclic / short-peptide public structures (RCSB geometry only).
 # Not scraped from ~400 HF protein-language repos.
 DEFAULT_CYCLIC_IDS = [
-    "1CSA",  # cyclosporin A (~11)
-    "1S4U",  # may expose short peptide chain
-    "1JBL",
+    "1CSA",  # cyclosporin A
     "1IKF",  # cyclosporin complex
-    "2X2C",  # cyclic peptide
-    "3WNE",  # cyclic
-    "4K8Y",  # cyclic peptide
-    "5EOC",  # cyclic
-    "6B3F",  # cyclic peptide
-    "1TET",  # small peptide
+    "1JBL",
+    "1TET",
+    "2X2C",
+    "3WNE",
+    "4K8Y",
+    "5EOC",
+    "1SRA",  # SRA cyclic / short
+    "1ORK",
+    "2O9R",  # cyclic peptide
+    "3AVB",
+    "4M6E",  # cyclic
+    "5LSO",  # cyclic peptide
+    "6PIX",  # macrocycle
+    "1V9C",
 ]
 
 
@@ -76,7 +82,11 @@ def rank_one(
 
     native = score_geometry_vs_crit(xyz, templates)
     native["label"] = "native"
-    decoys = make_ca_decoys(xyz, n_decoys, rng, noise=noise)
+    # multi-hardness decoys: soft shape noise + harder deformation
+    n_soft = max(n_decoys // 2, 1)
+    n_hard = n_decoys - n_soft
+    decoys = make_ca_decoys(xyz, n_soft, rng, noise=noise)
+    decoys += make_ca_decoys(xyz, n_hard, rng, noise=noise * 1.8)
     rows = [native]
     for i, d in enumerate(decoys):
         sc = score_geometry_vs_crit(d, templates)
