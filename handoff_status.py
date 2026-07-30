@@ -140,9 +140,38 @@ def build_status(
             else None
         ),
         "matrix_acceptance": matrix_acceptance,
+        "delivery": _load_delivery(releases_dir, matrix_report),
         "ontology": "handoff_status_not_lambda_eq_gamma",
         "note": "Ops view only; acceptance metric is openable PDBs + pin.",
     }
+
+
+def _load_delivery(
+    releases_dir: Path,
+    matrix_report: Path | None,
+) -> dict | None:
+    candidates: list[Path] = [
+        releases_dir / "LATEST_DELIVERY.json",
+        releases_dir / "DELIVERY.json",
+    ]
+    if matrix_report:
+        candidates.insert(0, Path(matrix_report).parent / "DELIVERY.json")
+    for p in candidates:
+        if p.is_file():
+            try:
+                d = json.loads(p.read_text(encoding="utf-8"))
+                return {
+                    "shippable": d.get("shippable"),
+                    "n_pdb_total": (d.get("matrix_acceptance") or {}).get(
+                        "n_pdb_total"
+                    ),
+                    "n_accepted": (d.get("matrix_acceptance") or {}).get("n_accepted"),
+                    "payload_sha256": d.get("payload_sha256"),
+                    "path": str(p.resolve()),
+                }
+            except Exception as exc:  # noqa: BLE001
+                return {"error": str(exc), "path": str(p)}
+    return None
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -225,6 +254,13 @@ def main(argv: list[str] | None = None) -> int:
             ma.get("n_accepted"),
             ma.get("n_pdb_total"),
         )
+    if status.get("delivery"):
+        logger.info(
+            "delivery shippable=%s n_pdb_total=%s payload=%s",
+            (status.get("delivery") or {}).get("shippable"),
+            (status.get("delivery") or {}).get("n_pdb_total"),
+            ((status.get("delivery") or {}).get("payload_sha256") or "")[:16],
+        )
     if status.get("archive_verify"):
         logger.info(
             "latest archive verify ok=%s checked=%s",
@@ -255,6 +291,7 @@ def main(argv: list[str] | None = None) -> int:
                 "latest_label": (status.get("latest") or {}).get("label"),
                 "accepted": (status.get("acceptance") or {}).get("accepted"),
                 "n_pdb": (status.get("acceptance") or {}).get("n_pdb"),
+                "shippable": (status.get("delivery") or {}).get("shippable"),
                 "report": str(out.resolve()),
             }
         )

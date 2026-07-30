@@ -14,6 +14,7 @@ on:
       - "handoff_matrix.py"
       - "handoff_status.py"
       - "handoff_accept.py"
+      - "handoff_deliver.py"
       - "tests/test_handoff*.py"
       - "tests/test_pdb_write.py"
       - ".github/workflows/handoff.yml"
@@ -29,6 +30,7 @@ on:
       - "handoff_matrix.py"
       - "handoff_status.py"
       - "handoff_accept.py"
+      - "handoff_deliver.py"
       - "tests/test_handoff*.py"
       - "tests/test_pdb_write.py"
       - ".github/workflows/handoff.yml"
@@ -54,7 +56,7 @@ jobs:
           pytest tests/test_pdb_write.py tests/test_handoff.py tests/test_handoff_pipeline.py \
             tests/test_handoff_structure.py tests/test_handoff_package.py tests/test_handoff_verify.py \
             tests/test_handoff_release.py tests/test_handoff_matrix.py tests/test_handoff_status.py \
-            tests/test_handoff_accept.py \
+            tests/test_handoff_accept.py tests/test_handoff_deliver.py \
             -q --tb=line
       - name: Dual-gate policy pin + verify CLI
         env:

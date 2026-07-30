@@ -19,6 +19,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from handoff_campaign import main as campaign_main
+from realm.handoff.package import write_delivery_receipt
 from realm.handoff.verify import (
     accept_partner_drop,
     verify_archive_dir,
@@ -73,6 +74,11 @@ def main(argv: list[str] | None = None) -> int:
         "--no-accept",
         action="store_true",
         help="skip partner accept_partner_drop on each archive",
+    )
+    p.add_argument(
+        "--no-delivery",
+        action="store_true",
+        help="skip writing DELIVERY.json commercial ship receipt",
     )
     p.add_argument("--resume", action="store_true")
     p.add_argument("--dry-run", action="store_true")
@@ -246,6 +252,30 @@ def main(argv: list[str] | None = None) -> int:
     acc_path.write_text(json.dumps(acceptance, indent=2) + "\n", encoding="utf-8")
     logger.info("matrix ok=%s acceptance=%s → %s", matrix["ok"], acceptance.get("ok"), matrix_path)
     logger.info("matrix_acceptance → %s n_accepted=%s n_pdb_total=%s", acc_path, n_accept, n_pdb_total)
+
+    if not args.no_delivery and not args.dry_run and matrix["ok"]:
+        latest = None
+        latest_path = Path(args.archive_dir) / "LATEST.json"
+        if latest_path.is_file():
+            try:
+                latest = json.loads(latest_path.read_text(encoding="utf-8"))
+            except Exception:  # noqa: BLE001
+                latest = None
+        for dest in (
+            out_root / "DELIVERY.json",
+            Path(args.archive_dir) / "DELIVERY.json",
+            Path(args.archive_dir) / "LATEST_DELIVERY.json",
+        ):
+            write_delivery_receipt(
+                path=dest,
+                pin=pin,
+                matrix_acceptance=acceptance,
+                latest=latest,
+                matrix_report=matrix,
+                label="matrix-" + "-".join(tokens),
+            )
+        logger.info("DELIVERY receipts written (matrix + releases)")
+
     for r in rows:
         logger.info(
             "  %s ok=%s n_ok=%s/%s n_pdb=%s archive=%s accept=%s",

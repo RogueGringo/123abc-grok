@@ -430,6 +430,137 @@ def write_attestation_json(
     return dest
 
 
+def write_delivery_receipt(
+    *,
+    path: Path | str,
+    pin: dict[str, Any],
+    matrix_acceptance: dict[str, Any] | None = None,
+    latest: dict[str, Any] | None = None,
+    matrix_report: dict[str, Any] | None = None,
+    label: str | None = None,
+) -> Path:
+    """Partner ship receipt: pin + matrix accept + drop pointers + payload seal.
+
+    Single JSON a partner can file as commercial delivery proof.
+    Does not re-rank. Never lambda=gamma. Enrichment is not a criterion.
+    """
+    dest = Path(path)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+    drops: list[dict[str, Any]] = []
+    tokens = (matrix_acceptance or {}).get("tokens") or {}
+    for tok, info in tokens.items():
+        adir = info.get("archive_dir")
+        row: dict[str, Any] = {
+            "token": tok,
+            "accepted": info.get("accepted"),
+            "n_pdb": info.get("n_pdb"),
+            "archive_dir": adir,
+            "reasons": info.get("reasons") or [],
+        }
+        if adir and Path(adir).is_dir():
+            arch_meta = Path(adir) / "ARCHIVE.json"
+            att_path = Path(adir) / "ATTESTATION.json"
+            if arch_meta.is_file():
+                try:
+                    am = json.loads(arch_meta.read_text(encoding="utf-8"))
+                    row["zip_sha256"] = am.get("zip_sha256")
+                    row["label"] = am.get("label")
+                except Exception:  # noqa: BLE001
+                    pass
+            if att_path.is_file():
+                try:
+                    at = json.loads(att_path.read_text(encoding="utf-8"))
+                    row["payload_sha256"] = at.get("payload_sha256")
+                except Exception:  # noqa: BLE001
+                    pass
+        drops.append(row)
+
+    pin_ok = pin.get("ok") is True and abs(
+        float(pin.get("soft_T", pin.get("expected_soft_T", -1)) or -1) - 0.036
+    ) < 1e-9
+    matrix_ok = (matrix_acceptance or {}).get("ok") is True if matrix_acceptance else None
+    shippable = bool(pin_ok) and (matrix_ok is not False) and (
+        matrix_ok is True
+        or (
+            matrix_acceptance is None
+            and latest is not None
+            and latest.get("accepted") is True
+        )
+    )
+    if matrix_acceptance is not None:
+        shippable = bool(pin_ok and matrix_ok)
+
+    body = {
+        "label": label or "dual-gate-commercial-delivery",
+        "created_utc": stamp,
+        "shippable": shippable,
+        "pin": {
+            "soft_T": pin.get("soft_T"),
+            "seq_mix": pin.get("seq_mix"),
+            "face_weight": pin.get("face_weight"),
+            "expected_soft_T": 0.036,
+            "ok": pin_ok,
+        },
+        "matrix_acceptance": {
+            "ok": (matrix_acceptance or {}).get("ok"),
+            "n_tokens": (matrix_acceptance or {}).get("n_tokens"),
+            "n_accepted": (matrix_acceptance or {}).get("n_accepted"),
+            "n_pdb_total": (matrix_acceptance or {}).get("n_pdb_total"),
+        }
+        if matrix_acceptance
+        else None,
+        "latest": {
+            "archive_dir": (latest or {}).get("archive_dir"),
+            "label": (latest or {}).get("label"),
+            "accepted": (latest or {}).get("accepted"),
+            "n_pdb": (latest or {}).get("n_pdb"),
+            "zip_sha256": (latest or {}).get("zip_sha256"),
+            "payload_sha256": (latest or {}).get("payload_sha256"),
+        }
+        if latest
+        else None,
+        "drops": drops,
+        "matrix_tokens": (matrix_report or {}).get("tokens") if matrix_report else None,
+        "acceptance_criteria": [
+            "dual_gate_pin soft_T(n=12)=0.036",
+            "openable_pdbs_with_ontology_remark",
+            "quality_gate",
+            "archive_integrity_and_attestation",
+        ],
+        "not_acceptance_criteria": [
+            "mean_enrichment",
+            "top20_count",
+            "lambda_eq_gamma",
+            "RH_claims",
+        ],
+        "ontology": "handoff_delivery_receipt_not_lambda_eq_gamma",
+        "verify_cli": "python handoff_accept.py --from-matrix <matrix_report.json>",
+        "status_cli": "python handoff_status.py --verify-latest",
+        "note": "Commercial ship receipt; openable PDBs + pin; not enrichment score-chase.",
+    }
+    payload = json.dumps(
+        {
+            "pin": body["pin"],
+            "matrix_acceptance": body["matrix_acceptance"],
+            "drops": body["drops"],
+            "latest": body["latest"],
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    body["payload_sha256"] = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    dest.write_text(json.dumps(body, indent=2) + "\n", encoding="utf-8")
+    logger.info(
+        "DELIVERY receipt shippable=%s payload=%s → %s",
+        shippable,
+        body["payload_sha256"][:16],
+        dest,
+    )
+    return dest
+
+
 def write_latest_pointer(
     archive_meta: dict[str, Any],
     archive_root: Path | str,
