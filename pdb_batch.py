@@ -25,6 +25,7 @@ from realm.validate.dual import (
     forge_crit_geometry,
     multimode_for_ca_length,
     sectors_for_ca_length,
+    select_multimode_by_fit,
 )
 from realm.validate.pdb_io import PdbIOError, fetch_pdb, load_ca_cyclic_band
 from realm.validate.report import load_knobs, write_json
@@ -86,17 +87,35 @@ def rank_one(
     # Match Keymaker N to backbone length (geometry scaffold size)
     N = max(n_ca, 7)
     n_sec = sectors_for_ca_length(n_ca, mode=sectors_mode, default=n_sectors)
-    if multimode is None:
-        use_mm = multimode_for_ca_length(n_ca, mode=multimode_mode)
-    else:
+    fit_diag = None
+    mm_mode = str(multimode_mode or "adaptive_short").lower().strip()
+    if multimode is not None:
         use_mm = bool(multimode)
-    pack = forge_crit_geometry(
-        knobs,
-        N=N,
-        n_zeros=n_zeros,
-        n_sectors=n_sec,
-        multimode=use_mm,
-    )
+        pack = forge_crit_geometry(
+            knobs,
+            N=N,
+            n_zeros=n_zeros,
+            n_sectors=n_sec,
+            multimode=use_mm,
+        )
+    elif mm_mode in ("self_fit", "self-fit", "fit"):
+        use_mm, pack, fit_diag = select_multimode_by_fit(
+            xyz,
+            knobs,
+            N=N,
+            n_zeros=n_zeros,
+            n_sectors=n_sec,
+            soft_T=soft_T,
+        )
+    else:
+        use_mm = multimode_for_ca_length(n_ca, mode=mm_mode)
+        pack = forge_crit_geometry(
+            knobs,
+            N=N,
+            n_zeros=n_zeros,
+            n_sectors=n_sec,
+            multimode=use_mm,
+        )
     a = float(np.clip(alpha_proj, 0.0, 1.0))
     sc_kw = dict(alpha_proj=a, soft_T=soft_T, aggregate=aggregate)
     native = dual_score_geometry(xyz, pack, **sc_kw)
@@ -160,7 +179,10 @@ def rank_one(
         "n_sectors_used": n_sec,
         "sectors_mode": sectors_mode,
         "multimode": use_mm,
-        "multimode_mode": multimode_mode if multimode is None else "override",
+        "multimode_mode": (
+            "override" if multimode is not None else multimode_mode
+        ),
+        "multimode_fit": fit_diag,
         "operator": pack["operator"].to_dict() if a < 1.0 else None,
     }
 
@@ -208,9 +230,10 @@ def main(argv=None) -> int:
     p.add_argument(
         "--multimode-mode",
         type=str,
-        default="adaptive_short",
-        choices=("adaptive_short", "on", "off"),
-        help="adaptive_short: multimode only CA≤8; on/off force all",
+        default="self_fit",
+        choices=("self_fit", "adaptive_short", "on", "off"),
+        help="self_fit: pick planar/multimode by native Crit distance; "
+        "adaptive_short: multimode only CA≤8; on/off force all",
     )
     p.add_argument(
         "--multimode",

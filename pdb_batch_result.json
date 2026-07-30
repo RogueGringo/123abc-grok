@@ -23,7 +23,13 @@
       "n_sectors_used": 6,
       "sectors_mode": "adaptive",
       "multimode": false,
-      "multimode_mode": "adaptive_short",
+      "multimode_mode": "self_fit",
+      "multimode_fit": {
+        "dist_planar": 0.3463154018917899,
+        "dist_multimode": 0.40515928247035293,
+        "chosen": "planar",
+        "margin": -0.058843880578563046
+      },
       "operator": null
     },
     {
@@ -49,7 +55,13 @@
       "n_sectors_used": 6,
       "sectors_mode": "adaptive",
       "multimode": false,
-      "multimode_mode": "adaptive_short",
+      "multimode_mode": "self_fit",
+      "multimode_fit": {
+        "dist_planar": 0.27790837516945455,
+        "dist_multimode": 0.35606836990540636,
+        "chosen": "planar",
+        "margin": -0.07815999473595181
+      },
       "operator": null
     },
     {
@@ -75,7 +87,13 @@
       "n_sectors_used": 6,
       "sectors_mode": "adaptive",
       "multimode": false,
-      "multimode_mode": "adaptive_short",
+      "multimode_mode": "self_fit",
+      "multimode_fit": {
+        "dist_planar": 0.3302958712381925,
+        "dist_multimode": 0.4076770441712037,
+        "chosen": "planar",
+        "margin": -0.07738117293301122
+      },
       "operator": null
     },
     {
@@ -84,13 +102,13 @@
       "n_ca": 11,
       "chain": "A",
       "N_scaffold": 11,
-      "native_dist": 0.4939830873724252,
-      "native_proj": 0.4939830873724252,
+      "native_dist": 0.48429905469798046,
+      "native_proj": 0.48429905469798046,
       "native_op": 0.0,
-      "native_rank": 11.333333333333334,
+      "native_rank": 9.0,
       "n_total": 41,
-      "enrichment": 0.7416666666666667,
-      "enrichment_std": 0.06561673228343176,
+      "enrichment": 0.7999999999999999,
+      "enrichment_std": 0.04082482904638629,
       "top20": false,
       "method": "CRIT_KABSCH_SOFTMIN",
       "n_templates": 6,
@@ -100,8 +118,14 @@
       "aggregate": "softmin",
       "n_sectors_used": 6,
       "sectors_mode": "adaptive",
-      "multimode": false,
-      "multimode_mode": "adaptive_short",
+      "multimode": true,
+      "multimode_mode": "self_fit",
+      "multimode_fit": {
+        "dist_planar": 0.4939830873724252,
+        "dist_multimode": 0.48429905469798046,
+        "chosen": "multimode",
+        "margin": 0.009684032674444731
+      },
       "operator": null
     },
     {
@@ -110,13 +134,13 @@
       "n_ca": 6,
       "chain": "C",
       "N_scaffold": 7,
-      "native_dist": 0.28781958275855907,
-      "native_proj": 0.28781958275855907,
+      "native_dist": 0.27642488095603646,
+      "native_proj": 0.27642488095603646,
       "native_op": 0.0,
-      "native_rank": 6.666666666666667,
+      "native_rank": 5.666666666666667,
       "n_total": 41,
-      "enrichment": 0.8583333333333334,
-      "enrichment_std": 0.05892556509887896,
+      "enrichment": 0.8833333333333333,
+      "enrichment_std": 0.011785113019775804,
       "top20": true,
       "method": "CRIT_KABSCH_SOFTMIN",
       "n_templates": 4,
@@ -126,8 +150,14 @@
       "aggregate": "softmin",
       "n_sectors_used": 4,
       "sectors_mode": "adaptive",
-      "multimode": true,
-      "multimode_mode": "adaptive_short",
+      "multimode": false,
+      "multimode_mode": "self_fit",
+      "multimode_fit": {
+        "dist_planar": 0.27642488095603646,
+        "dist_multimode": 0.28781958275855907,
+        "chosen": "planar",
+        "margin": -0.011394701802522611
+      },
       "operator": null
     },
     {
@@ -136,8 +166,8 @@
       "n_ca": 13,
       "chain": "B",
       "N_scaffold": 13,
-      "native_dist": 0.523140650215933,
-      "native_proj": 0.523140650215933,
+      "native_dist": 0.5182587714279377,
+      "native_proj": 0.5182587714279377,
       "native_op": 0.0,
       "native_rank": 12.0,
       "n_total": 41,
@@ -152,8 +182,14 @@
       "aggregate": "softmin",
       "n_sectors_used": 6,
       "sectors_mode": "adaptive",
-      "multimode": false,
-      "multimode_mode": "adaptive_short",
+      "multimode": true,
+      "multimode_mode": "self_fit",
+      "multimode_fit": {
+        "dist_planar": 0.523140650215933,
+        "dist_multimode": 0.5182587714279377,
+        "chosen": "multimode",
+        "margin": 0.004881878787995286
+      },
       "operator": null
     },
     {
@@ -179,7 +215,13 @@
       "n_sectors_used": 6,
       "sectors_mode": "adaptive",
       "multimode": false,
-      "multimode_mode": "adaptive_short",
+      "multimode_mode": "self_fit",
+      "multimode_fit": {
+        "dist_planar": 0.5187154009192382,
+        "dist_multimode": 0.5451988094948768,
+        "chosen": "planar",
+        "margin": -0.02648340857563858
+      },
       "operator": null
     },
     {
@@ -205,7 +247,13 @@
       "n_sectors_used": 6,
       "sectors_mode": "adaptive",
       "multimode": false,
-      "multimode_mode": "adaptive_short",
+      "multimode_mode": "self_fit",
+      "multimode_fit": {
+        "dist_planar": 0.5168293785930889,
+        "dist_multimode": 0.5298257916105542,
+        "chosen": "planar",
+        "margin": -0.012996413017465347
+      },
       "operator": null
     },
     {
@@ -214,13 +262,13 @@
       "n_ca": 8,
       "chain": "Y",
       "N_scaffold": 8,
-      "native_dist": 0.5177940890239104,
-      "native_proj": 0.5177940890239104,
+      "native_dist": 0.4617080231475662,
+      "native_proj": 0.4617080231475662,
       "native_op": 0.0,
-      "native_rank": 8.0,
+      "native_rank": 7.0,
       "n_total": 41,
-      "enrichment": 0.8250000000000001,
-      "enrichment_std": 0.020412414523193124,
+      "enrichment": 0.85,
+      "enrichment_std": 0.04082482904638629,
       "top20": true,
       "method": "CRIT_KABSCH_SOFTMIN",
       "n_templates": 4,
@@ -230,8 +278,14 @@
       "aggregate": "softmin",
       "n_sectors_used": 4,
       "sectors_mode": "adaptive",
-      "multimode": true,
-      "multimode_mode": "adaptive_short",
+      "multimode": false,
+      "multimode_mode": "self_fit",
+      "multimode_fit": {
+        "dist_planar": 0.4617080231475662,
+        "dist_multimode": 0.5177940890239104,
+        "chosen": "planar",
+        "margin": -0.05608606587634424
+      },
       "operator": null
     },
     {
@@ -240,14 +294,14 @@
       "n_ca": 8,
       "chain": "Y",
       "N_scaffold": 8,
-      "native_dist": 0.514710727949412,
-      "native_proj": 0.514710727949412,
+      "native_dist": 0.4655372228768641,
+      "native_proj": 0.4655372228768641,
       "native_op": 0.0,
-      "native_rank": 8.0,
+      "native_rank": 9.0,
       "n_total": 41,
-      "enrichment": 0.8249999999999998,
-      "enrichment_std": 0.020412414523193124,
-      "top20": true,
+      "enrichment": 0.7999999999999999,
+      "enrichment_std": 0.08164965809277262,
+      "top20": false,
       "method": "CRIT_KABSCH_SOFTMIN",
       "n_templates": 4,
       "n_seeds": 3,
@@ -256,8 +310,14 @@
       "aggregate": "softmin",
       "n_sectors_used": 4,
       "sectors_mode": "adaptive",
-      "multimode": true,
-      "multimode_mode": "adaptive_short",
+      "multimode": false,
+      "multimode_mode": "self_fit",
+      "multimode_fit": {
+        "dist_planar": 0.4655372228768641,
+        "dist_multimode": 0.514710727949412,
+        "chosen": "planar",
+        "margin": -0.04917350507254786
+      },
       "operator": null
     },
     {
@@ -283,7 +343,13 @@
       "n_sectors_used": 4,
       "sectors_mode": "adaptive",
       "multimode": true,
-      "multimode_mode": "adaptive_short",
+      "multimode_mode": "self_fit",
+      "multimode_fit": {
+        "dist_planar": 0.5410235420699647,
+        "dist_multimode": 0.4656595231896323,
+        "chosen": "multimode",
+        "margin": 0.07536401888033245
+      },
       "operator": null
     },
     {
@@ -309,18 +375,24 @@
       "n_sectors_used": 6,
       "sectors_mode": "adaptive",
       "multimode": false,
-      "multimode_mode": "adaptive_short",
+      "multimode_mode": "self_fit",
+      "multimode_fit": {
+        "dist_planar": 0.5477256178379637,
+        "dist_multimode": 0.5981114132174066,
+        "chosen": "planar",
+        "margin": -0.05038579537944288
+      },
       "operator": null
     }
   ],
   "summary": {
     "n_ok": 12,
     "n_total_ids": 12,
-    "mean_enrichment": 0.8249999999999998,
-    "mean_enrichment_std": 0.04805086157281994,
-    "probe_mean_enrichment": 0.8333333333333334,
+    "mean_enrichment": 0.8319444444444445,
+    "mean_enrichment_std": 0.04886063680420527,
+    "probe_mean_enrichment": 0.8541666666666666,
     "holdout_mean_enrichment": 0.8208333333333333,
-    "top20_count": 8,
+    "top20_count": 7,
     "n_seeds": 3,
     "n_decoys": 40,
     "alpha_proj": 1.0,
@@ -329,7 +401,7 @@
     "sectors_mode": "adaptive",
     "sectors_default": 6,
     "multimode": null,
-    "multimode_mode": "adaptive_short"
+    "multimode_mode": "self_fit"
   },
   "knobs": {
     "Lambda": 148.24406176702522,

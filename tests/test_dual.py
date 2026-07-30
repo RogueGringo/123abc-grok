@@ -14,6 +14,7 @@ from realm.validate.dual import (
     multimode_for_ca_length,
     operator_fingerprint,
     sectors_for_ca_length,
+    select_multimode_by_fit,
 )
 
 
@@ -39,6 +40,19 @@ def test_multimode_for_ca_length_adaptive_short():
     assert multimode_for_ca_length(11, "adaptive_short") is False
     assert multimode_for_ca_length(12, "off") is False
     assert multimode_for_ca_length(6, "on") is True
+
+
+def test_select_multimode_by_fit_returns_pack():
+    kn = _knobs()
+    t = np.linspace(0, 2 * np.pi, 11, endpoint=False)
+    xyz = np.column_stack([np.cos(t), np.sin(t), 0.05 * np.sin(3 * t)])
+    use_m, pack, diag = select_multimode_by_fit(
+        xyz, kn, N=11, n_zeros=14, n_sectors=6, soft_T=0.04, prefer_maxop=False
+    )
+    assert isinstance(use_m, bool)
+    assert len(pack["templates"]) >= 1
+    assert "dist_planar" in diag and "dist_multimode" in diag
+    assert diag["chosen"] in ("planar", "multimode")
 
 
 def test_operator_fingerprint_shapes():

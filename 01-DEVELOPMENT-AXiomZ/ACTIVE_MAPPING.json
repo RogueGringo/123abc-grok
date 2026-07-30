@@ -42,7 +42,7 @@
       "name": "operational_geometry",
       "code": ["realm/projection.py", "realm/zeta_geometry.py", "realm/validate/decoys.py", "realm/validate/dual.py:sectors_for_ca_length"],
       "status": "active",
-      "role": "Projected Crit geometry M_v; sectors CA≤8→4 else 6; multimode only CA≤8 (planar otherwise)"
+      "role": "Projected Crit geometry M_v; sectors 4/6; self_fit planar vs multimode by native Crit distance"
     },
     {
       "axiom_id": "4.1",

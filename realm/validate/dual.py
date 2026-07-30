@@ -144,14 +144,69 @@ def multimode_for_ca_length(n_ca: int, mode: str = "adaptive_short") -> bool:
     adaptive_short: multimode only for short rings (CA≤8) — height ribbon
     helps tiny cyclics; planar holonomy circle ranks better for longer rings.
     on / off: force all multimode or all planar.
+    self_fit: not length-based — caller must pick via native Crit distance.
     """
     mode = str(mode or "adaptive_short").lower().strip()
     if mode in ("on", "true", "1", "yes"):
         return True
     if mode in ("off", "false", "0", "no", "planar"):
         return False
+    if mode in ("self_fit", "self-fit", "fit"):
+        # length heuristic only as fallback; prefer select_multimode_by_fit
+        return int(n_ca) <= 8
     # adaptive_short (default production)
     return int(n_ca) <= 8
+
+
+def select_multimode_by_fit(
+    xyz: np.ndarray,
+    knobs: dict[str, Any],
+    *,
+    N: int,
+    n_zeros: int,
+    n_sectors: int,
+    soft_T: float = 0.04,
+    prefer_maxop: bool = True,
+) -> tuple[bool, dict[str, Any], dict[str, Any]]:
+    """Pick planar vs multimode Crit mold by native projection distance.
+
+    Structure-conditioned mold choice (not decoy-label training): forge both,
+    keep the ensemble with lower softmin Kabsch distance to the native CA.
+    Returns (use_multimode, pack, diagnostics).
+    """
+    from realm.validate.decoys import score_geometry_vs_crit
+
+    pack_p = forge_crit_geometry(
+        knobs,
+        N=N,
+        n_zeros=n_zeros,
+        n_sectors=n_sectors,
+        multimode=False,
+        prefer_maxop=prefer_maxop,
+    )
+    pack_m = forge_crit_geometry(
+        knobs,
+        N=N,
+        n_zeros=n_zeros,
+        n_sectors=n_sectors,
+        multimode=True,
+        prefer_maxop=prefer_maxop,
+    )
+    d_p = float(
+        score_geometry_vs_crit(xyz, pack_p["templates"], soft_T=soft_T)["mean_dist"]
+    )
+    d_m = float(
+        score_geometry_vs_crit(xyz, pack_m["templates"], soft_T=soft_T)["mean_dist"]
+    )
+    use_m = d_m < d_p - 1e-12
+    pack = pack_m if use_m else pack_p
+    diag = {
+        "dist_planar": d_p,
+        "dist_multimode": d_m,
+        "chosen": "multimode" if use_m else "planar",
+        "margin": float(d_p - d_m),
+    }
+    return use_m, pack, diag
 
 
 def sectors_for_ca_length(n_ca: int, mode: str = "fixed", default: int = 6) -> int:

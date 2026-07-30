@@ -10190,11 +10190,11 @@
     "batch": {
       "n_ok": 12,
       "n_total_ids": 12,
-      "mean_enrichment": 0.8249999999999998,
-      "mean_enrichment_std": 0.04805086157281994,
-      "probe_mean_enrichment": 0.8333333333333334,
+      "mean_enrichment": 0.8319444444444445,
+      "mean_enrichment_std": 0.04886063680420527,
+      "probe_mean_enrichment": 0.8541666666666666,
       "holdout_mean_enrichment": 0.8208333333333333,
-      "top20_count": 8,
+      "top20_count": 7,
       "n_seeds": 3,
       "n_decoys": 40,
       "alpha_proj": 1.0,
@@ -10203,7 +10203,7 @@
       "sectors_mode": "adaptive",
       "sectors_default": 6,
       "multimode": null,
-      "multimode_mode": "adaptive_short"
+      "multimode_mode": "self_fit"
     },
     "transfer_holdout_preference": false,
     "null_claim": "RETRACTED",
@@ -10262,7 +10262,7 @@
     {
       "name": "external_ranking_signal",
       "ok": true,
-      "detail": "batch mean_enrichment=82.5% (projection path)",
+      "detail": "batch mean_enrichment=83.2% (projection path)",
       "axioms": [
         "2.4",
         "5.2",
