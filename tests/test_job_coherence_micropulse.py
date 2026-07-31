@@ -137,7 +137,9 @@ def test_pin_job_union_needs_gamma_shock_vibe():
 def test_glue_depth_proximity_with_fixture_depths():
     surface = parse_las(LAS)
     bundle = load_micropulse_bundle(FIX)
-    glue = compute_glue(surface, bundle, align_mode="depth_primary")
+    glue = compute_glue(
+        surface, bundle, align_mode="depth_primary", channel_pack="mwd_full"
+    )
     assert glue["multi_source"] is True
     assert glue["has_micropulse"] is True
     assert glue["has_depth_domain"] is True
@@ -153,15 +155,117 @@ def test_glue_single_source_no_mp():
     assert glue["score"] == pytest.approx(1.0)
 
 
-def test_glue_incomplete_proposes_align_free_params():
-    """When multi-source glue is weak, align section proposes free moves (not pin)."""
+def test_structural_fiber_join_pack_relative_mwd_full_gamma_only():
+    """LAS depth + MP time + GAMMA only (no shared axis) must clear min_align for mwd_full.
+
+    Pack-relative scoring: fiber_frac = 1/1 (GAMMA required), not 1/7.
+    Extra unused kinds must not be required to pass.
+    """
+    surface = parse_las(LAS)
+    # Single GAMMA fiber, strip depths so path is cross-domain structural join
+    gamma = parse_micropulse_csv(MP_GAMMA)
+    gamma["depths"] = [None] * gamma["n_rows"]
+    gamma["depth_key"] = None
+    bundle = {
+        "fibers": {"GAMMA": gamma},
+        "kinds": ["GAMMA"],
+        "n_fibers": 1,
+        "source_path": str(MP_GAMMA),
+        "sources": [str(MP_GAMMA)],
+        "times_union": [t for t in gamma["times"] if t is not None],
+        "depths_union": [],
+        "pack_channels": {"GAMMA": gamma["channels"]["GAMMA"]},
+        "downhole_kinds_present": ["GAMMA"],
+    }
+    glue = compute_glue(
+        surface, bundle, align_mode="depth_primary", channel_pack="mwd_full"
+    )
+    assert glue["method"] == "structural_fiber_join"
+    assert glue["has_depth_domain"] is False
+    assert glue["has_time_domain"] is False
+    assert glue["fiber_frac"] == pytest.approx(1.0)
+    assert glue["score"] >= 0.5
+    assert "glue_incomplete" not in glue["notes"]
+
+    # Missing required GAMMA → incomplete under mwd_full
+    empty_bundle = {
+        "fibers": {},
+        "kinds": [],
+        "n_fibers": 1,  # present as multi-source shell
+        "times_union": [1.0e9],
+        "depths_union": [],
+        "pack_channels": {},
+        "downhole_kinds_present": [],
+    }
+    # n_fibers>0 with no pack channels still multi-source
+    glue_miss = compute_glue(
+        surface, empty_bundle, align_mode="depth_primary", channel_pack="mwd_full"
+    )
+    assert glue_miss["method"] == "structural_fiber_join"
+    assert glue_miss["fiber_frac"] == pytest.approx(0.0)
+    assert glue_miss["score"] < 0.5
+
+
+def test_structural_join_unused_kinds_do_not_inflate_surface_pack():
+    """TEMP present must not be required; surface_min co-presence is binary."""
+    surface = parse_las(LAS)
+    temp = parse_micropulse_csv(MP_TEMP)
+    bundle = {
+        "fibers": {"TEMP": temp},
+        "kinds": ["TEMP"],
+        "n_fibers": 1,
+        "times_union": [t for t in temp["times"] if t is not None],
+        "depths_union": [],
+        "pack_channels": {"TEMP": temp["channels"]["TEMP"]},
+        "downhole_kinds_present": ["TEMP"],
+    }
+    glue = compute_glue(
+        surface, bundle, align_mode="depth_primary", channel_pack="surface_min"
+    )
+    assert glue["method"] == "structural_fiber_join"
+    # surface pack: any downhole co-presence → fiber_frac 1.0
+    assert glue["fiber_frac"] == pytest.approx(1.0)
+    assert glue["score"] >= 0.5
+
+
+def test_null_policy_drop_ignores_short_mp_channels():
+    """drop must not shrink surface skeleton using length-mismatched MP fibers."""
+    from realm.job_os.ingest_las import apply_null_policy
+
+    surface = parse_las(LAS)
+    bundle = load_micropulse_bundle(FIX)
+    joined = join_surface_micropulse(surface, bundle)
+    n_surface = joined["n_rows"]
+    assert n_surface == 20
+    # Inject null into short GAMMA fiber
+    gamma = list(joined["channels"]["GAMMA"])
+    assert len(gamma) < n_surface
+    gamma[0] = None
+    joined["channels"]["GAMMA"] = gamma
+    # Also inject one surface null
+    wob = list(joined["channels"]["WOB"])
+    wob[5] = None
+    joined["channels"]["WOB"] = wob
+
+    dropped = apply_null_policy(joined, "drop")
+    # Only surface null at row 5 drops one row — not GAMMA[0]
+    assert dropped["n_rows"] == n_surface - 1
+    # MP fiber preserved whole (presence-only)
+    assert len(dropped["channels"]["GAMMA"]) == len(gamma)
+    assert dropped["null_policy_fiber_channels_skipped"]
+    assert "GAMMA" in dropped["null_policy_fiber_channels_skipped"]
+
+
+def test_glue_incomplete_proposes_align_only_when_domain_exists():
+    """Align free moves only when alternate domain is actually available."""
     thr = JobThresholds(min_align_score=0.5)
     params = FreeParams(
         align_mode="depth_primary",
         channel_pack="mwd_full",
         null_policy="mark_only",
     )
-    obs = Observations(
+    # No shared time domain → must NOT propose time_primary or glue hold_last
+    obs_no_domain = Observations(
         pin_ok=True,
         n_rows=20,
         n_channels=8,
@@ -182,17 +286,48 @@ def test_glue_incomplete_proposes_align_free_params():
         glue_method="structural_fiber_join",
         mp_n_fibers=1,
         glue_notes=["glue_incomplete", "no_shared_depth_or_time_axis"],
+        glue_has_depth_domain=False,
+        glue_has_time_domain=False,
     )
-    props = collect_section_proposals(obs, params, thr, tried=set())
-    assert props
-    sections = {p.section for p in props}
-    assert "align" in sections
-    nxt, reason, board = merge_proposals(props, params)
+    props = collect_section_proposals(obs_no_domain, params, thr, tried=set())
+    align_props = [p for p in props if p.section == "align"]
+    assert align_props == [], "no unusable align moves when domain missing"
+    for pr in props:
+        blob = json.dumps(pr.to_dict())
+        assert "depth_mono_eps" not in blob
+
+    # Shared time domain available → may propose time_primary
+    obs_time = Observations(
+        pin_ok=True,
+        n_rows=20,
+        n_channels=8,
+        n_required=6,
+        n_required_present=6,
+        export_ok_fraction=1.0,
+        verify_ok=True,
+        align_score=0.3,
+        physics_n_ok=3,
+        physics_n_warn=0,
+        physics_n_fail=0,
+        depth_mono_ok=True,
+        unit_sanity_ok=True,
+        out_dir="/tmp",
+        notes=["align_weak", "glue_incomplete"],
+        has_micropulse=True,
+        glue_score=0.3,
+        glue_method="time_proximity_fallback",
+        mp_n_fibers=1,
+        glue_notes=["glue_incomplete"],
+        glue_has_depth_domain=False,
+        glue_has_time_domain=True,
+    )
+    props2 = collect_section_proposals(obs_time, params, thr, tried=set())
+    align2 = [p for p in props2 if p.section == "align"]
+    assert align2
+    nxt, reason, board = merge_proposals(align2, params)
     assert nxt is not None
-    # Prefer time_primary or hold_last — never pin fields
-    assert nxt.align_mode in ("time_primary", "depth_primary")
-    blob = json.dumps(nxt.to_dict())
-    assert "depth_mono_eps" not in blob
+    assert nxt.align_mode == "time_primary"
+    assert "hold_last" not in reason  # null_policy not proposed for glue alone
 
 
 def test_observe_joined_series_mwd_full():
@@ -203,7 +338,9 @@ def test_observe_joined_series_mwd_full():
     params = FreeParams(channel_pack="mwd_full", align_mode="depth_primary")
     thr = JobThresholds()
     pin = verify_job_pin(joined, pack="mwd_full")
-    glue = compute_glue(joined, bundle, align_mode="depth_primary")
+    glue = compute_glue(
+        joined, bundle, align_mode="depth_primary", channel_pack="mwd_full"
+    )
     obs = observe_job(
         series=joined, params=params, thr=thr, out_dir="/x", pin=pin, glue=glue
     )
@@ -212,6 +349,36 @@ def test_observe_joined_series_mwd_full():
     assert obs.glue_score >= 0.5
     assert obs.export_ok_fraction == pytest.approx(1.0)
     assert is_solved(obs, thr, params)
+    # Domain flags plumbed for propose
+    assert obs.glue_has_depth_domain is True
+
+
+def test_coherence_score_no_double_count_glue():
+    from realm.job_os.observe import coherence_score
+
+    thr = JobThresholds()
+    params = FreeParams(channel_pack="mwd_full")
+    obs = Observations(
+        pin_ok=True,
+        n_rows=20,
+        n_channels=8,
+        n_required=6,
+        n_required_present=6,
+        export_ok_fraction=1.0,
+        verify_ok=True,
+        align_score=0.7,  # already = glue for multi-source
+        physics_n_ok=3,
+        physics_n_warn=0,
+        physics_n_fail=0,
+        depth_mono_ok=True,
+        unit_sanity_ok=True,
+        out_dir="/tmp",
+        has_micropulse=True,
+        glue_score=0.7,
+    )
+    s = coherence_score(obs, thr, params)
+    # 5 parts: pin, export, verify, physics, align — not 6 with glue again
+    assert s == pytest.approx((1 + 1 + 1 + 1 + 0.7) / 5)
 
 
 def test_os_loop_mwd_full_with_micropulse_solves(tmp_path: Path):

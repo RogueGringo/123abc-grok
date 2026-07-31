@@ -184,57 +184,88 @@ def apply_null_policy(
 ) -> dict[str, Any]:
     """Return a shallow-copied series with nulls handled per free param.
 
-    drop: drop rows where any channel is null (keeps depth-aligned rows only if all ok)
-    hold_last: forward-fill nulls per channel
+    drop: drop surface rows where any *surface-aligned* channel is null
+    hold_last: forward-fill nulls on surface-aligned channels only
     mark_only: leave nulls as None (default)
+
+    Surface-aligned = channel length equals len(depths) / n_rows.
+    Length-mismatched MicroPulse fibers are presence-only until a real
+    align/resample stalk exists; they must not drive surface row drops.
     """
     pol = (policy or "mark_only").lower().strip()
     channels = {k: list(v) for k, v in (series.get("channels") or {}).items()}
     depths = list(series.get("depths") or [])
-    n = len(depths)
+    n = int(series.get("n_rows") or len(depths) or 0)
+    if n <= 0:
+        n = len(depths)
+
+    def _is_surface_aligned(arr: list[Any]) -> bool:
+        return len(arr) == n
+
+    surface_keys = [k for k, arr in channels.items() if _is_surface_aligned(arr)]
+    # Presence-only fibers (e.g. shorter MicroPulse pack channels)
+    fiber_keys = [k for k in channels if k not in surface_keys]
 
     if pol == "mark_only":
         out = dict(series)
         out["channels"] = channels
         out["depths"] = depths
         out["null_policy_applied"] = pol
+        out["null_policy_surface_channels"] = surface_keys
+        out["null_policy_fiber_channels_skipped"] = fiber_keys
         return out
 
     if pol == "hold_last":
-        for name, arr in channels.items():
+        for name in surface_keys:
+            arr = channels[name]
             last: float | None = None
             for i in range(len(arr)):
                 if arr[i] is None:
                     arr[i] = last
                 else:
                     last = arr[i]
+        # Leave fiber_keys untouched (not depth-row aligned)
         out = dict(series)
         out["channels"] = channels
         out["depths"] = depths
         out["null_policy_applied"] = pol
+        out["null_policy_surface_channels"] = surface_keys
+        out["null_policy_fiber_channels_skipped"] = fiber_keys
         return out
 
     if pol == "drop":
         keep: list[int] = []
         for i in range(n):
-            row_ok = depths[i] == depths[i]  # not nan
+            row_ok = True
+            if i < len(depths):
+                row_ok = depths[i] == depths[i]  # not nan
+            else:
+                row_ok = False
             if not row_ok:
                 continue
-            for arr in channels.values():
-                if i < len(arr) and arr[i] is None:
+            # Only surface-aligned channels participate in the drop mask
+            for name in surface_keys:
+                arr = channels[name]
+                if arr[i] is None:
                     row_ok = False
                     break
             if row_ok:
                 keep.append(i)
-        new_depths = [depths[i] for i in keep]
-        new_channels = {
-            k: [arr[i] for i in keep if i < len(arr)] for k, arr in channels.items()
-        }
+        new_depths = [depths[i] for i in keep if i < len(depths)]
+        new_channels: dict[str, list[Any]] = {}
+        for k, arr in channels.items():
+            if k in surface_keys:
+                new_channels[k] = [arr[i] for i in keep]
+            else:
+                # Preserve mismatched MP fibers whole (presence-only)
+                new_channels[k] = list(arr)
         out = dict(series)
         out["depths"] = new_depths
         out["channels"] = new_channels
         out["n_rows"] = len(new_depths)
         out["null_policy_applied"] = pol
+        out["null_policy_surface_channels"] = surface_keys
+        out["null_policy_fiber_channels_skipped"] = fiber_keys
         return out
 
     out = dict(series)

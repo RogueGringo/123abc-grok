@@ -8,13 +8,16 @@ Rules:
   - Prefer shared domain (both depths or both times) when present.
   - Depth overlap / time overlap via range Jaccard + coverage.
   - Cross-domain (surface depth-only + MP time-only): honest structural
-    fiber-join score from downhole pack presence — does NOT invent depth/time.
+    fiber-join score from **pack-required** downhole presence — does NOT
+    invent depth/time and does not score unused fiber kinds.
   - Never invent surveys or reorder depths.
 """
 
 from __future__ import annotations
 
 from typing import Any
+
+from realm.job_os.types import DOWNHOLE_PACK_CHANNELS, PACK_REQUIRED
 
 
 def _finite(vals: list[Any]) -> list[float]:
@@ -60,11 +63,49 @@ def _coverage_in_range(points: list[float], lo: float, hi: float) -> float:
     return float(inside / len(points))
 
 
+def _pack_downhole_targets(channel_pack: str) -> tuple[str, ...]:
+    """Downhole mnemonics required by pack (empty for surface-only packs)."""
+    pack_l = (channel_pack or "surface_min").lower().strip()
+    required = PACK_REQUIRED.get(pack_l, PACK_REQUIRED["surface_min"])
+    down = set(c.upper() for c in DOWNHOLE_PACK_CHANNELS)
+    return tuple(c.upper() for c in required if c.upper() in down)
+
+
+def _structural_fiber_frac(
+    present_set: set[str],
+    channel_pack: str,
+) -> tuple[float, tuple[str, ...], int]:
+    """Fraction of pack-required downhole fibers present.
+
+    Surface-only packs with optional MP: fiber_frac = 1.0 if any downhole
+    fiber is present (co-presence), else 0.0 — unused kinds never inflate.
+    """
+    targets = _pack_downhole_targets(channel_pack)
+    if targets:
+        n_hit = sum(1 for t in targets if t in present_set)
+        return float(n_hit / len(targets)), targets, n_hit
+    # surface pack + multi-source: co-presence of any known downhole fiber
+    any_dh = any(c in present_set for c in DOWNHOLE_PACK_CHANNELS)
+    return (1.0 if any_dh else 0.0), targets, (1 if any_dh else 0)
+
+
+def _structural_join_score(fiber_frac: float, surface_ok: float) -> float:
+    """Map pack-relative fiber completeness to a glue score.
+
+    When all pack-required downhole fibers are present (fiber_frac=1), score
+    clears default min_align_score (0.5). Missing required fibers stay below.
+    Does not invent depth/time alignment.
+    """
+    # full required set: 0.25 + 0.45 = 0.70; none: 0.25; half: 0.475
+    return float((0.25 + 0.45 * fiber_frac) * surface_ok)
+
+
 def compute_glue(
     surface: dict[str, Any],
     mp_bundle: dict[str, Any] | None,
     *,
     align_mode: str = "depth_primary",
+    channel_pack: str = "surface_min",
 ) -> dict[str, Any]:
     """Compute structural glue observation between surface and MicroPulse.
 
@@ -75,6 +116,7 @@ def compute_glue(
         n_surface_rows, n_mp_times, n_mp_depths, downhole_present, …
     """
     am = (align_mode or "depth_primary").lower().strip()
+    pack = (channel_pack or "surface_min").lower().strip()
     notes: list[str] = []
 
     s_depths = _finite(list(surface.get("depths") or []))
@@ -111,6 +153,11 @@ def compute_glue(
             "downhole_present": [],
             "shared_domain": None,
             "align_mode": am,
+            "channel_pack": pack,
+            "has_depth_domain": False,
+            "has_time_domain": False,
+            "fiber_frac": None,
+            "required_downhole": list(_pack_downhole_targets(pack)),
         }
 
     mp = mp_bundle or {}
@@ -133,14 +180,10 @@ def compute_glue(
     has_depth_domain = bool(s_depths) and bool(mp_depths)
     has_time_domain = bool(s_times) and bool(mp_times)
 
-    # Structural fiber-join completeness (cross-domain fallback)
-    # Fraction of common downhole kinds present among GAMMA/SHOCK/VIBE/…
-    target_fibers = ("GAMMA", "SHOCK", "VIBE", "PULSE", "TELEM", "TEMP", "FLOW")
     present_set = {str(x).upper() for x in downhole} | {str(x).upper() for x in pack_ch}
-    n_target = len(target_fibers)
-    n_present = sum(1 for t in target_fibers if t in present_set)
-    fiber_frac = float(n_present / max(n_target, 1))
+    fiber_frac, required_downhole, n_req_hit = _structural_fiber_frac(present_set, pack)
     surface_ok = 1.0 if s_depths else 0.0
+    n_present_any = sum(1 for t in DOWNHOLE_PACK_CHANNELS if t in present_set)
 
     method = "none"
     score = 0.0
@@ -148,7 +191,7 @@ def compute_glue(
 
     if am == "none":
         method = "multi_source_no_align"
-        score = 0.3 if (s_depths or s_times) and (mp_times or mp_depths or n_present) else 0.0
+        score = 0.3 if (s_depths or s_times) and (mp_times or mp_depths or n_present_any) else 0.0
         notes.append("align_mode_none")
     elif am == "survey_anchor":
         method = "survey_anchor_pending"
@@ -169,10 +212,15 @@ def compute_glue(
         else:
             method = "structural_fiber_join"
             shared_domain = None
-            # Honest partial: fibers co-present without shared axis
-            score = 0.35 + 0.35 * fiber_frac * surface_ok
+            # Pack-relative fiber join — not a fixed 7-kind universe score chase
+            score = _structural_join_score(fiber_frac, surface_ok)
             notes.append("no_shared_depth_or_time_axis")
             notes.append("structural_fiber_join_only")
+            notes.append(f"pack_downhole_frac={fiber_frac:.3f}")
+            if required_downhole:
+                notes.append(
+                    f"required_downhole:{','.join(required_downhole)} hit={n_req_hit}"
+                )
     elif am == "time_primary":
         if has_time_domain:
             method = "time_proximity"
@@ -187,9 +235,14 @@ def compute_glue(
         else:
             method = "structural_fiber_join"
             shared_domain = None
-            score = 0.35 + 0.35 * fiber_frac * surface_ok
+            score = _structural_join_score(fiber_frac, surface_ok)
             notes.append("no_shared_depth_or_time_axis")
             notes.append("structural_fiber_join_only")
+            notes.append(f"pack_downhole_frac={fiber_frac:.3f}")
+            if required_downhole:
+                notes.append(
+                    f"required_downhole:{','.join(required_downhole)} hit={n_req_hit}"
+                )
     else:
         method = "unknown_align_mode"
         score = 0.0
@@ -217,8 +270,10 @@ def compute_glue(
         "n_mp_times": len(mp_times),
         "downhole_present": sorted(present_set),
         "fiber_frac": fiber_frac,
+        "required_downhole": list(required_downhole),
         "shared_domain": shared_domain,
         "align_mode": am,
+        "channel_pack": pack,
         "has_depth_domain": has_depth_domain,
         "has_time_domain": has_time_domain,
     }

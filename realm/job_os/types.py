@@ -141,6 +141,9 @@ class Observations:
     mp_n_fibers: int = 0
     mp_kinds: list[str] = field(default_factory=list)
     glue_notes: list[str] = field(default_factory=list)
+    # Domain availability for honest align free-param proposals
+    glue_has_depth_domain: bool = False
+    glue_has_time_domain: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

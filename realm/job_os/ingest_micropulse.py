@@ -517,7 +517,9 @@ def join_surface_micropulse(
         if key not in units:
             units[key] = ""
 
-    # Also attach per-fiber raw channels under FIBER__CHANNEL to avoid collisions
+    # Presence-only join: promote pack mnemonics above; store fiber metadata
+    # index (n_rows, paths, axis keys) — no FIBER__ raw-channel merge (avoids
+    # length-mismatched collisions until a real align/resample stalk exists).
     fiber_index: dict[str, Any] = {}
     for kind, fiber in (mp_bundle.get("fibers") or {}).items():
         fiber_index[kind] = {

@@ -156,8 +156,10 @@ def collect_section_proposals(
                     )
                 )
 
-    # --- align: weak glue → free-param align_mode / null_policy only ---
-    # P2: multi-source glue_incomplete also triggers (structural, not score-chase)
+    # --- align: weak glue → free-param align_mode only when domain exists ---
+    # P2: multi-source glue_incomplete triggers; do NOT burn budget on
+    # unusable mode flips (e.g. time_primary without surface TIME) or
+    # null_policy moves that cannot change glue (glue uses immutable axes).
     align_weak = (
         obs.align_score + 1e-12 < thr.min_align_score
         or "align_weak" in obs.notes
@@ -167,6 +169,9 @@ def collect_section_proposals(
             and getattr(obs, "has_micropulse", False)
         )
     )
+    has_mp = bool(getattr(obs, "has_micropulse", False))
+    has_time_domain = bool(getattr(obs, "glue_has_time_domain", False))
+    has_depth_domain = bool(getattr(obs, "glue_has_depth_domain", False))
     if align_weak:
         if p.align_mode == "none":
             cand = _fresh(
@@ -211,77 +216,55 @@ def collect_section_proposals(
                         SECTION_PRIORITY["align"],
                     )
                 )
-        elif p.align_mode == "depth_primary" and getattr(obs, "has_micropulse", False):
-            # Prefer trying time_primary when depth glue is incomplete on multi-source
-            cand = _fresh(
-                FreeParams(
-                    align_mode="time_primary",
-                    window_scale=p.window_scale,
-                    channel_pack=p.channel_pack,
-                    null_policy=p.null_policy,
-                    survey_gate=p.survey_gate,
-                    regime_mode=p.regime_mode,
-                ),
-                tried,
-            )
-            if cand:
-                props.append(
-                    SectionProposal(
-                        "align",
-                        cand,
-                        "try_time_primary_glue_incomplete",
-                        SECTION_PRIORITY["align"],
-                    )
-                )
-            if p.null_policy == "mark_only":
+        elif p.align_mode == "depth_primary" and has_mp:
+            # Only propose time_primary when a shared time domain actually exists
+            if has_time_domain:
                 cand = _fresh(
-                    _with_pack(p, p.channel_pack, null_policy="hold_last"), tried
+                    FreeParams(
+                        align_mode="time_primary",
+                        window_scale=p.window_scale,
+                        channel_pack=p.channel_pack,
+                        null_policy=p.null_policy,
+                        survey_gate=p.survey_gate,
+                        regime_mode=p.regime_mode,
+                    ),
+                    tried,
                 )
                 if cand:
                     props.append(
                         SectionProposal(
                             "align",
                             cand,
-                            "hold_last_nulls_for_glue",
-                            SECTION_PRIORITY["align"] + 1,
+                            "try_time_primary_glue_incomplete",
+                            SECTION_PRIORITY["align"],
                         )
                     )
-        elif p.align_mode == "time_primary" and getattr(obs, "has_micropulse", False):
-            # Time domain weak → try depth_primary
-            cand = _fresh(
-                FreeParams(
-                    align_mode="depth_primary",
-                    window_scale=p.window_scale,
-                    channel_pack=p.channel_pack,
-                    null_policy=p.null_policy,
-                    survey_gate=p.survey_gate,
-                    regime_mode=p.regime_mode,
-                ),
-                tried,
-            )
-            if cand:
-                props.append(
-                    SectionProposal(
-                        "align",
-                        cand,
-                        "try_depth_primary_glue_incomplete",
-                        SECTION_PRIORITY["align"],
-                    )
-                )
-            if p.null_policy == "mark_only":
+            # null_policy does not affect glue axes — do not propose for glue alone
+        elif p.align_mode == "time_primary" and has_mp:
+            # Only propose depth_primary when a shared depth domain exists
+            if has_depth_domain:
                 cand = _fresh(
-                    _with_pack(p, p.channel_pack, null_policy="hold_last"), tried
+                    FreeParams(
+                        align_mode="depth_primary",
+                        window_scale=p.window_scale,
+                        channel_pack=p.channel_pack,
+                        null_policy=p.null_policy,
+                        survey_gate=p.survey_gate,
+                        regime_mode=p.regime_mode,
+                    ),
+                    tried,
                 )
                 if cand:
                     props.append(
                         SectionProposal(
                             "align",
                             cand,
-                            "hold_last_nulls_for_glue",
-                            SECTION_PRIORITY["align"] + 1,
+                            "try_depth_primary_glue_incomplete",
+                            SECTION_PRIORITY["align"],
                         )
                     )
-        elif p.null_policy == "mark_only":
+        elif (not has_mp) and p.null_policy == "mark_only":
+            # Single-source weak align: null fill may still help export/physics
             cand = _fresh(_with_pack(p, p.channel_pack, null_policy="hold_last"), tried)
             if cand:
                 props.append(

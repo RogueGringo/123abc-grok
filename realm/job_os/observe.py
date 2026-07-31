@@ -130,9 +130,19 @@ def observe_job(
                     k: True for k in (mp.get("pack_channels") or [])
                 },
             }
-            glue = compute_glue(series, bundle, align_mode=p.align_mode)
+            glue = compute_glue(
+                series,
+                bundle,
+                align_mode=p.align_mode,
+                channel_pack=p.channel_pack,
+            )
         else:
-            glue = compute_glue(series, None, align_mode=p.align_mode)
+            glue = compute_glue(
+                series,
+                None,
+                align_mode=p.align_mode,
+                channel_pack=p.channel_pack,
+            )
 
     required = PACK_REQUIRED.get(p.channel_pack, PACK_REQUIRED["surface_min"])
     present = pin.get("present_channels") or []
@@ -196,6 +206,8 @@ def observe_job(
         mp_n_fibers=int(mp_info.get("n_fibers") or 0),
         mp_kinds=list(mp_info.get("kinds") or []),
         glue_notes=glue_notes,
+        glue_has_depth_domain=bool(glue.get("has_depth_domain")),
+        glue_has_time_domain=bool(glue.get("has_time_domain")),
     )
 
 
@@ -221,7 +233,10 @@ def is_solved(obs: Observations, thr: JobThresholds, params: FreeParams) -> bool
 
 
 def coherence_score(obs: Observations, thr: JobThresholds, params: FreeParams) -> float:
-    """Scalar 0..1 for trajectory logging (not commercial accept / not ROP)."""
+    """Scalar 0..1 for trajectory logging (not commercial accept / not ROP).
+
+    Multi-source: align_score already carries glue_score — do not double-count.
+    """
     parts: list[float] = []
     parts.append(1.0 if obs.pin_ok else 0.0)
     parts.append(float(obs.export_ok_fraction))
@@ -236,7 +251,6 @@ def coherence_score(obs: Observations, thr: JobThresholds, params: FreeParams) -
         parts.append(1.0 - obs.physics_n_fail / n_phys)
     else:
         parts.append(0.5)
+    # align_score is glue_score when multi-source; single term only
     parts.append(max(0.0, min(1.0, float(obs.align_score))))
-    if obs.has_micropulse:
-        parts.append(max(0.0, min(1.0, float(obs.glue_score))))
     return float(sum(parts) / len(parts))

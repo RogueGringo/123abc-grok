@@ -160,9 +160,10 @@ def execute_job_cycle(
     cycle_dir.mkdir(parents=True, exist_ok=True)
     p = params.clamp()
     raw = parse_las(las_path)
-    # Join downhole fibers before null_policy / pack so pack required channels resolve
-    series = join_surface_micropulse(raw, mp_bundle)
-    series = apply_null_policy(series, p.null_policy)
+    # Null-policy on surface skeleton first; then join presence-only MP fibers
+    # so length-mismatched channels never drive surface row drops.
+    series = apply_null_policy(raw, p.null_policy)
+    series = join_surface_micropulse(series, mp_bundle)
     series = select_channel_pack(series, p.channel_pack)
 
     pin = verify_job_pin(
@@ -174,7 +175,12 @@ def execute_job_cycle(
         json.dumps(pin, indent=2) + "\n", encoding="utf-8"
     )
 
-    glue = compute_glue(series, mp_bundle, align_mode=p.align_mode)
+    glue = compute_glue(
+        series,
+        mp_bundle,
+        align_mode=p.align_mode,
+        channel_pack=p.channel_pack,
+    )
     (cycle_dir / "glue.json").write_text(
         json.dumps(glue, indent=2) + "\n", encoding="utf-8"
     )
