@@ -110,6 +110,48 @@ def test_export_structure_handoff_polyala(tmp_path: Path):
         assert m.get("path_decorated")
 
 
+def test_export_batch_campaign_rollups(tmp_path: Path):
+    kn_path = Path("evolve_result.json")
+    pdb_path = Path("data/pdb/1CSA.pdb")
+    if not kn_path.is_file() or not pdb_path.is_file():
+        pytest.skip("need evolve_result.json and data/pdb/1CSA.pdb")
+    kn = load_knobs(kn_path)
+    if isinstance(kn, dict) and "best_knobs" in kn:
+        kn = kn["best_knobs"]
+    summary = export_structure_batch(
+        ["1CSA"],
+        kn,
+        out_root=tmp_path / "camp",
+        top_k=2,
+        decorate="sequence",
+        physics="geometry",
+        with_enrichment=False,
+        with_biopython_check=False,
+        include_coutsias=False,
+    )
+    assert summary["n_ok"] == 1
+    assert (tmp_path / "camp" / "DECORATE_ROLLUP.json").is_file()
+    assert (tmp_path / "camp" / "PHYSICS_ROLLUP.json").is_file()
+    dec = summary.get("decorate_rollup") or {}
+    assert int(dec.get("n_ok") or 0) >= 1
+    md = (tmp_path / "camp" / "SUMMARY.md").read_text(encoding="utf-8")
+    assert "Decorate OK" in md
+    assert "Physics self-check" in md
+    # verify decorate inventory
+    from realm.handoff.verify import verify_decorate_inventory, verify_handoff_tree
+
+    inv = verify_decorate_inventory(tmp_path / "camp")
+    assert inv["n_decorated"] >= 1
+    assert inv["n_with_ontology_remark"] >= 1
+    report = verify_handoff_tree(
+        tmp_path / "camp",
+        require_sha256=False,
+        check_biopython=False,
+    )
+    assert "decorate_inventory" in report
+    assert report["pin"]["ok"] is True
+
+
 def test_export_batch_manifest(tmp_path: Path):
     kn_path = Path("evolve_result.json")
     pdb_path = Path("data/pdb/1CSA.pdb")

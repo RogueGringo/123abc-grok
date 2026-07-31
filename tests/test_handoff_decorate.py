@@ -79,6 +79,20 @@ def test_sequence_fallback_polyala(tmp_path: Path):
     assert "polyala" in res.path_decorated.name or "fell back" in (res.note or "")
 
 
+def test_decorated_has_ontology_remark(tmp_path: Path):
+    bb = _ring_bb(tmp_path)
+    # strip remarks if any
+    text = bb.read_text(encoding="utf-8")
+    lines = [ln for ln in text.splitlines() if not ln.startswith("REMARK")]
+    bb.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    art = BackboneArtifact(path_ca=bb, path_bb=bb, meta={})
+    res = PolyAlaStubAdapter().decorate(DecorateRequest(backbone=art))
+    assert res.path_decorated is not None
+    t = res.path_decorated.read_text(encoding="utf-8")
+    assert "not_lambda_eq_gamma" in t
+    assert "DECORATE" in t
+
+
 def test_export_sequence_decorate_1csa(tmp_path: Path):
     from realm.handoff.pipeline import export_structure_handoff
     from realm.validate.report import load_knobs

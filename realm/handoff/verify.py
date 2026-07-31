@@ -120,6 +120,41 @@ def verify_biopython_pdbs(root: Path, *, max_files: int = 50) -> dict[str, Any]:
     }
 
 
+def verify_decorate_inventory(root: Path) -> dict[str, Any]:
+    """Inventory decorated stubs (informational; never hard-gates commercial ok)."""
+    root = Path(root)
+    candidates = list(root.rglob("*_seq.pdb")) + list(root.rglob("*_polyala.pdb"))
+    # also any file under a decorated/ directory
+    candidates.extend(
+        p for p in root.rglob("*.pdb") if "decorated" in p.parts
+    )
+    # de-dupe
+    seen: set[str] = set()
+    paths: list[Path] = []
+    for p in sorted(candidates):
+        key = str(p.resolve())
+        if key in seen:
+            continue
+        seen.add(key)
+        paths.append(p)
+    n_remark = 0
+    for p in paths:
+        try:
+            if "not_lambda_eq_gamma" in p.read_text(encoding="utf-8", errors="replace"):
+                n_remark += 1
+        except Exception:  # noqa: BLE001
+            pass
+    return {
+        "ok": None,  # informational
+        "n_decorated": len(paths),
+        "n_with_ontology_remark": n_remark,
+        "note": (
+            "Decorate inventory only; commercial success remains openable molds + pin."
+        ),
+        "ontology": "handoff_decorate_inventory_not_lambda_eq_gamma",
+    }
+
+
 def verify_index_policy(root: Path) -> dict[str, Any]:
     """If index/batch_index present, confirm stamped soft_T matches policy for n_ca."""
     issues: list[str] = []
@@ -162,6 +197,7 @@ def verify_handoff_tree(
         "ontology_remarks": verify_ontology_remarks(root),
         "sha256": verify_sha256sums(root),
         "index_policy": verify_index_policy(root),
+        "decorate_inventory": verify_decorate_inventory(root),
         "biopython": (
             verify_biopython_pdbs(root) if check_biopython else {"ok": None, "skipped": True}
         ),

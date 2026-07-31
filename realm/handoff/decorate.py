@@ -92,15 +92,13 @@ def _write_stub_pdb(
 
     out_lines: list[str] = []
     res_i = 0
+    has_ontology = "not_lambda_eq_gamma" in text
     for ln in text.splitlines():
         if ln.startswith("END"):
             continue
         if ln.startswith("ATOM") or ln.startswith("HETATM"):
             name = ln[12:16].strip() if len(ln) >= 16 else ""
             rn = resnames[min(res_i, n_ca - 1)] if n_ca else "ALA"
-            if name == "CA":
-                # advance residue index on CA (one res per CA in our bb files)
-                pass
             if len(ln) >= 20:
                 ln = ln[:17] + f"{rn:3s}" + ln[20:]
             else:
@@ -109,6 +107,15 @@ def _write_stub_pdb(
             if name == "CA":
                 res_i += 1
         out_lines.append(ln)
+
+    # Ensure ontology REMARK for partner verify (molds are source of truth)
+    prefix: list[str] = []
+    if not has_ontology:
+        prefix.append(
+            "REMARK   2 ONTOLOGY substrate_crit_projection_not_lambda_eq_gamma"
+        )
+    prefix.append("REMARK   9 DECORATE stub_sidechain_not_full_packing")
+    out_lines = prefix + out_lines
 
     serial = sum(
         1 for ln in out_lines if ln.startswith("ATOM") or ln.startswith("HETATM")

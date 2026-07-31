@@ -657,6 +657,77 @@ def export_structure_batch(
         if (r.get("enrichment") or {}).get("top20") is True
     )
 
+    # Campaign-level decorate + physics rollups (informational)
+    n_dec_ok = 0
+    n_dec_paths = 0
+    n_dec_molds = 0
+    dec_status: dict[str, int] = {}
+    phys_reports: list[dict[str, Any]] = []
+    for r in ok_rows:
+        dr = r.get("decorate_rollup") or {}
+        n_dec_ok += int(dr.get("n_ok") or 0)
+        n_dec_paths += int(dr.get("n_with_path") or 0)
+        n_dec_molds += int(dr.get("n_molds") or 0)
+        for st, c in (dr.get("by_status") or {}).items():
+            dec_status[st] = dec_status.get(st, 0) + int(c)
+        pr = r.get("physics_rollup")
+        if isinstance(pr, dict) and pr.get("n_reports"):
+            # expand fails/warns with pdb id for campaign glance
+            for key in ("fails", "warns"):
+                for item in pr.get(key) or []:
+                    row = dict(item)
+                    row.setdefault("pdb", r.get("pdb"))
+                    phys_reports.append(
+                        {
+                            "status": "FAIL" if key == "fails" else "WARN",
+                            "stem": row.get("stem"),
+                            "pdb": row.get("pdb"),
+                            "notes": row.get("notes") or [],
+                            "metrics": {
+                                "ca_bond_mean": row.get("ca_bond_mean"),
+                            },
+                        }
+                    )
+            # synthesize OK count as reports without fail/warn
+            n_ok_p = int(pr.get("n_ok") or 0)
+            for _ in range(n_ok_p):
+                phys_reports.append(
+                    {
+                        "status": "OK",
+                        "pdb": r.get("pdb"),
+                        "metrics": {
+                            "ca_bond_mean": pr.get("mean_ca_bond"),
+                            "ca_bond_std": pr.get("mean_ca_bond_std"),
+                        },
+                    }
+                )
+
+    decorate_campaign = {
+        "ontology": "campaign_decorate_rollup_not_lambda_eq_gamma",
+        "n_ok": n_dec_ok,
+        "n_with_path": n_dec_paths,
+        "n_molds": n_dec_molds,
+        "by_status": dec_status,
+        "note": (
+            "Campaign decorate rollup; sequence/polyala stubs are partner convenience. "
+            "Not ACCEPTANCE — openable PDBs + dual-gate pin remain success metrics."
+        ),
+    }
+    (root / "DECORATE_ROLLUP.json").write_text(
+        json.dumps(decorate_campaign, indent=2) + "\n", encoding="utf-8"
+    )
+    physics_campaign = None
+    if phys_reports:
+        try:
+            from realm.handoff.physics import write_physics_rollup
+
+            pr_path = write_physics_rollup(
+                phys_reports, root / "PHYSICS_ROLLUP.json", scope="campaign"
+            )
+            physics_campaign = json.loads(pr_path.read_text(encoding="utf-8"))
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("campaign physics rollup failed: %s", exc)
+
     summary = {
         "n_ids": len(rows),
         "n_ok": sum(1 for r in rows if r.get("status") == "OK"),
@@ -669,6 +740,8 @@ def export_structure_batch(
                 "soft_T": (r.get("dual_gate") or {}).get("length_policy", {}).get("soft_T"),
                 "enrichment": (r.get("enrichment") or {}).get("enrichment"),
                 "top20": (r.get("enrichment") or {}).get("top20"),
+                "decorate_ok": (r.get("decorate_rollup") or {}).get("n_ok"),
+                "physics_ok": (r.get("physics_rollup") or {}).get("n_ok"),
                 "error": r.get("error"),
             }
             for r in rows
@@ -678,6 +751,8 @@ def export_structure_batch(
             "mean_enrichment": float(sum(enrs) / len(enrs)) if enrs else None,
             "top20_count": int(top20_n),
         },
+        "decorate_rollup": decorate_campaign,
+        "physics_rollup": physics_campaign,
         "manifest": str((root / "manifest.tsv").resolve()),
         "enrichment_summary": str(enr_path.resolve()),
         "ontology": "handoff_dual_gate_batch_not_lambda_eq_gamma",
@@ -694,6 +769,8 @@ def write_partner_summary_md(summary: dict[str, Any], path: Path | str) -> Path:
     dest = Path(path)
     dest.parent.mkdir(parents=True, exist_ok=True)
     agg = summary.get("enrichment_aggregate") or {}
+    dec = summary.get("decorate_rollup") or {}
+    phys = summary.get("physics_rollup") or {}
     lines = [
         "# Dual-gate handoff campaign summary",
         "",
@@ -701,19 +778,26 @@ def write_partner_summary_md(summary: dict[str, Any], path: Path | str) -> Path:
         f"- Resume skips: {summary.get('n_skipped_resume', 0)}",
         f"- Mean enrichment (if stamped): {agg.get('mean_enrichment')}",
         f"- top20 count (if stamped): {agg.get('top20_count')}",
+        f"- Decorate OK / with path: **{dec.get('n_ok')}** / {dec.get('n_with_path')} "
+        f"(of {dec.get('n_molds')} molds)",
+        f"- Physics self-check OK / WARN / FAIL: **{phys.get('n_ok')}** / "
+        f"{phys.get('n_warn')} / {phys.get('n_fail')}",
         f"- Manifest: `{summary.get('manifest')}`",
         f"- Enrichment table: `{summary.get('enrichment_summary')}`",
         "",
         "Ontology: Crit projection molds only -- **not** lambda=gamma.",
         "LengthPolicy production pins were not modified by this export.",
+        "Decorate/physics rollups are informational — commercial success remains "
+        "openable PDBs + dual-gate pin.",
         "",
-        "| PDB | status | n_molds | soft_T | enrichment | top20 |",
-        "|-----|--------|---------|--------|------------|-------|",
+        "| PDB | status | n_molds | soft_T | decorate_ok | physics_ok | enrichment | top20 |",
+        "|-----|--------|---------|--------|-------------|------------|------------|-------|",
     ]
     for r in summary.get("rows") or []:
         lines.append(
             f"| {r.get('pdb')} | {r.get('status')} | {r.get('n_molds')} | "
-            f"{r.get('soft_T')} | {r.get('enrichment')} | {r.get('top20')} |"
+            f"{r.get('soft_T')} | {r.get('decorate_ok')} | {r.get('physics_ok')} | "
+            f"{r.get('enrichment')} | {r.get('top20')} |"
         )
     lines.append("")
     dest.write_text("\n".join(lines), encoding="utf-8")
