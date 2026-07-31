@@ -59,7 +59,7 @@ jobs:
         run: |
           # Live RCSB fetch; small decoy budget; report-only
           python known_solutions.py \
-            --only-ids 1CSA,2X2C,4M6E \
+            --only-ids --ids 1CSA,2X2C,4M6E \
             --n-seeds 1 --n-decoys 12 \
             --kabsch-set none \
             --decoy-mode soft \
@@ -87,7 +87,7 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
         run: |
           python known_solutions.py \
-            --only-ids 1CSA \
+            --only-ids --ids 1CSA \
             --n-seeds 1 --n-decoys 12 \
             --kabsch-set none \
             --decoy-mode mixed \
