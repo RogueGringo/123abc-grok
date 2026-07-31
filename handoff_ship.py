@@ -20,7 +20,11 @@ if str(ROOT) not in sys.path:
 from handoff_deliver import main as deliver_main
 from handoff_matrix import main as matrix_main
 from handoff_status import main as status_main
-from realm.handoff.package import write_ship_md
+from realm.handoff.package import (
+    build_partner_receipt_bundle,
+    write_releases_catalog,
+    write_ship_md,
+)
 from realm.handoff.verify import verify_delivery_receipt, verify_dual_gate_pin
 
 logger = logging.getLogger("handoff_ship")
@@ -75,6 +79,11 @@ def main(argv: list[str] | None = None) -> int:
         type=str,
         default="commercial-ship",
         help="DELIVERY label",
+    )
+    p.add_argument(
+        "--no-bundle",
+        action="store_true",
+        help="skip partner receipt zip (proof-only, no mold PDBs)",
     )
     p.add_argument("-v", action="store_true")
     args = p.parse_args(argv)
@@ -191,13 +200,31 @@ def main(argv: list[str] | None = None) -> int:
     ship_path.write_text(json.dumps(ship, indent=2) + "\n", encoding="utf-8")
     ship_md = write_ship_md(ship, Path(args.releases) / "SHIP.md")
     ship["ship_md"] = str(ship_md.resolve())
-    ship_path.write_text(json.dumps(ship, indent=2) + "\n", encoding="utf-8")
     # also copy brief ship summary next to matrix
     if matrix_report.parent.is_dir():
         write_ship_md(ship, matrix_report.parent / "SHIP.md")
         (matrix_report.parent / "SHIP.json").write_text(
             json.dumps(ship, indent=2) + "\n", encoding="utf-8"
         )
+
+    if ship["ok"] and not args.no_bundle:
+        try:
+            bundle = build_partner_receipt_bundle(
+                releases_dir=args.releases,
+                matrix_dir=matrix_report.parent,
+                label=args.label,
+            )
+            ship["partner_receipt_bundle"] = bundle.get("zip_path")
+            ship["partner_receipt_bundle_sha256"] = bundle.get("zip_sha256")
+            logger.info(
+                "partner receipt bundle → %s",
+                bundle.get("zip_path"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("receipt bundle skipped: %s", exc)
+
+    ship_path.write_text(json.dumps(ship, indent=2) + "\n", encoding="utf-8")
+    write_releases_catalog(args.releases)
     logger.info("SHIP.json → %s ok=%s md=%s", ship_path, ship["ok"], ship_md)
     print(json.dumps(ship))
     return 0 if ship["ok"] else 1

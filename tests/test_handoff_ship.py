@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from handoff_ship import main as ship_main
+from realm.handoff.package import build_partner_receipt_bundle
 from realm.handoff.verify import verify_dual_gate_pin
 
 
@@ -93,3 +94,13 @@ def test_handoff_ship_from_existing_matrix(tmp_path: Path):
             break
     else:
         raise AssertionError("expected DELIVERY.md companion")
+
+    assert ship.get("partner_receipt_bundle")
+    assert Path(ship["partner_receipt_bundle"]).is_file()
+    assert (releases / "PARTNER_RECEIPT_BUNDLE.json").is_file()
+    # rebuild bundle independently
+    meta = build_partner_receipt_bundle(
+        releases_dir=releases, matrix_dir=matrix_dir, label="rebuild"
+    )
+    assert meta["n_files"] >= 3
+    assert Path(meta["zip_path"]).is_file()

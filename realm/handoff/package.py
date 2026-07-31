@@ -668,6 +668,143 @@ def write_ship_md(ship: dict[str, Any], path: Path | str) -> Path:
     return dest
 
 
+def build_partner_receipt_bundle(
+    *,
+    releases_dir: Path | str,
+    matrix_dir: Path | str | None = None,
+    zip_path: Path | str | None = None,
+    label: str | None = None,
+) -> dict[str, Any]:
+    """Zip commercial proof artifacts (receipts only — not mold PDBs).
+
+    Lightweight partner email/upload bundle: DELIVERY, SHIP, INDEX, LATEST,
+    matrix_acceptance. Full PDB packages stay in per-drop archives.
+    """
+    root = Path(releases_dir)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    safe = "".join(
+        c if c.isalnum() or c in ("-", "_") else "-"
+        for c in (label or "receipts")
+    ).strip("-") or "receipts"
+    zpath = Path(zip_path) if zip_path else root / f"partner_receipts_{stamp}_{safe}.zip"
+
+    names = [
+        "LATEST_DELIVERY.json",
+        "LATEST_DELIVERY.md",
+        "DELIVERY.json",
+        "DELIVERY.md",
+        "DELIVERY_VERIFY.json",
+        "SHIP.json",
+        "SHIP.md",
+        "LATEST.json",
+        "INDEX.json",
+        "INDEX.md",
+        "STATUS.json",
+    ]
+    files: list[Path] = []
+    for name in names:
+        p = root / name
+        if p.is_file():
+            files.append(p)
+
+    mdir = Path(matrix_dir) if matrix_dir else None
+    if mdir and mdir.is_dir():
+        for name in (
+            "matrix_acceptance.json",
+            "matrix_report.json",
+            "DELIVERY.json",
+            "DELIVERY.md",
+            "SHIP.json",
+            "SHIP.md",
+        ):
+            p = mdir / name
+            if p.is_file() and p not in files:
+                files.append(p)
+
+    if not files:
+        raise FileNotFoundError(f"no receipt artifacts under {root}")
+
+    readme = "\n".join(
+        [
+            "# Dual-gate partner receipt bundle",
+            "",
+            "Commercial **proof** package (no mold PDBs).",
+            "",
+            "## Contents",
+            "",
+            "- `LATEST_DELIVERY.json` / `.md` — ship receipt (pin + openable PDB totals)",
+            "- `SHIP.json` / `.md` — ops ship summary",
+            "- `INDEX.json` / `.md` — catalog of full drops (PDB zips live in archive dirs)",
+            "- `matrix_acceptance.json` — probe/holdout partner-accept rollup",
+            "",
+            "## Acceptance criteria",
+            "",
+            "- dual-gate pin soft_T(n=12) = 0.036",
+            "- openable PDBs with ontology REMARK",
+            "- quality_gate + archive attestation",
+            "",
+            "## Not acceptance criteria",
+            "",
+            "- mean_enrichment, top20, lambda=gamma, RH claims",
+            "",
+            "## Verify",
+            "",
+            "```bash",
+            "python handoff_deliver.py --verify LATEST_DELIVERY.json",
+            "```",
+            "",
+            "Full mold packages: see per-drop `*_pkg.zip` under releases archive dirs.",
+            "",
+            "Ontology: Crit projection molds only -- **not** lambda=gamma.",
+            "",
+        ]
+    )
+    readme_path = root / "_RECEIPT_BUNDLE_README.md"
+    readme_path.write_text(readme, encoding="utf-8")
+    files.append(readme_path)
+
+    mdir_res = mdir.resolve() if mdir and mdir.exists() else None
+
+    def _under_matrix(f: Path) -> bool:
+        if mdir_res is None:
+            return False
+        try:
+            f.resolve().relative_to(mdir_res)
+            return True
+        except ValueError:
+            return False
+
+    if zpath.exists():
+        zpath.unlink()
+    with zipfile.ZipFile(zpath, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for f in files:
+            # flatten matrix files with prefix if under matrix_dir
+            arc = f"matrix/{f.name}" if _under_matrix(f) else f.name
+            zf.write(f, arcname=arc)
+
+    meta = {
+        "zip_path": str(zpath.resolve()),
+        "zip_sha256": _sha256_file(zpath),
+        "n_files": len(files),
+        "files": [f.name for f in files],
+        "created_utc": stamp,
+        "label": safe,
+        "ontology": "handoff_partner_receipt_bundle_not_lambda_eq_gamma",
+        "note": "Proof-only zip; mold PDBs not included. Openable PDB counts in DELIVERY.",
+        "verify_cli": "python handoff_deliver.py --verify LATEST_DELIVERY.json",
+    }
+    (root / "PARTNER_RECEIPT_BUNDLE.json").write_text(
+        json.dumps(meta, indent=2) + "\n", encoding="utf-8"
+    )
+    logger.info(
+        "partner receipt bundle files=%d zip=%s sha=%s",
+        meta["n_files"],
+        zpath,
+        meta["zip_sha256"][:16],
+    )
+    return meta
+
+
 def write_latest_pointer(
     archive_meta: dict[str, Any],
     archive_root: Path | str,
@@ -772,15 +909,57 @@ def write_releases_catalog(archive_root: Path | str) -> Path:
             latest = json.loads(latest_path.read_text(encoding="utf-8"))
         except Exception:  # noqa: BLE001
             latest = None
+    delivery = None
+    for name in ("LATEST_DELIVERY.json", "DELIVERY.json"):
+        dp = root / name
+        if dp.is_file():
+            try:
+                delivery = json.loads(dp.read_text(encoding="utf-8"))
+            except Exception:  # noqa: BLE001
+                delivery = {"path": str(dp)}
+            break
+    ship = None
+    sp = root / "SHIP.json"
+    if sp.is_file():
+        try:
+            ship = json.loads(sp.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001
+            ship = {"path": str(sp)}
+    bundle_meta = None
+    bp = root / "PARTNER_RECEIPT_BUNDLE.json"
+    if bp.is_file():
+        try:
+            bundle_meta = json.loads(bp.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001
+            bundle_meta = None
+
     catalog = {
         "archive_root": str(root.resolve()),
         "n_drops": len(drops),
         "latest": latest,
+        "delivery": {
+            "shippable": (delivery or {}).get("shippable"),
+            "n_pdb_total": ((delivery or {}).get("matrix_acceptance") or {}).get(
+                "n_pdb_total"
+            ),
+            "payload_sha256": (delivery or {}).get("payload_sha256"),
+        }
+        if delivery
+        else None,
+        "ship": {
+            "ok": (ship or {}).get("ok"),
+            "shippable": (ship or {}).get("shippable"),
+            "n_pdb_total": (ship or {}).get("n_pdb_total"),
+        }
+        if ship
+        else None,
+        "partner_receipt_bundle": bundle_meta,
         "drops": drops,
         "ontology": "handoff_releases_catalog_not_lambda_eq_gamma",
         "note": "Catalog of immutable dual-gate partner drops; not enrichment chase.",
         "verify_cli": "python handoff_verify.py --archive <archive_dir>",
         "status_cli": "python handoff_status.py --releases <archive_root>",
+        "ship_cli": "python handoff_ship.py --out-root out/matrix",
     }
     idx = root / "INDEX.json"
     idx.write_text(json.dumps(catalog, indent=2) + "\n", encoding="utf-8")
@@ -791,8 +970,13 @@ def write_releases_catalog(archive_root: Path | str) -> Path:
         f"- Archive root: `{root}`",
         f"- Drops: **{len(drops)}**",
         f"- Latest: `{((latest or {}).get('archive_dir'))}`",
+        f"- DELIVERY shippable: **{(delivery or {}).get('shippable')}**",
+        f"- SHIP ok: **{(ship or {}).get('ok')}** openable PDBs: "
+        f"**{(ship or {}).get('n_pdb_total') or ((delivery or {}).get('matrix_acceptance') or {}).get('n_pdb_total')}**",
         "",
         "Ontology: Crit projection molds only -- **not** lambda=gamma.",
+        "",
+        "Proof bundle (no PDBs): `partner_receipts_*.zip` / `PARTNER_RECEIPT_BUNDLE.json`",
         "",
         "| created_utc | label | n_ids | gate | archive |",
         "|-------------|-------|-------|------|---------|",
@@ -803,7 +987,9 @@ def write_releases_catalog(archive_root: Path | str) -> Path:
             f"{d.get('quality_gate_ok')} | `{d.get('name')}` |"
         )
     lines.append("")
-    lines.append("Verify: `python handoff_verify.py --archive <archive_dir>`")
+    lines.append("Verify drop: `python handoff_verify.py --archive <archive_dir>`")
+    lines.append("Verify delivery: `python handoff_deliver.py --verify LATEST_DELIVERY.json`")
+    lines.append("Ship: `python handoff_ship.py --out-root out/matrix`")
     lines.append("")
     (root / "INDEX.md").write_text("\n".join(lines), encoding="utf-8")
     logger.info("releases catalog → %s drops=%d", idx, len(drops))
