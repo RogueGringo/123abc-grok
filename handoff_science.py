@@ -79,6 +79,11 @@ def main(argv: list[str] | None = None) -> int:
         help="copy annex/compare into matrix out-root",
     )
     p.add_argument(
+        "--pdf",
+        action="store_true",
+        help="ensure PARTNER_SCIENCE_ONEPAGER.pdf is written for the stamp",
+    )
+    p.add_argument(
         "--status",
         action="store_true",
         help="run handoff_status with this science stamp after report",
@@ -197,6 +202,17 @@ def main(argv: list[str] | None = None) -> int:
             "out": str(stamp_dir),
             "note": "science stamp only; not ACCEPTANCE/SHIP",
         }
+
+    if args.pdf:
+        from realm.validate.known_solutions_pdf import write_partner_science_pdf
+
+        try:
+            pdf_path = write_partner_science_pdf(stamp_dir)
+            summary["pdf"] = str(pdf_path)
+            logger.info("science PDF → %s", pdf_path)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("science PDF: %s", exc)
+            summary["pdf_error"] = str(exc)
 
     attach_meta = {}
     if args.attach_releases is not None:

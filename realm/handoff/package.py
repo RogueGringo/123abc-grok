@@ -739,6 +739,7 @@ def build_partner_receipt_bundle(
             "KNOWN_SOLUTIONS_ATTACH.json",
             "DECOY_MODE_COMPARE.json",
             "DECOY_MODE_COMPARE.md",
+            "PARTNER_SCIENCE_ONEPAGER.pdf",
         ):
             p = mdir / name
             if p.is_file() and p not in files:
@@ -750,6 +751,7 @@ def build_partner_receipt_bundle(
             "pin.json",
             "DECOY_MODE_COMPARE.json",
             "DECOY_MODE_COMPARE.md",
+            "PARTNER_SCIENCE_ONEPAGER.pdf",
         ):
             p = mdir / "known_solutions" / name
             if p.is_file() and p not in files:
@@ -762,6 +764,7 @@ def build_partner_receipt_bundle(
         "KNOWN_SOLUTIONS_ATTACH.json",
         "DECOY_MODE_COMPARE.json",
         "DECOY_MODE_COMPARE.md",
+        "PARTNER_SCIENCE_ONEPAGER.pdf",
     ):
         p = root / name
         if p.is_file() and p not in files:
@@ -784,6 +787,7 @@ def build_partner_receipt_bundle(
             "- `matrix_acceptance.json` — probe/holdout partner-accept rollup",
             "- `PARTNER_SCIENCE_ANNEX.*` — optional known-solutions evidence (not accept)",
             "- `DECOY_MODE_COMPARE.*` — optional soft/mixed/hard stress table (not accept)",
+            "- `PARTNER_SCIENCE_ONEPAGER.pdf` — optional one-page science summary (not accept)",
             "",
             "## Acceptance criteria",
             "",
@@ -1273,12 +1277,14 @@ Partner receipt / releases drops may also include:
 |------|-------------|
 | `PARTNER_SCIENCE_ANNEX.md` | Dual-gate ranking on public natives (informational) |
 | `DECOY_MODE_COMPARE.md` | soft vs mixed vs hard decoy stress table (informational) |
+| `PARTNER_SCIENCE_ONEPAGER.pdf` | one-page science summary for email/BD (informational) |
 
 These **do not** accept or reject a package. Commercial success remains openable PDBs + dual-gate pin.
 
 ```bash
 python known_solutions.py --compare-modes soft,mixed,hard
-python handoff_science.py --skip-expand --attach-releases out/releases --status
+python known_solutions.py --pdf-from out/known_solutions
+python handoff_science.py --skip-expand --pdf --attach-releases out/releases --status
 python handoff_ship.py --verify-bundle partner_receipts_*.zip
 ```
 

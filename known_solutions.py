@@ -103,6 +103,17 @@ def main(argv=None) -> int:
         action="store_true",
         help="resolve universe + pin only; no ranking",
     )
+    p.add_argument(
+        "--pdf",
+        action="store_true",
+        help="write/regenerate PARTNER_SCIENCE_ONEPAGER.pdf from latest stamp (or after run)",
+    )
+    p.add_argument(
+        "--pdf-from",
+        type=Path,
+        default=None,
+        help="write PDF only from existing stamp/parent (no ranking)",
+    )
     p.add_argument("-v", action="store_true")
     args = p.parse_args(argv)
 
@@ -110,6 +121,17 @@ def main(argv=None) -> int:
         level=logging.DEBUG if args.v else logging.INFO,
         format="%(asctime)s - %(levelname)s - %(message)s",
     )
+
+    if args.pdf_from is not None:
+        from realm.validate.known_solutions_pdf import write_partner_science_pdf
+
+        try:
+            pdf_path = write_partner_science_pdf(args.pdf_from)
+        except Exception as exc:  # noqa: BLE001
+            logger.error("PDF failed: %s", exc)
+            return 3
+        print(f"pdf={pdf_path}")
+        return 0
 
     if not args.knobs.is_file() and not args.dry_run:
         logger.error("knobs not found: %s", args.knobs)
@@ -160,6 +182,14 @@ def main(argv=None) -> int:
             enr = all_ok.get("mean_enrichment")
             enr_s = f"{enr:.1%}" if enr is not None else "n/a"
             print(f"  {mode}: all_enr={enr_s} n={all_ok.get('n')}")
+        if args.pdf:
+            from realm.validate.known_solutions_pdf import write_partner_science_pdf
+
+            try:
+                pdf_path = write_partner_science_pdf(rollup.get("out_dir") or args.out_dir)
+                print(f"pdf={pdf_path}")
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("PDF: %s", exc)
         return 0
 
     report = run_known_solutions(
@@ -214,6 +244,15 @@ def main(argv=None) -> int:
             logger.error("zero successful rank rows")
             return 3
         return 3
+
+    if args.pdf and not args.dry_run:
+        from realm.validate.known_solutions_pdf import write_partner_science_pdf
+
+        try:
+            pdf_path = write_partner_science_pdf(out)
+            print(f"pdf={pdf_path}")
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("PDF: %s", exc)
 
     return 0
 

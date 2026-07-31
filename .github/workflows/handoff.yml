@@ -20,9 +20,11 @@ on:
       - "handoff_science.py"
       - "realm/validate/known_solutions*.py"
       - "realm/validate/decoys.py"
+      - "realm/validate/known_solutions_pdf.py"
       - "data/known_solutions/**"
       - "tests/test_handoff*.py"
       - "tests/test_known_solutions.py"
+      - "tests/test_known_solutions_pdf.py"
       - "tests/test_decoys.py"
       - "tests/test_pdb_write.py"
       - ".github/workflows/handoff.yml"
@@ -44,9 +46,11 @@ on:
       - "handoff_science.py"
       - "realm/validate/known_solutions*.py"
       - "realm/validate/decoys.py"
+      - "realm/validate/known_solutions_pdf.py"
       - "data/known_solutions/**"
       - "tests/test_handoff*.py"
       - "tests/test_known_solutions.py"
+      - "tests/test_known_solutions_pdf.py"
       - "tests/test_decoys.py"
       - "tests/test_pdb_write.py"
       - ".github/workflows/handoff.yml"
@@ -62,7 +66,7 @@ jobs:
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
-          pip install numpy pytest
+          pip install numpy pytest fpdf2
           # BioPython optional — open check skips if missing; install for full metric
           pip install biopython || true
       - name: Handoff + PDB write suite
@@ -87,7 +91,7 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: |
-          pytest tests/test_known_solutions.py tests/test_decoys.py tests/test_handoff_science.py -q --tb=line
+          pytest tests/test_known_solutions.py tests/test_decoys.py tests/test_handoff_science.py tests/test_known_solutions_pdf.py -q --tb=line
           python known_solutions.py --dry-run --skip-expand --out-dir /tmp/ks_dry
           python handoff_science.py --dry-run --skip-expand --out-dir /tmp/ks_science_dry
           # universe + pin only; enrichment never gates CI

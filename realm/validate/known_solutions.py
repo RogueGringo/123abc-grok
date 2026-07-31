@@ -335,6 +335,7 @@ def attach_report_to_dir(
         "DECOY_MODE_COMPARE.json",
         "DECOY_MODE_COMPARE.md",
         "KNOWN_SOLUTIONS_COMPARE.json",
+        "PARTNER_SCIENCE_ONEPAGER.pdf",
     ]
     if include_full_ledger:
         names.extend(
@@ -355,6 +356,7 @@ def attach_report_to_dir(
                 "DECOY_MODE_COMPARE.json",
                 "DECOY_MODE_COMPARE.md",
                 "KNOWN_SOLUTIONS_COMPARE.json",
+                "PARTNER_SCIENCE_ONEPAGER.pdf",
                 "KNOWN_SOLUTIONS.json",
                 "KNOWN_SOLUTIONS.md",
                 "summary.tsv",
@@ -375,6 +377,7 @@ def attach_report_to_dir(
         "PARTNER_SCIENCE_ANNEX.md",
         "DECOY_MODE_COMPARE.json",
         "DECOY_MODE_COMPARE.md",
+        "PARTNER_SCIENCE_ONEPAGER.pdf",
     ):
         sp = science_dest / name
         if sp.is_file():
@@ -393,6 +396,9 @@ def attach_report_to_dir(
     has_compare = (science_dest / "DECOY_MODE_COMPARE.json").is_file() or (
         dest / "DECOY_MODE_COMPARE.json"
     ).is_file()
+    has_pdf = (science_dest / "PARTNER_SCIENCE_ONEPAGER.pdf").is_file() or (
+        dest / "PARTNER_SCIENCE_ONEPAGER.pdf"
+    ).is_file()
     annex_ok = (science_dest / "PARTNER_SCIENCE_ANNEX.json").is_file() or (
         dest / "PARTNER_SCIENCE_ANNEX.json"
     ).is_file()
@@ -404,6 +410,7 @@ def attach_report_to_dir(
         "missing": missing,
         "pin_ok": pin_ok,
         "has_decoy_mode_compare": has_compare,
+        "has_science_pdf": has_pdf,
         "ontology": "known_solutions_attach_not_lambda_eq_gamma",
         "note": "Science annex attached for partner glance; not ACCEPTANCE/SHIP gate.",
     }
@@ -787,6 +794,13 @@ def run_known_solutions(
     except Exception as exc:  # noqa: BLE001
         logger.warning("known_solutions INDEX: %s", exc)
 
+    try:
+        from realm.validate.known_solutions_pdf import write_partner_science_pdf
+
+        write_partner_science_pdf(root)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("partner science PDF skipped: %s", exc)
+
     return base
 
 
@@ -1058,5 +1072,12 @@ def run_compare_modes(
         update_known_solutions_index(out_dir)
     except Exception as exc:  # noqa: BLE001
         logger.warning("known_solutions INDEX: %s", exc)
+
+    try:
+        from realm.validate.known_solutions_pdf import write_partner_science_pdf
+
+        write_partner_science_pdf(root)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("partner science PDF skipped: %s", exc)
 
     return rollup
