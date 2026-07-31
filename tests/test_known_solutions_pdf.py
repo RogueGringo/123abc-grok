@@ -103,6 +103,9 @@ def test_write_partner_science_pdf(tmp_path: Path):
     # header present in binary-ish form
     data = pdf.read_bytes()
     assert data[:4] == b"%PDF"
+    # Branded content (compressed streams may still embed ASCII strings)
+    # At least ensure multi-page-safe size after branding header/footer
+    assert pdf.stat().st_size > 800
 
 
 def test_pdf_from_cli(tmp_path: Path):

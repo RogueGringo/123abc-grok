@@ -61,7 +61,7 @@ def main(argv=None) -> int:
     p.add_argument(
         "--only-ids",
         action="store_true",
-        help="rank only --ids (omit curated + expand); requires --ids",
+        help="rank only --ids (omit curated + expand); e.g. --only-ids --ids 1CSA,2X2C",
     )
     p.add_argument(
         "--max-expand",

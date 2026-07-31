@@ -82,26 +82,34 @@ jobs:
           assert pdf.is_file() and pdf.stat().st_size > 500
           print("pdf", pdf, pdf.stat().st_size)
           PY
-      - name: Mixed decoy stress (1CSA only)
+      - name: Soft vs hard decoy compare (1CSA)
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: |
+          # Lightweight stress table: soft production decoys vs hard structured
           python known_solutions.py \
             --only-ids --ids 1CSA \
+            --compare-modes soft,hard \
             --n-seeds 1 --n-decoys 12 \
             --kabsch-set none \
-            --decoy-mode mixed \
-            --out-dir /tmp/ks_mixed_smoke
+            --out-dir /tmp/ks_compare_smoke
           python - <<PY
           import json
           from pathlib import Path
-          latest = Path(open("/tmp/ks_mixed_smoke/LATEST").read().strip())
-          d = json.loads((latest / "KNOWN_SOLUTIONS.json").read_text())
-          assert d["status"] == "OK"
-          row = (d.get("rows") or [{}])[0]
-          print("mixed 1CSA enrichment", row.get("enrichment"), "decoy_mode", row.get("decoy_mode"))
-          assert row.get("status") == "OK"
-          assert row.get("decoy_mode") == "mixed"
+          latest = Path(open("/tmp/ks_compare_smoke/LATEST").read().strip())
+          cmp_ = json.loads((latest / "DECOY_MODE_COMPARE.json").read_text())
+          by = cmp_.get("by_mode") or {}
+          assert "soft" in by and "hard" in by
+          soft_enr = (by["soft"].get("all_ok") or {}).get("mean_enrichment")
+          hard_enr = (by["hard"].get("all_ok") or {}).get("mean_enrichment")
+          print("compare 1CSA soft=", soft_enr, "hard=", hard_enr)
+          assert soft_enr is not None and hard_enr is not None
+          # Harder decoys should not invent a higher mean (stress direction)
+          # Allow equality; fail only if hard is magically much better than soft.
+          assert float(hard_enr) <= float(soft_enr) + 0.05
+          pdf = latest / "PARTNER_SCIENCE_ONEPAGER.pdf"
+          assert pdf.is_file() and pdf.stat().st_size > 500
+          print("compare pdf OK", pdf.stat().st_size)
           PY
       - name: Upload science smoke artifacts
         if: always()
@@ -111,6 +119,6 @@ jobs:
           path: |
             /tmp/ks_rel/
             /tmp/ks_soft_smoke/
-            /tmp/ks_mixed_smoke/
+            /tmp/ks_compare_smoke/
           if-no-files-found: ignore
           retention-days: 14
