@@ -29,6 +29,87 @@ from realm.validate.known_solutions import (
 
 logger = logging.getLogger("handoff_science")
 
+# Named presets for partner science stamps (report-only; never retune pins).
+PRESETS: dict[str, dict] = {
+    "smoke": {
+        "dry_run": True,
+        "skip_expand": True,
+        "compare_modes": "",
+        "out_dir": Path("out/known_solutions_smoke"),
+        "note": "pin + universe only",
+    },
+    "curated": {
+        "dry_run": False,
+        "skip_expand": True,
+        "compare_modes": "soft,mixed,hard",
+        "n_seeds": 1,
+        "n_decoys": 24,
+        "full_seeds": False,
+        "kabsch_set": "curated",
+        "kabsch_max": 4,
+        "out_dir": Path("out/known_solutions_curated"),
+        "pdf": True,
+        "status": True,
+        "note": "curated probe+holdout soft/mixed/hard",
+    },
+    "overnight": {
+        "dry_run": False,
+        "skip_expand": False,
+        "compare_modes": "soft,mixed,hard",
+        "n_seeds": 3,
+        "n_decoys": 24,
+        "full_seeds": True,
+        "kabsch_set": "curated",
+        "kabsch_max": 4,
+        "out_dir": Path("out/known_solutions_overnight"),
+        "pdf": True,
+        "status": True,
+        "attach_releases": Path("out/releases"),
+        "note": "full expand multi-seed soft/mixed/hard + attach + status",
+    },
+}
+
+
+def apply_preset(args: argparse.Namespace) -> str | None:
+    """Apply --preset defaults; explicit CLI flags still win when set after."""
+    name = getattr(args, "preset", None)
+    if not name:
+        return None
+    preset = PRESETS.get(str(name))
+    if not preset:
+        return None
+    # Only fill unset / defaulted fields — user overrides after parse are kept
+    # when they differ from argparse defaults for path/int flags we re-apply
+    # only when still at CLI default for that field.
+    if args.out_dir == Path("out/known_solutions") and "out_dir" in preset:
+        args.out_dir = Path(preset["out_dir"])
+    if getattr(args, "dry_run", False) is False and preset.get("dry_run"):
+        args.dry_run = True
+    if not args.skip_expand and preset.get("skip_expand"):
+        args.skip_expand = True
+    # overnight expands: only force skip_expand False if preset says so
+    if "skip_expand" in preset and not preset["skip_expand"]:
+        args.skip_expand = False
+    if args.compare_modes == "soft,mixed,hard" and "compare_modes" in preset:
+        args.compare_modes = preset["compare_modes"]
+    if args.n_seeds == 1 and "n_seeds" in preset:
+        args.n_seeds = int(preset["n_seeds"])
+    if args.n_decoys == 24 and "n_decoys" in preset:
+        args.n_decoys = int(preset["n_decoys"])
+    if not args.full_seeds and preset.get("full_seeds"):
+        args.full_seeds = True
+    if args.kabsch_set == "curated" and "kabsch_set" in preset:
+        args.kabsch_set = preset["kabsch_set"]
+    if args.kabsch_max == 4 and "kabsch_max" in preset:
+        args.kabsch_max = int(preset["kabsch_max"])
+    if preset.get("pdf") and not args.no_pdf:
+        args.pdf = True
+    if preset.get("status"):
+        args.status = True
+    if args.attach_releases is None and preset.get("attach_releases"):
+        args.attach_releases = Path(preset["attach_releases"])
+    return str(preset.get("note") or name)
+
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
@@ -43,6 +124,13 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         default=Path("out/known_solutions"),
         help="known-solutions output root",
+    )
+    p.add_argument(
+        "--preset",
+        type=str,
+        default=None,
+        choices=tuple(PRESETS.keys()),
+        help="smoke | curated | overnight (report-only science stamp recipes)",
     )
     p.add_argument("--n-decoys", type=int, default=24)
     p.add_argument("--n-seeds", type=int, default=1)
@@ -107,6 +195,10 @@ def main(argv: list[str] | None = None) -> int:
         level=logging.DEBUG if args.v else logging.INFO,
         format="%(asctime)s - %(levelname)s - %(message)s",
     )
+
+    preset_note = apply_preset(args)
+    if preset_note:
+        logger.info("preset=%s (%s)", args.preset, preset_note)
 
     pin = verify_dual_gate_pin()
     if not pin.get("ok"):

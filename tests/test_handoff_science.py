@@ -29,6 +29,55 @@ def test_handoff_science_dry_run(tmp_path: Path):
     assert abs(float(pin["soft_T"]) - 0.036) < 1e-12
 
 
+def test_handoff_science_preset_smoke(tmp_path: Path):
+    out = tmp_path / "ks_smoke"
+    rc = science_main(
+        [
+            "--preset",
+            "smoke",
+            "--out-dir",
+            str(out),
+        ]
+    )
+    assert rc == 0
+    assert (out / "LATEST").is_file()
+    latest = Path((out / "LATEST").read_text(encoding="utf-8").strip())
+    pin = json.loads((latest / "pin.json").read_text(encoding="utf-8"))
+    assert pin.get("ok") is True
+
+
+def test_apply_preset_overnight_fields():
+    from handoff_science import PRESETS, apply_preset
+    import argparse
+
+    assert "overnight" in PRESETS
+    ns = argparse.Namespace(
+        preset="overnight",
+        out_dir=Path("out/known_solutions"),
+        dry_run=False,
+        skip_expand=True,  # will be forced off by overnight
+        compare_modes="soft,mixed,hard",
+        n_seeds=1,
+        n_decoys=24,
+        full_seeds=False,
+        kabsch_set="curated",
+        kabsch_max=4,
+        pdf=None,
+        no_pdf=False,
+        status=False,
+        attach_releases=None,
+    )
+    note = apply_preset(ns)
+    assert note
+    assert ns.skip_expand is False
+    assert ns.n_seeds == 3
+    assert ns.full_seeds is True
+    assert ns.pdf is True
+    assert ns.status is True
+    assert ns.attach_releases == Path("out/releases")
+    assert "expand" in note.lower() or "multi" in note.lower()
+
+
 def test_handoff_science_attach_existing_stamp(tmp_path: Path):
     """Attach path exercised via known_solutions attach after dry-run stamp."""
     from realm.validate.known_solutions import attach_report_to_dir

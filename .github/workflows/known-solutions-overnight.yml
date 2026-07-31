@@ -1,0 +1,77 @@
+# Manual overnight / long-form known-solutions science stamp.
+# Report-only; never gates commercial accept/ship. Pin soft_T(n=12)=0.036 locked.
+# Does not run on schedule by default (long runtime + RCSB).
+name: known-solutions-overnight
+
+on:
+  workflow_dispatch:
+    inputs:
+      preset:
+        description: "smoke | curated | overnight"
+        required: true
+        default: "overnight"
+        type: choice
+        options:
+          - smoke
+          - curated
+          - overnight
+      n_seeds:
+        description: "Override n_seeds (blank = preset default)"
+        required: false
+        default: ""
+        type: string
+
+jobs:
+  science-stamp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-handoff.txt
+      - name: Pin + unit smoke
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python -c "from realm.validate.length_policy import policy_for; p=policy_for(12,base_beta=0.20); assert abs(p.soft_T-0.036)<1e-12; print('dual-gate OK', p.soft_T)"
+          pytest tests/test_known_solutions.py tests/test_known_solutions_pdf.py tests/test_handoff_science.py -q --tb=line
+      - name: Run handoff_science preset
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          PRESET="${{ github.event.inputs.preset }}"
+          EXTRA=()
+          if [ -n "${{ github.event.inputs.n_seeds }}" ]; then
+            EXTRA+=(--n-seeds "${{ github.event.inputs.n_seeds }}")
+          fi
+          mkdir -p out/releases
+          python handoff_science.py --preset "$PRESET" \
+            --releases out/releases \
+            "${EXTRA[@]}"
+          # smoke/curated/overnight always leave a LATEST under preset out dir
+          ROOT="out/known_solutions_${PRESET}"
+          if [ "$PRESET" = "smoke" ]; then ROOT="out/known_solutions_smoke"; fi
+          if [ "$PRESET" = "curated" ]; then ROOT="out/known_solutions_curated"; fi
+          if [ "$PRESET" = "overnight" ]; then ROOT="out/known_solutions_overnight"; fi
+          test -f "$ROOT/LATEST" || test -f out/known_solutions/LATEST
+          if [ -f out/releases/STATUS.json ]; then
+            python -c "import json; s=json.load(open('out/releases/STATUS.json')); assert s.get('ok') is True; print('status ok', (s.get('known_solutions') or {}).get('compare_all_enr'))"
+          fi
+      - name: Upload overnight science artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: known-solutions-${{ github.event.inputs.preset }}
+          path: |
+            out/known_solutions_*/
+            out/releases/PARTNER_SCIENCE*
+            out/releases/DECOY_MODE_COMPARE*
+            out/releases/STATUS.json
+            out/releases/KNOWN_SOLUTIONS_ATTACH.json
+          if-no-files-found: ignore
+          retention-days: 21
