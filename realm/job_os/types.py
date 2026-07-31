@@ -106,6 +106,14 @@ class JobThresholds:
     require_pin: bool = True
     depth_mono_eps: float = 1e-6  # pin config (locked for a run — not free)
     require_align: bool = False  # if True, align_mode=none not coherent for multi-src
+    # P3 survey stalk: when True, is_solved needs present survey + gate stalk_ok
+    require_survey: bool = False
+    # Locked QC bands for survey (not free params)
+    survey_total_g_tol: float = 0.05
+    survey_magf_lo: float = 0.15
+    survey_magf_hi: float = 1.20
+    survey_dogleg_jump_deg: float = 45.0
+    survey_dinc_jump_deg: float = 30.0
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -130,9 +138,16 @@ class Observations:
     unit_sanity_ok: bool
     out_dir: str
     notes: list[str] = field(default_factory=list)
-    # Optional stalk channels (informational / later PRs)
+    # P3 survey stalk (B)
     survey_n_stations: int = 0
     survey_qc_fail: int = 0
+    survey_present: bool = False
+    survey_qc_ok: bool = False
+    survey_holonomy_ok: bool = False
+    survey_defect_count: int = 0
+    survey_stalk_ok: bool = True  # True when gate=off or stalk passes
+    survey_max_abs_g_minus_1: float | None = None
+    survey_notes: list[str] = field(default_factory=list)
     regime_note: str | None = None
     # P2 MicroPulse / multi-source glue (structural — not ROP score)
     has_micropulse: bool = False

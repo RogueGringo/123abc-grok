@@ -1,7 +1,8 @@
-"""Observe job cycle: pin + export completeness + align/glue + physics.
+"""Observe job cycle: pin + export completeness + align/glue + survey + physics.
 
 Builds Observations from ingest series + pin report + free params.
 P2: multi-source glue_score (surface LAS + MicroPulse fibers) feeds align_score.
+P3: survey stalk QC / holonomy via survey_gate free param.
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ from typing import Any
 
 from realm.job_os.glue import compute_glue
 from realm.job_os.pin import verify_job_pin
+from realm.job_os.survey import evaluate_survey
 from realm.job_os.types import FreeParams, JobThresholds, Observations, PACK_REQUIRED
 
 
@@ -18,12 +20,14 @@ def _align_score(
     series: dict[str, Any],
     params: FreeParams,
     glue: dict[str, Any] | None = None,
+    survey_report: dict[str, Any] | None = None,
 ) -> float:
     """Align / glue score for is_solved.
 
     P1 single-source: depth presence.
     P2 multi-source: structural glue_score from compute_glue (depth/time
     proximity or honest fiber-join — not score-chase).
+    P3 survey_anchor: uses survey stations when present (never invents).
     """
     if glue is not None and glue.get("multi_source"):
         return float(glue.get("score") or 0.0)
@@ -36,7 +40,13 @@ def _align_score(
     if am == "none":
         return 0.5
     if am == "survey_anchor":
-        # No survey fiber in P1/P2 core — incomplete glue until P3
+        # P3: survey present → structural anchor score; else incomplete
+        if survey_report and survey_report.get("present") and int(
+            survey_report.get("n_stations") or 0
+        ) > 0:
+            # Stations present: pass min_align when QC not forced-failing glue
+            base = 0.75 if survey_report.get("qc_ok") else 0.55
+            return float(base)
         return 0.25
     # depth_primary or time_primary on single LAS: rows present → good
     finite = sum(1 for d in depths if d == d)  # not nan
@@ -105,8 +115,10 @@ def observe_job(
     out_dir: Path | str = ".",
     pin: dict[str, Any] | None = None,
     glue: dict[str, Any] | None = None,
+    survey: dict[str, Any] | None = None,
+    survey_report: dict[str, Any] | None = None,
 ) -> Observations:
-    """Extract observations from one execute (ingest + pin + align/glue)."""
+    """Extract observations from one execute (ingest + pin + align/glue + survey)."""
     thr = thr or JobThresholds()
     p = params.clamp()
     if pin is None:
@@ -119,6 +131,9 @@ def observe_job(
     # Glue: use provided report or compute from series.micropulse bundle-like
     if glue is None:
         mp = series.get("micropulse")
+        n_survey = 0
+        if survey is not None:
+            n_survey = int(survey.get("n_stations") or 0)
         if mp:
             # Reconstruct minimal bundle for glue from joined summary
             bundle = {
@@ -135,6 +150,7 @@ def observe_job(
                 bundle,
                 align_mode=p.align_mode,
                 channel_pack=p.channel_pack,
+                survey_n_stations=n_survey,
             )
         else:
             glue = compute_glue(
@@ -142,7 +158,20 @@ def observe_job(
                 None,
                 align_mode=p.align_mode,
                 channel_pack=p.channel_pack,
+                survey_n_stations=n_survey,
             )
+
+    # Survey stalk report
+    if survey_report is None:
+        survey_report = evaluate_survey(
+            survey,
+            survey_gate=p.survey_gate,
+            total_g_tol=float(thr.survey_total_g_tol),
+            magf_lo=float(thr.survey_magf_lo),
+            magf_hi=float(thr.survey_magf_hi),
+            dogleg_jump_deg=float(thr.survey_dogleg_jump_deg),
+            dinc_jump_deg=float(thr.survey_dinc_jump_deg),
+        )
 
     required = PACK_REQUIRED.get(p.channel_pack, PACK_REQUIRED["surface_min"])
     present = pin.get("present_channels") or []
@@ -160,7 +189,7 @@ def observe_job(
     if n_rows <= 0:
         export_ok_fraction = 0.0
 
-    align = _align_score(series, p, glue=glue)
+    align = _align_score(series, p, glue=glue, survey_report=survey_report)
     n_ok, n_warn, n_fail, phys_notes = _physics_rollups(series, pin, thr)
 
     notes: list[str] = []
@@ -175,6 +204,16 @@ def observe_job(
     glue_notes = list(glue.get("notes") or [])
     if "glue_incomplete" in glue_notes:
         notes.append("glue_incomplete")
+    survey_notes = list(survey_report.get("notes") or [])
+    # Surface survey notes only when stalk is engaged or stations exist
+    # (avoid survey_missing noise on P1/P2 LAS-only runs with gate=off).
+    survey_engaged = (
+        p.survey_gate != "off"
+        or bool(getattr(thr, "require_survey", False))
+        or bool(survey_report.get("present"))
+    )
+    if survey_engaged:
+        notes.extend(survey_notes)
     notes.extend(phys_notes)
 
     verify_ok = bool(pin.get("ok")) and export_ok_fraction + 1e-12 >= thr.min_export_ok_fraction
@@ -200,6 +239,15 @@ def observe_job(
         unit_sanity_ok=bool(pin.get("unit_sanity_ok", False)),
         out_dir=str(out_dir),
         notes=notes,
+        survey_n_stations=int(survey_report.get("n_stations") or 0),
+        survey_qc_fail=int(survey_report.get("qc_fail_count") or 0),
+        survey_present=bool(survey_report.get("present")),
+        survey_qc_ok=bool(survey_report.get("qc_ok")),
+        survey_holonomy_ok=bool(survey_report.get("holonomy_ok")),
+        survey_defect_count=int(survey_report.get("defect_count") or 0),
+        survey_stalk_ok=bool(survey_report.get("stalk_ok", True)),
+        survey_max_abs_g_minus_1=survey_report.get("max_abs_g_minus_1"),
+        survey_notes=survey_notes,
         has_micropulse=has_mp,
         glue_score=float(glue.get("score") or 0.0),
         glue_method=str(glue.get("method") or "") or None,
@@ -212,7 +260,7 @@ def observe_job(
 
 
 def is_solved(obs: Observations, thr: JobThresholds, params: FreeParams) -> bool:
-    """Job routine coherence gate: pin + export + physics + align/glue (not ROP)."""
+    """Job routine coherence gate: pin + export + physics + align/glue + survey (not ROP)."""
     p = params.clamp()
     if thr.require_pin and not obs.pin_ok:
         return False
@@ -229,6 +277,19 @@ def is_solved(obs: Observations, thr: JobThresholds, params: FreeParams) -> bool
     if obs.align_score + 1e-12 < thr.min_align_score:
         # survey_anchor without survey / weak multi-source glue → honest unsolved
         return False
+    # P3 survey gate
+    if thr.require_survey:
+        if not obs.survey_present or obs.survey_n_stations <= 0:
+            return False
+        # require_survey implies at least qc_only stalk semantics when gate is off
+        if p.survey_gate == "off":
+            return False
+        if not obs.survey_stalk_ok:
+            return False
+    elif p.survey_gate != "off":
+        # gate engaged without --require-survey still must pass stalk
+        if not obs.survey_stalk_ok:
+            return False
     return True
 
 

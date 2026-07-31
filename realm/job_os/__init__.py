@@ -1,12 +1,13 @@
-"""Oilfield Job Coherence OS (P2: MicroPulse fiber join).
+"""Oilfield Job Coherence OS (P3: survey stalk QC + holonomy).
 
 Ontology:
-  - Substrate: raw multi-channel time/depth series (LAS/SQL/MicroPulse CSV)
+  - Substrate: raw multi-channel time/depth series (LAS/SQL/MicroPulse/survey)
   - Operational geometry: job manifold (depth/time skeleton + channel fibers)
   - Pin: QC/SOP invariants — read-only every cycle; never retuned for score
-  - Free params: align/window/pack/null only
+  - Free params: align/window/pack/null/survey_gate
   - Solved: is_solved ∧ empty free-param board × K
   - Glue: structural depth/time proximity (not score-chase)
+  - Survey: QC total G/MagF + optional discrete holonomy; never invent Inc/Azi
   - NEVER claim ζ/Crit predicts ROP; NEVER retune pin mid-run
 
 Mirror of realm.handoff.coherence OS v2 patterns without protein adapters.

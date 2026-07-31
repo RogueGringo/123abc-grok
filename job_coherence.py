@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
-"""Oilfield Job Coherence OS CLI (P2: MicroPulse fiber join).
+"""Oilfield Job Coherence OS CLI (P3: survey stalk QC + holonomy).
 
 observe → negotiate free parameters → re-ingest → until coherent or budget.
 
 LOCKED: QC pin (depth mono, required channels for pack, unit sanity).
-FREE: align_mode, window_scale, channel_pack, null_policy.
+FREE: align_mode, window_scale, channel_pack, null_policy, survey_gate.
 
 P2: --micropulse joins GAMMA/SHOCK/VIBE/PULSE/TELEM/TEMP/FLOW fibers;
 structural depth/time glue (not score-chase).
+
+P3: survey stalk (B) — parse MicroPulse SURVEY or --survey CSV;
+QC total G / MagF; optional discrete holonomy; --require-survey gates is_solved.
+Never invent Inc/Azi.
 
 Never ROP score-chase. Never retune SOP pin mid-run. Never ζ→ROP.
 Mirror of handoff_coherence OS v2 without protein adapters.
@@ -34,8 +38,8 @@ logger = logging.getLogger("job_coherence")
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
         description=(
-            "Oilfield Job Coherence OS: negotiate align/window/pack/null until "
-            "job routine fixed-point. QC pin locked. Optional MicroPulse join. "
+            "Oilfield Job Coherence OS: negotiate align/window/pack/null/survey_gate "
+            "until job routine fixed-point. QC pin locked. Optional MicroPulse + survey. "
             "Not ROP score-chase."
         )
     )
@@ -50,6 +54,12 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         default=None,
         help="MicroPulse memory path: directory of CSVs or a single CSV fiber",
+    )
+    p.add_argument(
+        "--survey",
+        type=Path,
+        default=None,
+        help="optional survey CSV (MicroPulse SURVEY format or simple MD/Inc/Azi table)",
     )
     p.add_argument(
         "--out-dir",
@@ -101,6 +111,18 @@ def main(argv: list[str] | None = None) -> int:
         choices=("drop", "hold_last", "mark_only"),
     )
     p.add_argument(
+        "--survey-gate",
+        type=str,
+        default="off",
+        choices=("off", "qc_only", "holonomy"),
+        help="P3 free param: survey stalk depth (off | qc_only | holonomy)",
+    )
+    p.add_argument(
+        "--require-survey",
+        action="store_true",
+        help="P3: is_solved requires present survey stations + survey_gate stalk_ok",
+    )
+    p.add_argument(
         "--min-align-score",
         type=float,
         default=0.5,
@@ -134,6 +156,7 @@ def main(argv: list[str] | None = None) -> int:
             result = run_job_coherence_loop(
                 las_path=args.las,
                 micropulse_path=args.micropulse,
+                survey_path=args.survey,
                 out_root=args.out_dir,
                 max_rounds=int(args.max_rounds),
                 resume_dir=args.resume,
@@ -153,16 +176,21 @@ def main(argv: list[str] | None = None) -> int:
         if args.micropulse is not None and not args.micropulse.exists():
             logger.error("--micropulse path not found: %s", args.micropulse)
             return 2
+        if args.survey is not None and not args.survey.is_file():
+            logger.error("--survey path not found: %s", args.survey)
+            return 2
         try:
             result = run_job_coherence_loop(
                 las_path=args.las,
                 micropulse_path=args.micropulse,
+                survey_path=args.survey,
                 out_root=args.out_dir,
                 initial=FreeParams(
                     align_mode=args.align_mode,
                     window_scale=int(args.window_scale),
                     channel_pack=args.channel_pack,
                     null_policy=args.null_policy,
+                    survey_gate=args.survey_gate,
                 ),
                 thresholds=JobThresholds(
                     min_export_ok_fraction=1.0,
@@ -171,6 +199,7 @@ def main(argv: list[str] | None = None) -> int:
                     require_verify_ok=True,
                     require_pin=True,
                     depth_mono_eps=float(args.depth_mono_eps),
+                    require_survey=bool(args.require_survey),
                 ),
                 max_rounds=int(args.max_rounds),
                 stability_k=int(args.stability_k),
@@ -210,8 +239,13 @@ def main(argv: list[str] | None = None) -> int:
                 "partner_recipe": result.get("partner_recipe"),
                 "pin_ok": (result.get("pin_locked") or {}).get("last_ok"),
                 "micropulse_kinds": result.get("micropulse_kinds"),
+                "survey_n_stations": result.get("survey_n_stations"),
+                "require_survey": result.get("require_survey"),
                 "out": result.get("out_root"),
-                "note": "pin locked; free params only; OS fixed-point K; glue structural; not ROP",
+                "note": (
+                    "pin locked; free params only; OS fixed-point K; "
+                    "glue structural; survey never invents Inc/Azi; not ROP"
+                ),
             },
             indent=2,
         )

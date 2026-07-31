@@ -20,6 +20,7 @@ from realm.job_os.ingest_micropulse import join_surface_micropulse, load_micropu
 from realm.job_os.observe import coherence_score, is_solved, observe_job
 from realm.job_os.pin import verify_job_pin
 from realm.job_os.propose import collect_section_proposals, negotiate
+from realm.job_os.survey import evaluate_survey, load_survey
 from realm.job_os.types import FreeParams, JobThresholds
 
 logger = logging.getLogger(__name__)
@@ -40,11 +41,15 @@ def write_partner_recipe(
     las_path: str | None,
     solved: bool,
     micropulse_path: str | None = None,
+    survey_path: str | None = None,
+    require_survey: bool = False,
 ) -> Path:
     """Machine-readable free-param recipe for partner re-run (not ACCEPTANCE)."""
     dest = Path(path)
     dest.parent.mkdir(parents=True, exist_ok=True)
     mp_cli = f" --micropulse {micropulse_path}" if micropulse_path else ""
+    sv_cli = f" --survey {survey_path}" if survey_path else ""
+    req_cli = " --require-survey" if require_survey else ""
     body = {
         "kind": "partner_recipe",
         "ontology": "job_partner_recipe_not_rop_score",
@@ -62,13 +67,16 @@ def write_partner_recipe(
         "free_params": free_params.to_dict(),
         "las_path": las_path,
         "micropulse_path": micropulse_path,
+        "survey_path": survey_path,
+        "require_survey": require_survey,
         "re_run_cli": (
             f"python job_coherence.py --os --las {las_path or '<LAS>'}"
-            f"{mp_cli} "
+            f"{mp_cli}{sv_cli}{req_cli} "
             f"--align-mode {free_params.align_mode} "
             f"--window-scale {free_params.window_scale} "
             f"--channel-pack {free_params.channel_pack} "
-            f"--null-policy {free_params.null_policy}"
+            f"--null-policy {free_params.null_policy} "
+            f"--survey-gate {free_params.survey_gate}"
         ),
         "disclaimers": [
             "PARTNER_RECIPE is free-param + pin stamp for re-run fidelity.",
@@ -76,6 +84,7 @@ def write_partner_recipe(
             "Commercial success remains gluing sources + QC pin.",
             "Never retune SOP pin for score. Never ζ→ROP claim.",
             "Glue is structural (depth/time proximity); not score-chase.",
+            "Survey stalk never invents Inc/Azi.",
         ],
     }
     dest.write_text(json.dumps(body, indent=2) + "\n", encoding="utf-8")
@@ -139,9 +148,10 @@ def _write_coherence_md(result: dict[str, Any], path: Path) -> Path:
         "",
         "- Substrate: raw multi-channel series",
         "- Pin: QC locked (depth mono, required channels, unit sanity)",
-        "- Free: align_mode, window_scale, channel_pack, null_policy",
+        "- Free: align_mode, window_scale, channel_pack, null_policy, survey_gate",
+        "- Survey stalk (B): QC total G/MagF + optional discrete holonomy",
         "- Fixed-point: is_solved ∧ empty board × K",
-        "- Never retune pin for score. Never ζ→ROP.",
+        "- Never retune pin for score. Never invent Inc/Azi. Never ζ→ROP.",
         "",
     ]
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -155,8 +165,9 @@ def execute_job_cycle(
     thr: JobThresholds,
     cycle_dir: Path,
     mp_bundle: dict[str, Any] | None = None,
+    survey: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], Any]:
-    """Ingest LAS (+ optional MicroPulse) → null policy → pack select → pin → observe."""
+    """Ingest LAS (+ optional MicroPulse/survey) → null policy → pack → pin → observe."""
     cycle_dir.mkdir(parents=True, exist_ok=True)
     p = params.clamp()
     raw = parse_las(las_path)
@@ -175,14 +186,29 @@ def execute_job_cycle(
         json.dumps(pin, indent=2) + "\n", encoding="utf-8"
     )
 
+    n_survey = int((survey or {}).get("n_stations") or 0)
     glue = compute_glue(
         series,
         mp_bundle,
         align_mode=p.align_mode,
         channel_pack=p.channel_pack,
+        survey_n_stations=n_survey,
     )
     (cycle_dir / "glue.json").write_text(
         json.dumps(glue, indent=2) + "\n", encoding="utf-8"
+    )
+
+    survey_report = evaluate_survey(
+        survey,
+        survey_gate=p.survey_gate,
+        total_g_tol=float(thr.survey_total_g_tol),
+        magf_lo=float(thr.survey_magf_lo),
+        magf_hi=float(thr.survey_magf_hi),
+        dogleg_jump_deg=float(thr.survey_dogleg_jump_deg),
+        dinc_jump_deg=float(thr.survey_dinc_jump_deg),
+    )
+    (cycle_dir / "survey_report.json").write_text(
+        json.dumps(survey_report, indent=2) + "\n", encoding="utf-8"
     )
 
     # Store lightweight series summary (not full arrays in json for large files)
@@ -204,12 +230,22 @@ def execute_job_cycle(
         "channel_pack": p.channel_pack,
         "null_policy": p.null_policy,
         "align_mode": p.align_mode,
+        "survey_gate": p.survey_gate,
         "source_path": series.get("source_path"),
         "units": series.get("units"),
         "n_channels": len(series.get("channels") or {}),
         "pack_required": series.get("pack_required"),
         "has_micropulse": bool(series.get("has_micropulse")),
         "micropulse": mp_summary,
+        "survey": {
+            "n_stations": survey_report.get("n_stations"),
+            "present": survey_report.get("present"),
+            "qc_ok": survey_report.get("qc_ok"),
+            "holonomy_ok": survey_report.get("holonomy_ok"),
+            "defect_count": survey_report.get("defect_count"),
+            "stalk_ok": survey_report.get("stalk_ok"),
+            "source_path": survey_report.get("source_path"),
+        },
         "glue": {
             "score": glue.get("score"),
             "method": glue.get("method"),
@@ -229,6 +265,8 @@ def execute_job_cycle(
         out_dir=cycle_dir,
         pin=pin,
         glue=glue,
+        survey=survey,
+        survey_report=survey_report,
     )
     (cycle_dir / "observations.json").write_text(
         json.dumps(obs.to_dict(), indent=2) + "\n", encoding="utf-8"
@@ -240,6 +278,7 @@ def run_job_coherence_loop(
     *,
     las_path: Path | str | None = None,
     micropulse_path: Path | str | None = None,
+    survey_path: Path | str | None = None,
     out_root: Path | str = "out/job_os",
     initial: FreeParams | None = None,
     thresholds: JobThresholds | None = None,
@@ -259,6 +298,7 @@ def run_job_coherence_loop(
     Fixed-point: is_solved ∧ empty free-param board for K consecutive cycles.
 
     P2: optional micropulse_path (dir of CSVs or single file) joins downhole fibers.
+    P3: optional survey_path and/or SURVEY fiber in MicroPulse; survey_gate free param.
     """
     thr = thresholds or JobThresholds()
     params = (initial or FreeParams()).clamp()
@@ -273,6 +313,7 @@ def run_job_coherence_loop(
     run_doc: dict[str, Any] | None = None
     las_str: str | None = str(las_path) if las_path is not None else None
     mp_str: str | None = str(micropulse_path) if micropulse_path is not None else None
+    survey_str: str | None = str(survey_path) if survey_path is not None else None
 
     if resume_dir is not None:
         state = load_resume_state(Path(resume_dir))
@@ -311,6 +352,9 @@ def run_job_coherence_loop(
         if run_meta.get("micropulse_path"):
             mp_str = str(run_meta["micropulse_path"])
             micropulse_path = mp_str
+        if run_meta.get("survey_path"):
+            survey_str = str(run_meta["survey_path"])
+            survey_path = survey_str
         run_doc = dict(run_meta)
         run_doc["status"] = "resuming"
         logger.info(
@@ -351,6 +395,25 @@ def run_job_coherence_loop(
             mp_bundle.get("kinds"),
         )
 
+    # P3 survey: explicit path wins; else SURVEY fiber from MicroPulse bundle
+    survey_table: dict[str, Any] | None = None
+    if survey_str or survey_path is not None:
+        sp = Path(survey_str or survey_path)  # type: ignore[arg-type]
+        if not sp.is_file():
+            raise FileNotFoundError(f"survey CSV not found: {sp}")
+        survey_str = str(sp.resolve())
+        survey_table = load_survey(survey_str, mp_bundle=None)
+    else:
+        survey_table = load_survey(None, mp_bundle=mp_bundle)
+        if survey_table and survey_table.get("source_path"):
+            survey_str = str(survey_table.get("source_path"))
+    if survey_table:
+        logger.info(
+            "survey stations=%s source=%s",
+            survey_table.get("n_stations"),
+            survey_table.get("source_path"),
+        )
+
     ledger: list[dict[str, Any]] = list(resume_ledger)
     solved = False
     stop_reason = "max_rounds"
@@ -371,9 +434,10 @@ def run_job_coherence_loop(
     if os_mode and resume_dir is None:
         run_doc = {
             "run_id": run_id,
-            "ontology": "job_coherence_os_p2_not_rop_score",
+            "ontology": "job_coherence_os_p3_not_rop_score",
             "las_path": las_str,
             "micropulse_path": mp_str,
+            "survey_path": survey_str,
             "thresholds": thr.to_dict(),
             "stability_k": stability_k,
             "max_rounds": int(max_rounds),
@@ -425,13 +489,13 @@ def run_job_coherence_loop(
         for rnd in range(start_round, max(1, int(max_rounds)) + 1):
             cycle_dir = out_root / f"cycle_{rnd:02d}"
             logger.info(
-                "job cycle %s/%s align=%s pack=%s null=%s window=%s streak=%s/%s os=%s",
+                "job cycle %s/%s align=%s pack=%s null=%s survey_gate=%s streak=%s/%s os=%s",
                 rnd,
                 max_rounds,
                 params.align_mode,
                 params.channel_pack,
                 params.null_policy,
-                params.window_scale,
+                params.survey_gate,
                 stability_streak,
                 stability_k,
                 os_mode,
@@ -443,6 +507,7 @@ def run_job_coherence_loop(
                 thr=thr,
                 cycle_dir=cycle_dir,
                 mp_bundle=mp_bundle,
+                survey=survey_table,
             )
             pin0 = pin
 
@@ -516,6 +581,10 @@ def run_job_coherence_loop(
                 "glue_score": obs.glue_score,
                 "glue_method": obs.glue_method,
                 "has_micropulse": obs.has_micropulse,
+                "survey_n_stations": obs.survey_n_stations,
+                "survey_qc_fail": obs.survey_qc_fail,
+                "survey_stalk_ok": obs.survey_stalk_ok,
+                "survey_defect_count": obs.survey_defect_count,
                 "cycle_dir": str(cycle_dir.resolve()),
                 "proposals": [pr.to_dict() for pr in board_props],
                 "sources": summary,
@@ -584,6 +653,7 @@ def run_job_coherence_loop(
             thr=thr,
             cycle_dir=out_root / "cycle_final_pin",
             mp_bundle=mp_bundle,
+            survey=survey_table,
         )
         recipe_path = out_root / "PARTNER_RECIPE.json"
         write_partner_recipe(
@@ -594,6 +664,8 @@ def run_job_coherence_loop(
             las_path=las_str,
             solved=True,
             micropulse_path=mp_str,
+            survey_path=survey_str,
+            require_survey=bool(thr.require_survey),
         )
         partner_recipe_path = str(recipe_path.resolve())
 
@@ -612,7 +684,7 @@ def run_job_coherence_loop(
 
     result = {
         "ontology": (
-            "job_coherence_os_p2_not_rop_score"
+            "job_coherence_os_p3_not_rop_score"
             if os_mode
             else "job_coherence_protocol_not_rop_score"
         ),
@@ -638,13 +710,17 @@ def run_job_coherence_loop(
         "out_root": str(out_root.resolve()),
         "las_path": las_str,
         "micropulse_path": mp_str,
+        "survey_path": survey_str,
+        "survey_n_stations": int((survey_table or {}).get("n_stations") or 0),
+        "require_survey": bool(thr.require_survey),
         "micropulse_n_fibers": (mp_bundle or {}).get("n_fibers") if mp_bundle else 0,
         "micropulse_kinds": (mp_bundle or {}).get("kinds") if mp_bundle else [],
         "note": (
             "Cyclic observe→multi-section propose→merge→ingest. "
             "Fixed-point: is_solved ∧ empty board × K. "
-            "Free params: align_mode/window_scale/channel_pack/null_policy. "
+            "Free params: align_mode/window_scale/channel_pack/null_policy/survey_gate. "
             "P2: MicroPulse fiber join + structural glue. "
+            "P3: survey stalk QC + optional discrete holonomy (never invent Inc/Azi). "
             "QC pin locked. Not ROP score-chase. Never ζ→ROP."
         ),
     }

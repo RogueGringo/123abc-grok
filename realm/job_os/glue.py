@@ -106,6 +106,7 @@ def compute_glue(
     *,
     align_mode: str = "depth_primary",
     channel_pack: str = "surface_min",
+    survey_n_stations: int = 0,
 ) -> dict[str, Any]:
     """Compute structural glue observation between surface and MicroPulse.
 
@@ -118,6 +119,7 @@ def compute_glue(
     am = (align_mode or "depth_primary").lower().strip()
     pack = (channel_pack or "surface_min").lower().strip()
     notes: list[str] = []
+    n_survey = int(survey_n_stations or 0)
 
     s_depths = _finite(list(surface.get("depths") or []))
     s_times = _finite(list(surface.get("times") or []))
@@ -134,16 +136,25 @@ def compute_glue(
         # Single-source: no multi-source glue required
         n = len(s_depths)
         score = 1.0 if n > 0 else 0.0
+        method = "single_source"
         if am == "none":
             score = 0.5 if n > 0 else 0.0
         elif am == "survey_anchor":
-            score = 0.25 if n > 0 else 0.0
+            # P3: survey stations present → honest anchor; else incomplete
+            if n_survey > 0 and n > 0:
+                score = 0.75
+                method = "survey_anchor"
+                notes.append("survey_anchor_with_stations")
+            else:
+                score = 0.25 if n > 0 else 0.0
+                method = "survey_anchor_pending"
+                notes.append("survey_anchor_missing_stations")
         return {
             "score": float(score),
-            "method": "single_source",
+            "method": method,
             "multi_source": False,
             "has_micropulse": False,
-            "notes": ["no_micropulse"],
+            "notes": notes or ["no_micropulse"],
             "depth_overlap": None,
             "time_overlap": None,
             "n_surface_depths": len(s_depths),
@@ -158,6 +169,7 @@ def compute_glue(
             "has_time_domain": False,
             "fiber_frac": None,
             "required_downhole": list(_pack_downhole_targets(pack)),
+            "survey_n_stations": n_survey,
         }
 
     mp = mp_bundle or {}
@@ -194,9 +206,22 @@ def compute_glue(
         score = 0.3 if (s_depths or s_times) and (mp_times or mp_depths or n_present_any) else 0.0
         notes.append("align_mode_none")
     elif am == "survey_anchor":
-        method = "survey_anchor_pending"
-        score = 0.2
-        notes.append("survey_anchor_requires_p3")
+        if n_survey > 0:
+            method = "survey_anchor"
+            # Blend survey presence with any shared domain proximity
+            if has_depth_domain:
+                shared_domain = "depth"
+                score = 0.55 + 0.35 * (0.5 * depth_overlap + 0.5 * depth_cov)
+            elif has_time_domain:
+                shared_domain = "time"
+                score = 0.50 + 0.30 * (0.5 * time_overlap + 0.5 * time_cov)
+            else:
+                score = 0.70 * surface_ok if surface_ok else 0.55
+            notes.append("survey_anchor_with_stations")
+        else:
+            method = "survey_anchor_pending"
+            score = 0.2
+            notes.append("survey_anchor_missing_stations")
     elif am == "depth_primary":
         if has_depth_domain:
             method = "depth_proximity"
@@ -276,4 +301,5 @@ def compute_glue(
         "channel_pack": pack,
         "has_depth_domain": has_depth_domain,
         "has_time_domain": has_time_domain,
+        "survey_n_stations": n_survey,
     }
