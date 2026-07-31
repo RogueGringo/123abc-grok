@@ -507,6 +507,21 @@ def test_cli_micropulse_flag(tmp_path: Path):
         cwd=str(Path(__file__).resolve().parents[1]),
     )
     assert proc.returncode == 0, proc.stderr + proc.stdout
+
+
+def test_parse_time_windows_safe():
+    """Windows rejects some naive .timestamp() values — must not raise."""
+    from realm.job_os.ingest_micropulse import _parse_time
+
+    # Real MicroPulse-style stamp
+    t = _parse_time("07/14/2025 21:53:15")
+    assert t is not None and t > 0
+    # Empty / garbage
+    assert _parse_time("") is None
+    assert _parse_time("not-a-date") is None
+    # Must not raise OSError on edge dates
+    _parse_time("01/01/1970 00:00:00")
+    _parse_time("12/31/1969 23:59:59")
     body = json.loads(proc.stdout)
     assert body["solved"] is True
     assert body.get("micropulse_kinds")

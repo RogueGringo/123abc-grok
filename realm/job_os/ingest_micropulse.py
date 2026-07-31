@@ -101,6 +101,8 @@ def _kind_from_title(title_line: str) -> str | None:
 
 def _parse_time(tok: str) -> float | None:
     """Parse timestamp to unix epoch seconds (float). None if not parseable."""
+    import calendar
+
     s = (tok or "").strip().strip('"')
     if not s:
         return None
@@ -115,9 +117,16 @@ def _parse_time(tok: str) -> float | None:
     for fmt in _TIME_FORMATS:
         try:
             dt = datetime.strptime(s, fmt)
-            return dt.timestamp()
         except ValueError:
             continue
+        try:
+            return float(dt.timestamp())
+        except (OSError, OverflowError, ValueError):
+            # Windows: naive pre-epoch / invalid local → treat as UTC ordinal
+            try:
+                return float(calendar.timegm(dt.timetuple()))
+            except (OSError, OverflowError, ValueError):
+                return None
     return None
 
 
@@ -448,8 +457,13 @@ def load_micropulse_bundle(path: str | Path) -> dict[str, Any]:
     all_depths: list[float] = []
     sources: list[str] = []
 
+    parse_errors: list[dict[str, str]] = []
     for f in files:
-        fiber = parse_micropulse_csv(f)
+        try:
+            fiber = parse_micropulse_csv(f)
+        except Exception as exc:  # noqa: BLE001
+            parse_errors.append({"path": str(f), "error": str(exc)})
+            continue
         kind = str(fiber.get("kind") or "UNKNOWN")
         # If duplicate kind, keep first non-empty or last with more rows
         prev = fibers.get(kind)
@@ -487,6 +501,8 @@ def load_micropulse_bundle(path: str | Path) -> dict[str, Any]:
         "downhole_kinds_present": [
             k for k in DOWNHOLE_FIBER_KINDS if k in fibers or k in pack_channels
         ],
+        "parse_errors": parse_errors,
+        "n_parse_errors": len(parse_errors),
     }
 
 
