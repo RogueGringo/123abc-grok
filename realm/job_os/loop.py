@@ -1,7 +1,7 @@
 """Job Coherence OS loop: observe → multi-section propose → merge → re-execute.
 
 OS mode: RUN.json, ledger.jsonl, stability-K fixed-point, PARTNER_RECIPE on SOLVED,
-optional resume.
+optional resume, optional post-SOLVED EOW ship (P5).
 
 Fixed-point: is_solved ∧ empty free-param board for K consecutive cycles.
 Pin re-checked every round and never written/adapted.
@@ -14,6 +14,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from realm.job_os.eow_ship import ship_eow_package
 from realm.job_os.glue import compute_glue
 from realm.job_os.ingest_las import apply_null_policy, parse_las, select_channel_pack
 from realm.job_os.ingest_micropulse import join_surface_micropulse, load_micropulse_bundle
@@ -156,6 +157,7 @@ def _write_coherence_md(result: dict[str, Any], path: Path) -> Path:
         f"- **n_rounds:** {result.get('n_rounds')}",
         f"- **final_params:** `{json.dumps(result.get('final_params') or {})}`",
         f"- **partner_recipe:** `{result.get('partner_recipe')}`",
+        f"- **eow_ship:** `{result.get('eow_ship_status')}`",
         "",
         "## Ontology",
         "",
@@ -164,6 +166,7 @@ def _write_coherence_md(result: dict[str, Any], path: Path) -> Path:
         "- Free: align_mode, window_scale, channel_pack, null_policy, survey_gate, regime_mode",
         "- Survey stalk (B): QC total G/MagF + optional discrete holonomy",
         "- Regime stalk (C): windowed H0 on SSSI/TOR/RPM; dual-gate science info",
+        "- EOW ship (D): post-SOLVED package inventory + PARTNER_RECIPE attach",
         "- Fixed-point: is_solved ∧ empty board × K",
         "- Science score never sets SOLVED alone (unless --require-regime stalk)",
         "- Never retune pin for score. Never invent Inc/Azi. Never ζ→ROP.",
@@ -356,6 +359,8 @@ def run_job_coherence_loop(
     run_id: str | None = None,
     with_regime: bool = False,
     with_science: bool = False,
+    eow_package: Path | str | None = None,
+    force_ship: bool = False,
 ) -> dict[str, Any]:
     """Execute cyclic observe→multi-section propose→merge→ingest until coherent.
 
@@ -369,6 +374,7 @@ def run_job_coherence_loop(
     P2: optional micropulse_path (dir of CSVs or single file) joins downhole fibers.
     P3: optional survey_path and/or SURVEY fiber in MicroPulse; survey_gate free param.
     P4: --with-regime / --with-science dual-gate info; --require-regime optional gate.
+    P5: optional eow_package after SOLVED (or --force-ship → UNSOLVED_SHIP banner).
     """
     thr = thresholds or JobThresholds()
     params = (initial or FreeParams()).clamp()
@@ -760,6 +766,45 @@ def run_job_coherence_loop(
         )
         partner_recipe_path = str(recipe_path.resolve())
 
+    # P5 EOW ship (D): package inventory after SOLVED (or force UNSOLVED_SHIP)
+    eow_ship_result: dict[str, Any] | None = None
+    eow_ship_status: str | None = None
+    eow_package_str: str | None = (
+        str(Path(eow_package).resolve()) if eow_package is not None else None
+    )
+    if eow_package is not None:
+        eow_ship_result = ship_eow_package(
+            run_dir=out_root,
+            eow_package=eow_package,
+            solved=bool(solved),
+            force_ship=bool(force_ship),
+            partner_recipe_path=partner_recipe_path,
+            run_id=str(run_id) if run_id is not None else None,
+            free_params=params.to_dict(),
+            raise_on_refuse=False,
+        )
+        eow_ship_status = eow_ship_result.get("status")
+        if eow_ship_result.get("refused"):
+            logger.warning(
+                "EOW SHIP refused (not SOLVED, no --force-ship): %s",
+                eow_ship_result.get("reason"),
+            )
+        elif eow_ship_result.get("shipped") and os_mode:
+            append_ledger(
+                out_root / "ledger.jsonl",
+                {
+                    "action": "eow_ship",
+                    "status": eow_ship_status,
+                    "solved": solved,
+                    "force_ship": bool(force_ship),
+                    "eow_package": eow_package_str,
+                    "package_index": eow_ship_result.get("package_index"),
+                    "ship_md": eow_ship_result.get("ship_md"),
+                    "partner_recipe": partner_recipe_path,
+                    "n_files": (eow_ship_result.get("inventory") or {}).get("n_files"),
+                },
+            )
+
     if os_mode and run_doc is not None:
         run_doc["status"] = "solved" if solved else stop_reason
         run_doc["stop_reason"] = stop_reason
@@ -771,13 +816,28 @@ def run_job_coherence_loop(
         run_doc["partner_recipe"] = partner_recipe_path
         run_doc["with_regime"] = with_regime
         run_doc["with_science"] = with_science
+        run_doc["eow_package"] = eow_package_str
+        run_doc["eow_ship_status"] = eow_ship_status
+        run_doc["eow_ship"] = (
+            {
+                "status": eow_ship_status,
+                "ok": eow_ship_result.get("ok"),
+                "shipped": eow_ship_result.get("shipped"),
+                "refused": eow_ship_result.get("refused"),
+                "package_index": eow_ship_result.get("package_index"),
+                "ship_md": eow_ship_result.get("ship_md"),
+                "banner": eow_ship_result.get("banner"),
+            }
+            if eow_ship_result is not None
+            else None
+        )
         _write_run_json(out_root, run_doc)
         if parent_for_latest is not None:
             _write_latest_run_pointer(parent_for_latest, out_root)
 
     result = {
         "ontology": (
-            "job_coherence_os_p4_not_rop_score"
+            "job_coherence_os_p5_not_rop_score"
             if os_mode
             else "job_coherence_protocol_not_rop_score"
         ),
@@ -792,6 +852,9 @@ def run_job_coherence_loop(
         "thresholds": thr.to_dict(),
         "final_params": params.to_dict(),
         "partner_recipe": partner_recipe_path,
+        "eow_package": eow_package_str,
+        "eow_ship_status": eow_ship_status,
+        "eow_ship": eow_ship_result,
         "pin_locked": {
             "depth_mono": True,
             "required_channels_for_pack": True,
@@ -819,6 +882,8 @@ def run_job_coherence_loop(
             "P2: MicroPulse fiber join + structural glue. "
             "P3: survey stalk QC + optional discrete holonomy (never invent Inc/Azi). "
             "P4: regime H0 barcode + dual-gate science info (not accept gate). "
+            "P5: EOW SHIP after SOLVED (or --force-ship UNSOLVED_SHIP); "
+            "PACKAGE_INDEX + PARTNER_RECIPE attach. "
             "QC pin locked. Not ROP score-chase. Never ζ→ROP."
         ),
     }

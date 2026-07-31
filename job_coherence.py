@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Oilfield Job Coherence OS CLI (P4: regime stalk + dual-gate science).
+"""Oilfield Job Coherence OS CLI (P5: EOW package ship + recipe attach).
 
 observe → negotiate free parameters → re-ingest → until coherent or budget.
 
@@ -16,6 +16,10 @@ Never invent Inc/Azi.
 P4: regime stalk (C) — windowed H0 on SSSI/TOR/RPM; shock exceedance;
 --with-regime / --with-science dual-gate (native vs time-scramble) info only;
 --require-regime optional commercial gate. Science score never sets SOLVED alone.
+
+P5: --eow-package PATH after SOLVED (or with full run then ship);
+writes eow/PACKAGE_INDEX.json + SHIP.md with integrity hashes; references
+PARTNER_RECIPE. Refuse unless SOLVED unless --force-ship (UNSOLVED_SHIP banner).
 
 Never ROP score-chase. Never retune SOP pin mid-run. Never ζ→ROP.
 Mirror of handoff_coherence OS v2 without protein adapters.
@@ -44,7 +48,8 @@ def main(argv: list[str] | None = None) -> int:
         description=(
             "Oilfield Job Coherence OS: negotiate align/window/pack/null/survey_gate/"
             "regime_mode until job routine fixed-point. QC pin locked. "
-            "Optional MicroPulse + survey + regime science. Not ROP score-chase."
+            "Optional MicroPulse + survey + regime science + EOW ship. "
+            "Not ROP score-chase."
         )
     )
     p.add_argument(
@@ -167,6 +172,23 @@ def main(argv: list[str] | None = None) -> int:
         default=1e-6,
         help="locked pin tolerance for depth monotonicity (config, not free)",
     )
+    p.add_argument(
+        "--eow-package",
+        type=Path,
+        default=None,
+        help=(
+            "P5: EOW-like directory to inventory after SOLVED "
+            "(surveys/LAS/pdfs/xlsx); writes eow/PACKAGE_INDEX.json + SHIP.md"
+        ),
+    )
+    p.add_argument(
+        "--force-ship",
+        action="store_true",
+        help=(
+            "P5: allow EOW SHIP when not SOLVED; status UNSOLVED_SHIP with banner "
+            "(never pretends commercial fixed-point)"
+        ),
+    )
     p.add_argument("-v", action="store_true")
     args = p.parse_args(argv)
 
@@ -174,6 +196,10 @@ def main(argv: list[str] | None = None) -> int:
         level=logging.DEBUG if args.v else logging.INFO,
         format="%(asctime)s - %(levelname)s - %(message)s",
     )
+
+    if args.eow_package is not None and not args.eow_package.exists():
+        logger.error("--eow-package path not found: %s", args.eow_package)
+        return 2
 
     if args.resume is not None:
         if not (args.resume / "RUN.json").is_file():
@@ -191,6 +217,8 @@ def main(argv: list[str] | None = None) -> int:
                 os_mode=True,
                 with_regime=bool(args.with_regime),
                 with_science=bool(args.with_science),
+                eow_package=args.eow_package,
+                force_ship=bool(args.force_ship),
             )
         except FileNotFoundError as exc:
             logger.error("%s", exc)
@@ -238,6 +266,8 @@ def main(argv: list[str] | None = None) -> int:
                 run_id=args.run_id,
                 with_regime=bool(args.with_regime),
                 with_science=bool(args.with_science),
+                eow_package=args.eow_package,
+                force_ship=bool(args.force_ship),
             )
         except FileNotFoundError as exc:
             logger.error("%s", exc)
@@ -259,6 +289,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 4
 
+    eow = result.get("eow_ship") or {}
     print(
         json.dumps(
             {
@@ -270,6 +301,10 @@ def main(argv: list[str] | None = None) -> int:
                 "stability_k": result.get("stability_k"),
                 "final_params": result.get("final_params"),
                 "partner_recipe": result.get("partner_recipe"),
+                "eow_ship_status": result.get("eow_ship_status"),
+                "eow_shipped": eow.get("shipped"),
+                "eow_refused": eow.get("refused"),
+                "eow_banner": eow.get("banner"),
                 "pin_ok": (result.get("pin_locked") or {}).get("last_ok"),
                 "micropulse_kinds": result.get("micropulse_kinds"),
                 "survey_n_stations": result.get("survey_n_stations"),
@@ -281,12 +316,14 @@ def main(argv: list[str] | None = None) -> int:
                 "note": (
                     "pin locked; free params only; OS fixed-point K; "
                     "glue structural; survey never invents Inc/Azi; "
-                    "science info only; not ROP"
+                    "science info only; EOW ship post-SOLVED; not ROP"
                 ),
             },
             indent=2,
         )
     )
+    if eow.get("refused") and not result.get("solved"):
+        return 1
     return 0 if result.get("solved") else 1
 
 
