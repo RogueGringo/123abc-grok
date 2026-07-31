@@ -7,7 +7,7 @@ from pathlib import Path
 
 from handoff_deliver import main as deliver_main
 from realm.handoff.package import write_delivery_receipt
-from realm.handoff.verify import verify_dual_gate_pin
+from realm.handoff.verify import verify_delivery_receipt, verify_dual_gate_pin
 
 
 def test_write_delivery_receipt(tmp_path: Path):
@@ -57,6 +57,15 @@ def test_write_delivery_receipt(tmp_path: Path):
     assert "mean_enrichment" in data["not_acceptance_criteria"]
     assert data.get("payload_sha256")
     assert "not_lambda_eq_gamma" in data["ontology"]
+    v = verify_delivery_receipt(path, require_shippable=True)
+    assert v["ok"] is True
+    assert v["payload_sha256_ok"] is True
+
+    # tamper
+    data["shippable"] = False
+    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    bad = verify_delivery_receipt(path, require_shippable=True)
+    assert bad["ok"] is False
 
 
 def test_handoff_deliver_cli(tmp_path: Path):

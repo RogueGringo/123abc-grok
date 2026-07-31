@@ -431,6 +431,106 @@ def verify_attestation(archive_dir: Path | str) -> dict[str, Any]:
     }
 
 
+def verify_delivery_receipt(
+    path: Path | str,
+    *,
+    require_shippable: bool = True,
+    recheck_drops: bool = False,
+) -> dict[str, Any]:
+    """Verify a DELIVERY.json commercial ship receipt.
+
+    Checks payload seal, live dual-gate pin, shippable flag, drop accepts.
+    Optional recheck_drops runs accept_partner_drop on each archive_dir.
+    """
+    p = Path(path)
+    pin = verify_dual_gate_pin()
+    reasons: list[str] = []
+    if not p.is_file():
+        return {
+            "ok": False,
+            "reasons": ["missing_delivery_json"],
+            "path": str(p),
+            "pin": pin,
+            "ontology": "handoff_delivery_verify_not_lambda_eq_gamma",
+        }
+    try:
+        body = json.loads(p.read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "ok": False,
+            "reasons": [f"invalid_json:{exc}"],
+            "path": str(p.resolve()),
+            "pin": pin,
+            "ontology": "handoff_delivery_verify_not_lambda_eq_gamma",
+        }
+
+    if pin.get("ok") is not True:
+        reasons.append("live_pin_failed")
+    bpin = body.get("pin") or {}
+    if bpin.get("ok") is not True:
+        reasons.append("receipt_pin_not_ok")
+    if abs(float(bpin.get("soft_T", -1)) - 0.036) > 1e-9:
+        reasons.append("receipt_soft_T_drift")
+    if require_shippable and body.get("shippable") is not True:
+        reasons.append("not_shippable")
+
+    payload = json.dumps(
+        {
+            "pin": body.get("pin"),
+            "matrix_acceptance": body.get("matrix_acceptance"),
+            "drops": body.get("drops"),
+            "latest": body.get("latest"),
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    got = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    expect = body.get("payload_sha256")
+    if expect and got != expect:
+        reasons.append("payload_sha256_mismatch")
+
+    ma = body.get("matrix_acceptance") or {}
+    if ma and ma.get("ok") is False:
+        reasons.append("matrix_acceptance_not_ok")
+
+    drop_results: list[dict[str, Any]] = []
+    for d in body.get("drops") or []:
+        if d.get("accepted") is False:
+            reasons.append(f"drop_not_accepted:{d.get('token')}")
+        if recheck_drops and d.get("archive_dir"):
+            acc = accept_partner_drop(
+                d["archive_dir"],
+                require_acceptance=True,
+                require_attestation=True,
+            )
+            drop_results.append(
+                {
+                    "token": d.get("token"),
+                    "ok": acc.get("ok"),
+                    "n_pdb": acc.get("n_pdb"),
+                    "reasons": acc.get("reasons") or [],
+                }
+            )
+            if not acc.get("ok"):
+                reasons.append(f"drop_recheck_failed:{d.get('token')}")
+
+    ok = len(reasons) == 0
+    return {
+        "ok": ok,
+        "shippable": body.get("shippable"),
+        "reasons": reasons,
+        "path": str(p.resolve()),
+        "pin": pin,
+        "payload_sha256": expect,
+        "payload_sha256_ok": (expect is None) or (got == expect),
+        "matrix_acceptance": ma,
+        "n_drops": len(body.get("drops") or []),
+        "drop_rechecks": drop_results or None,
+        "ontology": "handoff_delivery_verify_not_lambda_eq_gamma",
+        "note": "Verify commercial ship receipt; openable PDBs + pin; not enrichment.",
+    }
+
+
 def accept_partner_drop(
     root: Path | str,
     *,

@@ -18,14 +18,14 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from realm.handoff.package import write_delivery_receipt
-from realm.handoff.verify import verify_dual_gate_pin
+from realm.handoff.verify import verify_delivery_receipt, verify_dual_gate_pin
 
 logger = logging.getLogger("handoff_deliver")
 
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
-        description="Write commercial DELIVERY.json receipt (pin + matrix + LATEST)"
+        description="Write or verify commercial DELIVERY.json receipt"
     )
     p.add_argument(
         "--matrix-report",
@@ -62,6 +62,17 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="exit non-zero if receipt is not shippable",
     )
+    p.add_argument(
+        "--verify",
+        type=Path,
+        default=None,
+        help="verify an existing DELIVERY.json (no rewrite)",
+    )
+    p.add_argument(
+        "--recheck-drops",
+        action="store_true",
+        help="with --verify, re-run partner accept on each drop archive",
+    )
     p.add_argument("-v", action="store_true")
     args = p.parse_args(argv)
 
@@ -69,6 +80,34 @@ def main(argv: list[str] | None = None) -> int:
         level=logging.DEBUG if args.v else logging.INFO,
         format="%(asctime)s - %(levelname)s - %(message)s",
     )
+
+    if args.verify is not None:
+        report = verify_delivery_receipt(
+            args.verify,
+            require_shippable=True,
+            recheck_drops=bool(args.recheck_drops),
+        )
+        out = Path(args.verify).parent / "DELIVERY_VERIFY.json"
+        out.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+        logger.info(
+            "delivery verify ok=%s shippable=%s reasons=%s → %s",
+            report.get("ok"),
+            report.get("shippable"),
+            report.get("reasons"),
+            out,
+        )
+        print(
+            json.dumps(
+                {
+                    "ok": report.get("ok"),
+                    "shippable": report.get("shippable"),
+                    "soft_T": (report.get("pin") or {}).get("soft_T"),
+                    "reasons": report.get("reasons"),
+                    "report": str(out.resolve()),
+                }
+            )
+        )
+        return 0 if report.get("ok") else 3
 
     pin = verify_dual_gate_pin()
     if not pin.get("ok"):
@@ -130,17 +169,20 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     receipt = json.loads(primary.read_text(encoding="utf-8"))
+    # self-check payload seal
+    v = verify_delivery_receipt(primary, require_shippable=False)
     logger.info(
-        "delivery shippable=%s n_pdb_total=%s drops=%s → %s",
+        "delivery shippable=%s n_pdb_total=%s drops=%s verify=%s → %s",
         receipt.get("shippable"),
         (receipt.get("matrix_acceptance") or {}).get("n_pdb_total"),
         len(receipt.get("drops") or []),
+        v.get("ok"),
         primary,
     )
     print(
         json.dumps(
             {
-                "ok": receipt.get("shippable"),
+                "ok": receipt.get("shippable") and v.get("ok"),
                 "shippable": receipt.get("shippable"),
                 "soft_T": (receipt.get("pin") or {}).get("soft_T"),
                 "n_pdb_total": (receipt.get("matrix_acceptance") or {}).get(
@@ -153,6 +195,8 @@ def main(argv: list[str] | None = None) -> int:
         )
     )
     if args.require_shippable and not receipt.get("shippable"):
+        return 3
+    if not v.get("ok"):
         return 3
     return 0
 
