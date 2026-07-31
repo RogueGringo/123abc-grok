@@ -96,6 +96,22 @@ def main(argv: list[str] | None = None) -> int:
             "never retunes dual-gate pin or gates commercial accept)"
         ),
     )
+    p.add_argument(
+        "--with-genotype",
+        action="store_true",
+        help=(
+            "after free-param loop: optional NS micro-search on spectral knobs "
+            "(if unsolved or science weak); never writes LengthPolicy pin"
+        ),
+    )
+    p.add_argument("--genotype-epochs", type=int, default=2)
+    p.add_argument("--genotype-pop", type=int, default=4)
+    p.add_argument(
+        "--science-weak",
+        type=float,
+        default=0.55,
+        help="mean soft enrichment below this triggers genotype when --with-genotype",
+    )
     p.add_argument("-v", action="store_true")
     args = p.parse_args(argv)
 
@@ -146,6 +162,10 @@ def main(argv: list[str] | None = None) -> int:
         verify=not args.no_verify,
         n_zeros=int(args.k),
         with_science=bool(args.with_science),
+        with_genotype=bool(args.with_genotype),
+        genotype_epochs=int(args.genotype_epochs),
+        genotype_pop=int(args.genotype_pop),
+        science_weak_threshold=float(args.science_weak),
     )
 
     print(
@@ -155,9 +175,11 @@ def main(argv: list[str] | None = None) -> int:
                 "stop_reason": result.get("stop_reason"),
                 "n_rounds": result.get("n_rounds"),
                 "final_params": result.get("final_params"),
+                "final_knobs_source": result.get("final_knobs_source"),
+                "genotype_improved": (result.get("genotype") or {}).get("improved"),
                 "pin_soft_T": (result.get("pin_locked") or {}).get("soft_T_n12"),
                 "out": result.get("out_root"),
-                "note": "pin locked; free params only",
+                "note": "pin locked; free params + optional genotype knobs",
             },
             indent=2,
         )

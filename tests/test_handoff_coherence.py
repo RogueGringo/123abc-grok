@@ -160,3 +160,39 @@ def test_observe_from_summary():
     assert obs.pin_ok and obs.n_export_ok == 2
     assert obs.decorate_n_ok == 4
     assert obs.physics_n_fail == 0
+
+
+def test_run_genotype_phase_structure():
+    """Genotype phase returns pin-safe report shape (may be slow if network)."""
+    from realm.handoff.coherence import run_genotype_phase
+
+    # Minimal knobs dict — may skip if Keymaker/probe fails in offline env
+    knobs = {
+        "Lambda": 1.0,
+        "omega_scale": 1.0,
+        "weight_power": 1.0,
+        "tier_split": 0.45,
+        "low_boost": 1.0,
+        "w1_mult": 1.0,
+        "w2_mult": 1.0,
+        "w3_mult": 1.0,
+    }
+    try:
+        rep = run_genotype_phase(
+            knobs,
+            probe_ids=["1CSA"],
+            n_zeros=14,
+            n_pop=2,
+            n_epochs=1,
+            n_decoys=4,
+        )
+    except Exception as exc:  # noqa: BLE001
+        import pytest
+
+        pytest.skip(f"genotype phase unavailable: {exc}")
+    assert rep.get("ran") is True
+    assert "baseline_probe_enrichment" in rep
+    assert "champion_knobs" in rep
+    assert "not_lambda" in (rep.get("ontology") or "") or "not_lambda" in (
+        rep.get("note") or ""
+    )

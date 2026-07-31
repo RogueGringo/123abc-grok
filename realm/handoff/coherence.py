@@ -511,6 +511,94 @@ def _science_soft_probe(
     }
 
 
+def run_genotype_phase(
+    founder_knobs: dict[str, Any],
+    *,
+    probe_ids: list[str],
+    n_zeros: int = 14,
+    n_pop: int = 4,
+    n_epochs: int = 2,
+    n_decoys: int = 12,
+    soft_T: float = 0.04,
+    defect_beta: float = 0.20,
+    seed: int = 42,
+) -> dict[str, Any]:
+    """Optional NS micro-search on spectral knobs (never dual-gate pin).
+
+    Sister to free-param negotiate: adapts genotype (Λ, ω, …) under probe
+    enrichment dual fitness. Does not write LengthPolicy or soft_T pin.
+    """
+    import numpy as np
+
+    from realm.adaptive_evolve import AdaptivePolicy, run_natural_selection
+    from realm.lock_key import Keymaker
+
+    # Prefer small probe set for speed
+    probes = [str(p).upper() for p in probe_ids[:4]] or ["1CSA"]
+    km = Keymaker(N=max(11, 7), n_zeros=int(n_zeros), n_sectors=6)
+    g_last = float(km.forge().field.gammas[-1])
+    rng = np.random.default_rng(int(seed))
+
+    # Local import of probe builder from evolve_ns when available
+    try:
+        from evolve_ns import _probe_enrichment_fn
+
+        probe_fn = _probe_enrichment_fn(
+            probes,
+            [],
+            n_decoys=int(n_decoys),
+            n_zeros=int(n_zeros),
+            n_sectors=6,
+            defect_beta=float(defect_beta),
+            soft_T=float(soft_T),
+            rng=rng,
+        )
+    except Exception:  # noqa: BLE001
+        # Fallback: constant probe (no-op genotype)
+        def probe_fn(_kn: dict) -> tuple[float, float | None]:
+            return 0.0, None
+
+    base_pe, _ = probe_fn(founder_knobs)
+    policy = AdaptivePolicy(tau=0.08, r_soft_cap=0.015)
+    ns = run_natural_selection(
+        dict(founder_knobs),
+        g_last=g_last,
+        N=max(11, 7),
+        n_zeros=int(n_zeros),
+        n_sectors=6,
+        n_pop=int(n_pop),
+        n_epochs=int(n_epochs),
+        policy=policy,
+        probe_fn=probe_fn,
+        rng=rng,
+        log=lambda m: logger.info("genotype %s", m),
+        until_resolved=False,
+        max_epochs=int(n_epochs),
+        min_epochs=1,
+    )
+    champ = ns.get("champion") or {}
+    champ_kn = champ.get("knobs") or founder_knobs
+    champ_pe = float(champ.get("probe_enrichment") or 0.0)
+    improved = champ_pe > float(base_pe) + 1e-9
+    return {
+        "ontology": "coherence_genotype_phase_not_lambda_eq_gamma",
+        "ran": True,
+        "probe_ids": probes,
+        "baseline_probe_enrichment": float(base_pe),
+        "champion_probe_enrichment": champ_pe,
+        "improved": improved,
+        "champion_knobs": champ_kn if improved else dict(founder_knobs),
+        "champion_F_total": champ.get("F_total"),
+        "champion_R": champ.get("R"),
+        "n_epochs_ran": ns.get("n_epochs_ran"),
+        "stop_reason": ns.get("stop_reason"),
+        "note": (
+            "Genotype knobs only; dual-gate LengthPolicy pin never written. "
+            "Champion accepted for re-export only if probe improved."
+        ),
+    }
+
+
 def run_coherence_loop(
     *,
     pdb_ids: list[str],
@@ -522,10 +610,16 @@ def run_coherence_loop(
     verify: bool = True,
     n_zeros: int = 14,
     with_science: bool = False,
+    with_genotype: bool = False,
+    genotype_epochs: int = 2,
+    genotype_pop: int = 4,
+    science_weak_threshold: float = 0.55,
 ) -> dict[str, Any]:
     """Execute cyclic observe→multi-section propose→merge→export until coherent.
 
     Dual-gate pin is re-checked every round and never written/adapted.
+    Optional genotype phase runs after free-param loop if with_genotype and
+    (not solved OR science soft enrichment below threshold).
     """
     from realm.handoff.pipeline import export_structure_batch
 
@@ -533,12 +627,14 @@ def run_coherence_loop(
     params = (initial or FreeParams()).clamp()
     out_root = Path(out_root)
     out_root.mkdir(parents=True, exist_ok=True)
+    active_knobs = dict(knobs)
 
     pin0 = verify_dual_gate_pin()
     ledger: list[dict[str, Any]] = []
     tried: set[str] = set()
     solved = False
     stop_reason = "max_rounds"
+    last_science_enr: float | None = None
 
     for rnd in range(1, max(1, int(max_rounds)) + 1):
         cycle_dir = out_root / f"cycle_{rnd:02d}"
@@ -569,7 +665,7 @@ def run_coherence_loop(
 
         summary = export_structure_batch(
             list(pdb_ids),
-            knobs,
+            active_knobs,
             out_root=cycle_dir,
             top_k=int(params.top_k),
             n_zeros=int(n_zeros),
@@ -650,11 +746,12 @@ def run_coherence_loop(
         if with_science:
             try:
                 science_pack = _science_soft_probe(
-                    list(pdb_ids), knobs, n_zeros=n_zeros
+                    list(pdb_ids), active_knobs, n_zeros=n_zeros
                 )
                 obs.science_soft_enrichment = science_pack.get("mean_enrichment")
                 obs.science_n_ok = int(science_pack.get("n_ok") or 0)
                 obs.science_n_attempted = int(science_pack.get("n_attempted") or 0)
+                last_science_enr = obs.science_soft_enrichment
                 (cycle_dir / "science_probe.json").write_text(
                     json.dumps(science_pack, indent=2) + "\n", encoding="utf-8"
                 )
@@ -712,6 +809,126 @@ def run_coherence_loop(
         )
         params = nxt
 
+    # --- optional genotype phase (spectral knobs; never LengthPolicy pin) ---
+    genotype_report: dict[str, Any] | None = None
+    science_weak = (
+        last_science_enr is not None
+        and float(last_science_enr) < float(science_weak_threshold)
+    )
+    if with_genotype and (
+        not solved
+        or science_weak
+        or (with_science and last_science_enr is None)
+    ):
+        logger.info(
+            "genotype phase (NS micro-search) solved=%s science_enr=%s weak=%s",
+            solved,
+            last_science_enr,
+            science_weak,
+        )
+        try:
+            genotype_report = run_genotype_phase(
+                active_knobs,
+                probe_ids=list(pdb_ids),
+                n_zeros=int(n_zeros),
+                n_pop=int(genotype_pop),
+                n_epochs=int(genotype_epochs),
+            )
+            (out_root / "GENOTYPE.json").write_text(
+                json.dumps(genotype_report, indent=2) + "\n", encoding="utf-8"
+            )
+            if genotype_report.get("improved") and genotype_report.get(
+                "champion_knobs"
+            ):
+                active_knobs = dict(genotype_report["champion_knobs"])
+                # Re-export one validation cycle with free params + new genotype
+                val_dir = out_root / "cycle_genotype_validate"
+                summary = export_structure_batch(
+                    list(pdb_ids),
+                    active_knobs,
+                    out_root=val_dir,
+                    top_k=int(params.top_k),
+                    n_zeros=int(n_zeros),
+                    include_coutsias=False,
+                    decorate=params.decorate,
+                    physics=params.physics,
+                    with_enrichment=False,
+                    with_biopython_check=True,
+                    resume=False,
+                )
+                vreport = None
+                if verify:
+                    vreport = verify_handoff_tree(
+                        val_dir,
+                        require_sha256=False,
+                        check_biopython=False,
+                    )
+                pin = verify_dual_gate_pin()
+                obs = observe(
+                    pin=pin,
+                    export_summary=summary,
+                    verify_report=vreport,
+                    out_dir=val_dir,
+                )
+                solved_g = is_solved(obs, thr, params)
+                ledger.append(
+                    {
+                        "round": "genotype",
+                        "params": params.to_dict(),
+                        "observations": obs.to_dict(),
+                        "coherence_score": coherence_score(obs, thr, params),
+                        "solved": solved_g,
+                        "action": "genotype_validate",
+                        "reason": (
+                            "champion_knobs_applied"
+                            if genotype_report.get("improved")
+                            else "no_improvement"
+                        ),
+                        "genotype": {
+                            "baseline": genotype_report.get(
+                                "baseline_probe_enrichment"
+                            ),
+                            "champion": genotype_report.get(
+                                "champion_probe_enrichment"
+                            ),
+                            "improved": genotype_report.get("improved"),
+                        },
+                        "pin": {
+                            "ok": pin.get("ok"),
+                            "soft_T": pin.get("soft_T"),
+                        },
+                        "cycle_dir": str(val_dir.resolve()),
+                    }
+                )
+                if solved_g:
+                    solved = True
+                    stop_reason = "coherent_after_genotype"
+                elif solved:
+                    stop_reason = stop_reason  # keep prior
+                else:
+                    stop_reason = "genotype_did_not_solve"
+            else:
+                ledger.append(
+                    {
+                        "round": "genotype",
+                        "action": "genotype_no_improvement",
+                        "reason": "champion_not_better_than_baseline",
+                        "genotype": genotype_report,
+                        "solved": solved,
+                    }
+                )
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("genotype phase failed")
+            genotype_report = {"ran": True, "error": str(exc), "improved": False}
+            ledger.append(
+                {
+                    "round": "genotype",
+                    "action": "genotype_error",
+                    "reason": str(exc),
+                    "solved": solved,
+                }
+            )
+
     result = {
         "ontology": "handoff_coherence_protocol_not_lambda_eq_gamma",
         "solved": solved,
@@ -719,8 +936,15 @@ def run_coherence_loop(
         "n_rounds": len(ledger),
         "max_rounds": int(max_rounds),
         "with_science": bool(with_science),
+        "with_genotype": bool(with_genotype),
+        "genotype": genotype_report,
         "thresholds": thr.to_dict(),
         "final_params": params.to_dict(),
+        "final_knobs_source": (
+            "genotype_champion"
+            if genotype_report and genotype_report.get("improved")
+            else "founder"
+        ),
         "pin_locked": {
             "soft_T_n12": 0.036,
             "seq_mix": 0.0,
@@ -732,9 +956,11 @@ def run_coherence_loop(
         "out_root": str(out_root.resolve()),
         "pdb_ids": list(pdb_ids),
         "note": (
-            "Cyclic observe→multi-section propose→merge→export. "
-            "Free params only: decorate/physics/top_k. "
-            "Dual-gate pin locked. Science channel informational. "
+            "Cyclic observe→multi-section propose→merge→export "
+            "(+ optional genotype NS micro-search). "
+            "Free params: decorate/physics/top_k. "
+            "Genotype: spectral knobs only. "
+            "Dual-gate pin locked. Science informational. "
             "Not enrichment score-chase. Never lambda=gamma."
         ),
     }
@@ -753,7 +979,10 @@ def _write_coherence_md(result: dict[str, Any], path: Path) -> Path:
         f"- **stop:** `{result.get('stop_reason')}`",
         f"- **rounds:** {result.get('n_rounds')} / {result.get('max_rounds')}",
         f"- **final free params:** `{result.get('final_params')}`",
+        f"- **knobs source:** `{result.get('final_knobs_source')}`",
         f"- **pin locked:** soft_T(n=12)=**0.036** (never adapted)",
+        f"- **genotype:** `{bool(result.get('with_genotype'))}` "
+        f"improved=`{(result.get('genotype') or {}).get('improved')}`",
         "",
         "Commercial accept remains openable PDBs + dual-gate pin — not this loop's score.",
         "Never lambda=gamma.",

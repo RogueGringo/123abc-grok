@@ -1,0 +1,59 @@
+# Coherence protocol unit + light negotiate smoke (report-only).
+# Never retunes dual-gate pin. Never lambda=gamma.
+name: handoff-coherence
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "handoff_coherence.py"
+      - "realm/handoff/coherence.py"
+      - "tests/test_handoff_coherence.py"
+      - ".github/workflows/handoff-coherence.yml"
+
+jobs:
+  coherence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-handoff.txt
+      - name: Unit tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          pytest tests/test_handoff_coherence.py -q --tb=line
+          python -c "from realm.validate.length_policy import policy_for; p=policy_for(12,base_beta=0.20); assert abs(p.soft_T-0.036)<1e-12"
+      - name: Negotiate smoke (1CSA, no genotype)
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python handoff_coherence.py \
+            --pdb-ids 1CSA \
+            --decorate null \
+            --require-decorate \
+            --max-rounds 4 \
+            --out-dir /tmp/coherence_ci
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          d = json.loads(Path("/tmp/coherence_ci/COHERENCE.json").read_text())
+          assert d.get("pin_locked", {}).get("soft_T_n12") == 0.036
+          assert d.get("solved") is True
+          assert (d.get("final_params") or {}).get("decorate") == "sequence"
+          print("coherence CI OK", d.get("stop_reason"), d.get("final_params"))
+          PY
+      - name: Upload coherence ledger
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coherence-ci
+          path: /tmp/coherence_ci/
+          if-no-files-found: ignore
+          retention-days: 14
