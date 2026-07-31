@@ -667,8 +667,10 @@ def write_ship_md(ship: dict[str, Any], path: Path | str) -> Path:
                 "",
                 f"- attached: **{ks.get('ok')}** pin_ok={ks.get('pin_ok')}",
                 f"- decoy_mode_compare: **{ks.get('has_decoy_mode_compare')}**",
+                f"- science_pdf: **{ks.get('has_science_pdf')}**",
                 f"- source: `{ks.get('source')}`",
-                "- see `PARTNER_SCIENCE_ANNEX.md` / `DECOY_MODE_COMPARE.md`",
+                "- see `PARTNER_SCIENCE_ANNEX.md` / `DECOY_MODE_COMPARE.md` / "
+                "`PARTNER_SCIENCE_ONEPAGER.pdf`",
                 "- enrichment is informational only",
                 "",
             ]

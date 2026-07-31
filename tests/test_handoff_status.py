@@ -96,6 +96,7 @@ def test_handoff_status_build_and_cli(tmp_path: Path):
         ),
         encoding="utf-8",
     )
+    (stamp / "PARTNER_SCIENCE_ONEPAGER.pdf").write_bytes(b"%PDF-1.4 test")
     (ks / "LATEST").write_text(str(stamp.resolve()), encoding="utf-8")
 
     st = build_status(
@@ -114,6 +115,8 @@ def test_handoff_status_build_and_cli(tmp_path: Path):
     assert st.get("acceptance", {}).get("accepted") is True
     ks_st = st.get("known_solutions") or {}
     assert ks_st.get("has_compare") is True
+    assert ks_st.get("has_science_pdf") is True
+    assert ks_st.get("science_pdf")
     assert ks_st.get("compare_all_enr", {}).get("soft") == 0.9
     assert "not" in (ks_st.get("note") or "").lower() or "Science" in (
         ks_st.get("note") or ""

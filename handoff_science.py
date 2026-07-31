@@ -81,7 +81,13 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument(
         "--pdf",
         action="store_true",
-        help="ensure PARTNER_SCIENCE_ONEPAGER.pdf is written for the stamp",
+        default=None,
+        help="write PARTNER_SCIENCE_ONEPAGER.pdf (default: on when attaching)",
+    )
+    p.add_argument(
+        "--no-pdf",
+        action="store_true",
+        help="skip PDF even when attaching",
     )
     p.add_argument(
         "--status",
@@ -124,6 +130,17 @@ def main(argv: list[str] | None = None) -> int:
             "out": str(stamp_dir),
             "note": "dry-run; science only",
         }
+        want_pdf = bool(args.pdf) or (
+            not args.no_pdf
+            and (args.attach_releases is not None or args.attach_matrix is not None)
+        )
+        if want_pdf or args.pdf:
+            try:
+                from realm.validate.known_solutions_pdf import write_partner_science_pdf
+
+                summary["pdf"] = str(write_partner_science_pdf(stamp_dir))
+            except Exception as exc:  # noqa: BLE001
+                summary["pdf_error"] = str(exc)
         if args.attach_releases is not None:
             summary["attach_releases"] = attach_report_to_dir(
                 stamp_dir, args.attach_releases
@@ -145,6 +162,9 @@ def main(argv: list[str] | None = None) -> int:
             status_path.write_text(json.dumps(st, indent=2) + "\n", encoding="utf-8")
             summary["status_ok"] = st.get("ok")
             summary["status_report"] = str(status_path.resolve())
+            summary["status_has_pdf"] = (st.get("known_solutions") or {}).get(
+                "has_science_pdf"
+            )
         print(json.dumps(summary))
         return 0
 
@@ -203,7 +223,11 @@ def main(argv: list[str] | None = None) -> int:
             "note": "science stamp only; not ACCEPTANCE/SHIP",
         }
 
-    if args.pdf:
+    want_pdf = bool(args.pdf) or (
+        not args.no_pdf
+        and (args.attach_releases is not None or args.attach_matrix is not None)
+    )
+    if want_pdf:
         from realm.validate.known_solutions_pdf import write_partner_science_pdf
 
         try:

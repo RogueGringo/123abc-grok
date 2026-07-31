@@ -93,11 +93,17 @@ jobs:
         run: |
           pytest tests/test_known_solutions.py tests/test_decoys.py tests/test_handoff_science.py tests/test_known_solutions_pdf.py -q --tb=line
           python known_solutions.py --dry-run --skip-expand --out-dir /tmp/ks_dry
-          python handoff_science.py --dry-run --skip-expand --out-dir /tmp/ks_science_dry
+          # science golden path: dry-run + PDF + attach to releases (report-only)
+          mkdir -p /tmp/ks_releases
+          python handoff_science.py --dry-run --skip-expand --out-dir /tmp/ks_science_dry \
+            --pdf --attach-releases /tmp/ks_releases --status --releases /tmp/ks_releases
           # universe + pin only; enrichment never gates CI
           test -f /tmp/ks_dry/LATEST || test -d /tmp/ks_dry
           LATEST=$(cat /tmp/ks_dry/LATEST 2>/dev/null || ls -d /tmp/ks_dry/*/ 2>/dev/null | head -1)
           python -c "import json,sys; p=sys.argv[1].strip(); d=json.load(open(p+'/pin.json')); assert d['ok'] and abs(d['soft_T']-0.036)<1e-12; print('ks pin OK', d['soft_T'])" "$LATEST"
+          test -f /tmp/ks_releases/PARTNER_SCIENCE_ONEPAGER.pdf
+          test -f /tmp/ks_releases/PARTNER_SCIENCE_ANNEX.json
+          python -c "import json; s=json.load(open('/tmp/ks_releases/STATUS.json')); assert s['ok'] is True; ks=s.get('known_solutions') or {}; assert ks.get('has_science_pdf') is True; print('status pdf OK', ks.get('science_pdf'))"
       - name: BioPython open metric (1CSA commercial smoke)
         env:
           PYTHONPATH: ${{ github.workspace }}

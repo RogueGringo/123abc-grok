@@ -65,11 +65,14 @@ def _load_known_solutions(
                 )
             except Exception as exc:  # noqa: BLE001
                 return {"error": str(exc), "path": str(releases_dir)}
+            pdf_flat = releases_dir / "PARTNER_SCIENCE_ONEPAGER.pdf"
             return {
                 "attached_at_releases": True,
                 "path": str(releases_dir.resolve()),
                 "pin": annex.get("pin"),
                 "has_compare": (releases_dir / "DECOY_MODE_COMPARE.json").is_file(),
+                "has_science_pdf": pdf_flat.is_file(),
+                "science_pdf": str(pdf_flat.resolve()) if pdf_flat.is_file() else None,
                 "mean_enrichment_by_tag": annex.get("mean_enrichment_by_tag"),
                 "note": "Science annex on releases; not ACCEPTANCE.",
             }
@@ -124,6 +127,17 @@ def _load_known_solutions(
             out["compare_error"] = str(exc)
     else:
         out["has_compare"] = False
+    pdf_p = stamp / "PARTNER_SCIENCE_ONEPAGER.pdf"
+    if not pdf_p.is_file():
+        pdf_p = root / "PARTNER_SCIENCE_ONEPAGER.pdf"
+    if not pdf_p.is_file():
+        # attached flat under releases
+        flat = releases_dir / "PARTNER_SCIENCE_ONEPAGER.pdf"
+        if flat.is_file():
+            pdf_p = flat
+    out["has_science_pdf"] = pdf_p.is_file()
+    if pdf_p.is_file():
+        out["science_pdf"] = str(pdf_p.resolve())
     idx_p = root / "INDEX.json"
     if idx_p.is_file():
         try:
@@ -387,8 +401,9 @@ def main(argv: list[str] | None = None) -> int:
     if status.get("known_solutions"):
         ks = status["known_solutions"] or {}
         logger.info(
-            "known_solutions has_compare=%s modes=%s all_enr=%s (science only)",
+            "known_solutions has_compare=%s pdf=%s modes=%s all_enr=%s (science only)",
             ks.get("has_compare"),
+            ks.get("has_science_pdf"),
             ks.get("compare_modes"),
             ks.get("compare_all_enr"),
         )
