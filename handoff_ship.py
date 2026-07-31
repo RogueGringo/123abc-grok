@@ -101,6 +101,43 @@ def main(argv: list[str] | None = None) -> int:
             "out-root (report-only; never gates ship/accept)"
         ),
     )
+    p.add_argument(
+        "--run-known-solutions",
+        action="store_true",
+        help=(
+            "after commercial ship: run known-solutions science ledger and attach "
+            "(report-only; never gates ship/accept)"
+        ),
+    )
+    p.add_argument(
+        "--ks-compare-modes",
+        type=str,
+        default=None,
+        help="with --run-known-solutions: e.g. soft,mixed,hard",
+    )
+    p.add_argument(
+        "--ks-skip-expand",
+        action="store_true",
+        help="with --run-known-solutions: curated probe/holdout only",
+    )
+    p.add_argument(
+        "--ks-n-seeds",
+        type=int,
+        default=1,
+        help="with --run-known-solutions: n_seeds (default 1)",
+    )
+    p.add_argument(
+        "--ks-out-dir",
+        type=Path,
+        default=None,
+        help="with --run-known-solutions: out dir (default: <out-root>/known_solutions_run)",
+    )
+    p.add_argument(
+        "--knobs",
+        type=Path,
+        default=Path("evolve_result.json"),
+        help="knobs for --run-known-solutions",
+    )
     p.add_argument("-v", action="store_true")
     args = p.parse_args(argv)
 
@@ -225,21 +262,64 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     ks_meta = None
-    if args.attach_known_solutions is not None:
+    ks_src = args.attach_known_solutions
+    # Science stamp AFTER commercial verify — never gates ship ok
+    if args.run_known_solutions:
+        from realm.validate.known_solutions import (
+            run_compare_modes,
+            run_known_solutions,
+        )
+
+        ks_out = args.ks_out_dir or (out_root / "known_solutions_run")
+        logger.info(
+            "=== ship: run known-solutions (report-only) → %s ===", ks_out
+        )
+        if args.ks_compare_modes:
+            modes = [
+                m.strip()
+                for m in str(args.ks_compare_modes).split(",")
+                if m.strip()
+            ]
+            ks_report = run_compare_modes(
+                knobs_path=args.knobs,
+                out_dir=ks_out,
+                modes=modes,
+                n_seeds=int(args.ks_n_seeds),
+                n_decoys=24,
+                skip_expand=bool(args.ks_skip_expand),
+                kabsch_set="curated",
+                kabsch_max=4,
+            )
+        else:
+            ks_report = run_known_solutions(
+                knobs_path=args.knobs,
+                out_dir=ks_out,
+                n_seeds=int(args.ks_n_seeds),
+                n_decoys=24,
+                skip_expand=bool(args.ks_skip_expand),
+                kabsch_set="curated",
+                kabsch_max=4,
+            )
+        ks_src = Path(ks_report.get("out_dir") or ks_out)
+        logger.info(
+            "known-solutions status=%s out=%s",
+            ks_report.get("status"),
+            ks_src,
+        )
+
+    if ks_src is not None:
         from realm.validate.known_solutions import attach_report_to_dir
 
-        logger.info(
-            "=== ship: attach known-solutions annex %s ===",
-            args.attach_known_solutions,
-        )
-        ks_meta = attach_report_to_dir(args.attach_known_solutions, args.releases)
+        logger.info("=== ship: attach known-solutions annex %s ===", ks_src)
+        ks_meta = attach_report_to_dir(ks_src, args.releases)
         # also beside matrix for partner matrix drop
         if matrix_report.parent.is_dir():
-            attach_report_to_dir(args.attach_known_solutions, matrix_report.parent)
+            attach_report_to_dir(ks_src, matrix_report.parent)
         logger.info(
-            "known-solutions attach ok=%s pin_ok=%s",
+            "known-solutions attach ok=%s pin_ok=%s compare=%s",
             ks_meta.get("ok"),
             ks_meta.get("pin_ok"),
+            ks_meta.get("has_decoy_mode_compare"),
         )
 
     ship = {
