@@ -133,6 +133,9 @@ def observe_job(
             series,
             pack=p.channel_pack,
             depth_mono_eps=float(thr.depth_mono_eps),
+            max_depth_mono_violations=int(
+                getattr(thr, "max_depth_mono_violations", 0) or 0
+            ),
         )
 
     # Glue: use provided report or compute from series.micropulse bundle-like

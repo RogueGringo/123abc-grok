@@ -105,6 +105,8 @@ class JobThresholds:
     require_verify_ok: bool = True
     require_pin: bool = True
     depth_mono_eps: float = 1e-6  # pin config (locked for a run — not free)
+    # EDR re-logs may reverse depth rarely; config (not free-param score-chase)
+    max_depth_mono_violations: int = 0
     require_align: bool = False  # if True, align_mode=none not coherent for multi-src
     # P3 survey stalk: when True, is_solved needs present survey + gate stalk_ok
     require_survey: bool = False

@@ -77,12 +77,14 @@ def inspect_chunk(
     *,
     pack: str = "surface_min",
     depth_mono_eps: float = 1e-6,
+    max_depth_mono_violations: int = 0,
 ) -> dict[str, Any]:
     """Pin + lightweight stats for one chunk (no free-param negotiate)."""
     pin = verify_job_pin(
         chunk,
         pack=pack,
         depth_mono_eps=float(depth_mono_eps),
+        max_depth_mono_violations=int(max_depth_mono_violations),
     )
     channels = chunk.get("channels") or {}
     n_ch = len(channels)
@@ -159,6 +161,7 @@ def run_las_chunk_inspect(
     max_chunks: int = 32,
     pack: str = "surface_min",
     depth_mono_eps: float = 1e-6,
+    max_depth_mono_violations: int = 0,
     out_path: Path | str | None = None,
 ) -> dict[str, Any]:
     """Parse LAS once, walk chunks, write optional JSON report."""
@@ -170,7 +173,10 @@ def run_las_chunk_inspect(
     ):
         reports.append(
             inspect_chunk(
-                chunk, pack=pack, depth_mono_eps=depth_mono_eps
+                chunk,
+                pack=pack,
+                depth_mono_eps=depth_mono_eps,
+                max_depth_mono_violations=max_depth_mono_violations,
             )
         )
     agg = aggregate_chunk_inspect(

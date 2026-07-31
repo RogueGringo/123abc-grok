@@ -173,6 +173,15 @@ def main(argv: list[str] | None = None) -> int:
         help="locked pin tolerance for depth monotonicity (config, not free)",
     )
     p.add_argument(
+        "--max-depth-mono-violations",
+        type=int,
+        default=0,
+        help=(
+            "pin config (not free): allow N finite-depth decreases "
+            "(EDR re-logs); default 0=strict"
+        ),
+    )
+    p.add_argument(
         "--eow-package",
         type=Path,
         default=None,
@@ -278,6 +287,7 @@ def main(argv: list[str] | None = None) -> int:
                     require_verify_ok=True,
                     require_pin=True,
                     depth_mono_eps=float(args.depth_mono_eps),
+                    max_depth_mono_violations=int(args.max_depth_mono_violations),
                     require_survey=bool(args.require_survey),
                     require_regime=bool(args.require_regime),
                 ),

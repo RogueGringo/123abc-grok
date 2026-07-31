@@ -36,6 +36,85 @@ def _utc_run_id() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
 
+def _cycle_trend_fields(summary: dict[str, Any] | None) -> dict[str, Any]:
+    """Extract informational multi-scale / λ1 fields for ledger trends.
+
+    Never ACCEPTANCE. Graph λ1 is algebraic connectivity, not λ=γ ontology.
+    """
+    s = summary or {}
+    reg = s.get("regime") or {}
+    sci = s.get("science") or {}
+    # Full regime report may live only on disk; summary is shallow.
+    # Prefer nested multi_scale/graph if execute_job_cycle enriched summary.
+    multi = reg.get("multi_scale") or s.get("multi_scale") or {}
+    graph = reg.get("graph_labels") or s.get("graph_labels") or {}
+    return {
+        "not_acceptance": True,
+        "regime_structure_score": reg.get("structure_score"),
+        "regime_barcode_n_bars": reg.get("barcode_n_bars"),
+        "multi_scale_n_long": multi.get("n_long"),
+        "multi_scale_n_short": multi.get("n_short"),
+        "multi_scale_dominant_phase": (multi.get("phases") or {}).get("dominant"),
+        "graph_lambda_1": graph.get("lambda_1"),
+        "rips_h0_n_long": graph.get("rips_h0_n_long"),
+        "science_native_beats_decoy": sci.get("native_beats_decoy"),
+        "science_native_score": sci.get("native_score"),
+        "science_decoy_score": sci.get("decoy_score"),
+        "note": "Trend fields informational; never pin retune; never SOLVED alone.",
+    }
+
+
+def build_trend_rollup(ledger: list[dict[str, Any]]) -> dict[str, Any]:
+    """Relative λ1 / multi-scale trend across cycles (info only)."""
+    rows: list[dict[str, Any]] = []
+    lambdas: list[float] = []
+    for e in ledger:
+        if not isinstance(e.get("round"), int):
+            continue
+        t = e.get("trend") or {}
+        lam = t.get("graph_lambda_1")
+        row = {
+            "round": e.get("round"),
+            "graph_lambda_1": lam,
+            "multi_scale_n_long": t.get("multi_scale_n_long"),
+            "regime_structure_score": t.get("regime_structure_score"),
+            "science_native_beats_decoy": t.get("science_native_beats_decoy"),
+        }
+        rows.append(row)
+        if lam is not None:
+            try:
+                lambdas.append(float(lam))
+            except (TypeError, ValueError):
+                pass
+
+    trend_dir = "flat"
+    delta = None
+    if len(lambdas) >= 2:
+        delta = float(lambdas[-1] - lambdas[0])
+        if delta > 1e-9:
+            trend_dir = "non_decreasing"
+        elif delta < -1e-9:
+            trend_dir = "decreasing"
+        else:
+            trend_dir = "flat"
+
+    return {
+        "kind": "trend_rollup",
+        "not_acceptance": True,
+        "ontology": "job_trend_rollup_not_lambda_eq_gamma",
+        "n_cycles": len(rows),
+        "cycles": rows,
+        "lambda_1_series": lambdas,
+        "lambda_1_delta": delta,
+        "lambda_1_trend": trend_dir,
+        "guidance": (
+            "Prefer relative λ1 trend across cycles over absolute floors "
+            "(parent KB threshold guidance). Never ACCEPTANCE."
+        ),
+        "kb_source": "Parent KB threshold_guidance + Academic KB multi-scale",
+    }
+
+
 def write_partner_recipe(
     path: Path | str,
     *,
@@ -203,6 +282,7 @@ def execute_job_cycle(
         series,
         pack=p.channel_pack,
         depth_mono_eps=float(thr.depth_mono_eps),
+        max_depth_mono_violations=int(thr.max_depth_mono_violations),
     )
     (cycle_dir / "pin.json").write_text(
         json.dumps(pin, indent=2) + "\n", encoding="utf-8"
@@ -306,6 +386,8 @@ def execute_job_cycle(
             "barcode_n_bars": regime_report.get("barcode_n_bars"),
             "structure_score": regime_report.get("structure_score"),
             "shock_exceedance": regime_report.get("shock_exceedance"),
+            "multi_scale": regime_report.get("multi_scale"),
+            "graph_labels": regime_report.get("graph_labels"),
         },
         "science": {
             "enabled": science_report.get("enabled"),
@@ -313,6 +395,7 @@ def execute_job_cycle(
             "decoy_score": science_report.get("decoy_score"),
             "native_beats_decoy": science_report.get("native_beats_decoy"),
             "informational_only": True,
+            "not_acceptance": True,
         },
         "glue": {
             "score": glue.get("score"),
@@ -563,6 +646,7 @@ def run_job_coherence_loop(
                 max_chunks=max_chunks_i,
                 pack=params.channel_pack,
                 depth_mono_eps=float(thr.depth_mono_eps),
+                max_depth_mono_violations=int(thr.max_depth_mono_violations),
                 out_path=out_root / "CHUNK_INSPECT.json",
             )
             logger.info(
@@ -736,6 +820,8 @@ def run_job_coherence_loop(
                 "regime_shock_exceedance": obs.regime_shock_exceedance,
                 "science_enabled": obs.science_enabled,
                 "science_native_beats_decoy": obs.science_native_beats_decoy,
+                # Trend stalk (info only): λ1 / multi-scale from regime_report summary
+                "trend": _cycle_trend_fields(summary),
                 "cycle_dir": str(cycle_dir.resolve()),
                 "proposals": [pr.to_dict() for pr in board_props],
                 "sources": summary,
@@ -936,6 +1022,7 @@ def run_job_coherence_loop(
         "max_chunks": max_chunks_i,
         "max_rows": max_rows_i,
         "chunk_inspect": chunk_inspect_report,
+        "trend_rollup": None,  # filled below
         "micropulse_n_fibers": (mp_bundle or {}).get("n_fibers") if mp_bundle else 0,
         "micropulse_kinds": (mp_bundle or {}).get("kinds") if mp_bundle else [],
         "note": (
@@ -951,6 +1038,16 @@ def run_job_coherence_loop(
             "QC pin locked. Not ROP score-chase. Never ζ→ROP."
         ),
     }
+    # Relative λ1 / multi-scale trend rollup (info only)
+    trend_rollup = build_trend_rollup(ledger)
+    result["trend_rollup"] = trend_rollup
+    try:
+        (out_root / "TREND_ROLLUP.json").write_text(
+            json.dumps(trend_rollup, indent=2) + "\n", encoding="utf-8"
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("trend rollup write skipped: %s", exc)
+
     (out_root / "COHERENCE.json").write_text(
         json.dumps(result, indent=2) + "\n", encoding="utf-8"
     )

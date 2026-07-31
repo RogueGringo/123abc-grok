@@ -18,10 +18,15 @@ from realm.job_os.types import PACK_REQUIRED
 # unless inverted pair detected.
 _KNOWN_UNITS = {
     "FT",
+    "FEET",
+    "F",
     "M",
+    "METER",
+    "METERS",
     "KLBF",
     "LBF",
     "KLB",
+    "KLBS",
     "RPM",
     "SPM",
     "PSI",
@@ -29,17 +34,34 @@ _KNOWN_UNITS = {
     "BAR",
     "KLBF.FT",
     "FT-LBF",
+    "FT-LB",
     "N.M",
     "NM",
     "DEG",
+    "DEGREES",
     "GAPI",
+    "API",
+    "PERCENT",
+    "PCT",
+    "CPS",
+    "GAL/MIN",
+    "FT/HR",
+    "FT/MIN",
+    "BARRELS",
+    "HRS",
+    "IN",
+    "KSI",
     "",
 }
 
 # Obvious unit inversion pairs (unit present that contradicts depth unit family)
 _DEPTH_UNIT_FAMILIES = {
     "FT": "imperial_depth",
+    "FEET": "imperial_depth",
+    "F": "imperial_depth",
     "M": "metric_depth",
+    "METER": "metric_depth",
+    "METERS": "metric_depth",
 }
 
 
@@ -48,6 +70,7 @@ def verify_job_pin(
     pack: str = "surface_min",
     *,
     depth_mono_eps: float = 1e-6,
+    max_depth_mono_violations: int = 0,
 ) -> dict[str, Any]:
     """Verify QC pin against ingested series.
 
@@ -61,6 +84,9 @@ def verify_job_pin(
         channel_pack name selecting required mnemonics.
     depth_mono_eps :
         Locked tolerance for non-decreasing depth (config, not free param).
+    max_depth_mono_violations :
+        Config (not free): allow up to N consecutive-finite decreases (EDR re-logs).
+        Default 0 = strict. Does not retune mid-run for score.
 
     Returns
     -------
@@ -70,6 +96,7 @@ def verify_job_pin(
     details: dict[str, Any] = {
         "pack": pack,
         "depth_mono_eps": float(depth_mono_eps),
+        "max_depth_mono_violations": int(max_depth_mono_violations),
         "ontology": "job_qc_pin_not_rop_score",
     }
 
@@ -118,31 +145,49 @@ def verify_job_pin(
     depth_mono_ok = True
     n_depth = 0
     n_violations = 0
+    n_finite = 0
+    max_viol = max(0, int(max_depth_mono_violations))
     if depths is None:
         depth_mono_ok = False
         reasons.append("depth_missing")
     else:
+        depth_list: list[float] = []
         try:
-            depth_list = [float(x) for x in depths]
+            for x in depths:
+                if x is None:
+                    depth_list.append(float("nan"))
+                    continue
+                depth_list.append(float(x))
         except (TypeError, ValueError):
             depth_mono_ok = False
             reasons.append("depth_not_numeric")
             depth_list = []
         n_depth = len(depth_list)
         eps = float(depth_mono_eps)
-        for i in range(1, len(depth_list)):
-            if depth_list[i] + eps < depth_list[i - 1]:
+        # Compare only consecutive *finite* depths (skip null/NaN gaps)
+        prev: float | None = None
+        for d in depth_list:
+            if d != d:  # nan
+                continue
+            n_finite += 1
+            if prev is not None and d + eps < prev:
                 n_violations += 1
-        if n_violations > 0:
+            prev = d
+        if n_violations > max_viol:
             depth_mono_ok = False
-            reasons.append(f"depth_not_monotonic:violations={n_violations}")
-        if n_depth < 1:
+            reasons.append(
+                f"depth_not_monotonic:violations={n_violations}>max={max_viol}"
+            )
+        elif n_violations > 0:
+            details["depth_mono_violations_allowed"] = n_violations
+        if n_finite < 1:
             depth_mono_ok = False
             if "depth_missing" not in reasons and "depth_not_numeric" not in reasons:
                 reasons.append("depth_empty")
 
     details["depth_mono_ok"] = depth_mono_ok
     details["n_depth"] = n_depth
+    details["n_finite_depth"] = n_finite
     details["n_mono_violations"] = n_violations
 
     # --- unit sanity ---
