@@ -74,6 +74,40 @@ def test_export_structure_handoff_1csa(tmp_path: Path):
         assert m["ontology_remark_ok"] is True
         ca = Path(m["path_ca"]).read_text(encoding="utf-8")
         assert "not_lambda_eq_gamma" in ca
+    assert (tmp_path / "1CSA" / "PHYSICS_ROLLUP.json").is_file()
+
+
+def test_export_structure_handoff_polyala(tmp_path: Path):
+    kn_path = Path("evolve_result.json")
+    pdb_path = Path("data/pdb/1CSA.pdb")
+    if not kn_path.is_file() or not pdb_path.is_file():
+        pytest.skip("need evolve_result.json and data/pdb/1CSA.pdb")
+    kn = load_knobs(kn_path)
+    if isinstance(kn, dict) and "best_knobs" in kn:
+        kn = kn["best_knobs"]
+    out = export_structure_handoff(
+        "1CSA",
+        kn,
+        out_dir=tmp_path / "1CSA",
+        top_k=2,
+        include_coutsias=False,
+        decorate="polyala",
+        physics="geometry",
+        with_enrichment=False,
+        with_biopython_check=False,
+    )
+    assert out["status"] == "OK"
+    dec = out.get("decorate_rollup") or {}
+    assert dec.get("n_ok", 0) >= 1
+    assert (tmp_path / "1CSA" / "DECORATE_ROLLUP.json").is_file()
+    # at least one decorated polyala file
+    decorated = list((tmp_path / "1CSA").rglob("*_polyala.pdb"))
+    assert decorated
+    text = decorated[0].read_text(encoding="utf-8")
+    assert " CB " in text or "CB  ALA" in text
+    for m in out["molds"]:
+        assert m.get("decorate_status") == "OK"
+        assert m.get("path_decorated")
 
 
 def test_export_batch_manifest(tmp_path: Path):

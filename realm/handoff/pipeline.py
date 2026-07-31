@@ -182,6 +182,7 @@ def write_manifest_tsv(
         "path_ca",
         "path_bb",
         "path_decorated",
+        "decorate_status",
         "soft_T",
         "ontology_remark_ok",
         "biopython_ca_ok",
@@ -209,6 +210,7 @@ def write_manifest_tsv(
                     "path_ca": m.get("path_ca"),
                     "path_bb": m.get("path_bb"),
                     "path_decorated": m.get("path_decorated") or "",
+                    "decorate_status": m.get("decorate_status") or "",
                     "soft_T": soft_T,
                     "ontology_remark_ok": m.get("ontology_remark_ok"),
                     "biopython_ca_ok": (bio.get("ca") or {}).get("ok"),
@@ -349,6 +351,32 @@ def export_structure_handoff(
         except Exception as exc:  # noqa: BLE001
             logger.warning("physics rollup failed for %s: %s", pdb_id, exc)
 
+    # Decorate rollup (polyala / null / pyrosetta status counts)
+    dec_by: dict[str, int] = {}
+    n_dec_ok = 0
+    n_dec_paths = 0
+    for m in index_molds:
+        st = str(m.get("decorate_status") or "UNKNOWN")
+        dec_by[st] = dec_by.get(st, 0) + 1
+        if st == "OK":
+            n_dec_ok += 1
+        if m.get("path_decorated"):
+            n_dec_paths += 1
+    decorate_rollup = {
+        "ontology": "decorate_rollup_not_lambda_eq_gamma",
+        "by_status": dec_by,
+        "n_ok": n_dec_ok,
+        "n_with_path": n_dec_paths,
+        "n_molds": len(index_molds),
+        "note": (
+            "Decorate is optional partner convenience (e.g. poly-ALA CB stubs). "
+            "Not an ACCEPTANCE criterion; openable PDBs + pin remain commercial success."
+        ),
+    }
+    (out / "DECORATE_ROLLUP.json").write_text(
+        json.dumps(decorate_rollup, indent=2) + "\n", encoding="utf-8"
+    )
+
     index: dict[str, Any] = {
         "pdb": pdb_id.upper(),
         "status": "OK",
@@ -357,6 +385,7 @@ def export_structure_handoff(
         "dual_gate": stamp,
         "enrichment": enrich,
         "physics_rollup": physics_rollup,
+        "decorate_rollup": decorate_rollup,
         "biopython_summary": {
             "n_checked": n_bio_checked,
             "n_ok": n_bio_ok,
@@ -546,6 +575,8 @@ def export_structure_batch(
         "method",
         "path_ca",
         "path_bb",
+        "path_decorated",
+        "decorate_status",
         "soft_T",
         "enrichment",
         "top20",
@@ -567,6 +598,8 @@ def export_structure_batch(
                         "method": "",
                         "path_ca": "",
                         "path_bb": "",
+                        "path_decorated": "",
+                        "decorate_status": "",
                         "soft_T": "",
                         "enrichment": "",
                         "top20": "",
@@ -589,6 +622,8 @@ def export_structure_batch(
                         "method": m.get("method"),
                         "path_ca": m.get("path_ca"),
                         "path_bb": m.get("path_bb"),
+                        "path_decorated": m.get("path_decorated") or "",
+                        "decorate_status": m.get("decorate_status") or "",
                         "soft_T": soft_T,
                         "enrichment": enr,
                         "top20": top20,

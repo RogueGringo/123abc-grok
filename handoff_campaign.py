@@ -45,6 +45,19 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--top-k", type=int, default=4)
     p.add_argument("-k", type=int, default=14)
     p.add_argument("--with-enrichment", action="store_true")
+    p.add_argument(
+        "--decorate",
+        type=str,
+        default="polyala",
+        choices=("null", "polyala", "auto"),
+        help="sidechain decorate adapter (default: polyala for partner packages)",
+    )
+    p.add_argument(
+        "--physics",
+        type=str,
+        default="geometry",
+        help="physics filter (geometry | none); informational rollup",
+    )
     p.add_argument("--no-biopython-check", action="store_true")
     p.add_argument(
         "--require-biopython",
@@ -154,6 +167,8 @@ def main(argv: list[str] | None = None) -> int:
         top_k=int(args.top_k),
         n_zeros=int(args.k),
         include_coutsias=False,
+        decorate=str(args.decorate),
+        physics=str(args.physics),
         with_enrichment=bool(args.with_enrichment),
         with_biopython_check=not bool(args.no_biopython_check),
         resume=bool(args.resume),
