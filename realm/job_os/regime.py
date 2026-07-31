@@ -371,21 +371,34 @@ def evaluate_regime(
                 series_point_cloud,
                 spectral_labels,
             )
+            from realm.kb_geometry.rips_h0 import (
+                algebraic_connectivity,
+                vietoris_rips_h0,
+            )
 
             cloud = series_point_cloud(regime_chs, max_points=48)
             if cloud.shape[0] >= 4:
                 g = knn_graph(cloud, k=min(5, cloud.shape[0] - 1))
                 lab = spectral_labels(g, n_clusters=2, seed=0)
+                lam = algebraic_connectivity(g)
+                rips = vietoris_rips_h0(cloud, long_frac=0.25)
                 graph_labels = {
                     "enabled": True,
                     "n_points": int(cloud.shape[0]),
                     "n_clusters": lab.get("n_clusters"),
                     "labels": lab.get("labels"),
+                    "lambda_1": lam.get("lambda_1"),
+                    "rips_h0_n_long": rips.get("n_long"),
+                    "rips_h0_n_bars": rips.get("n_bars"),
                     "not_acceptance": True,
                     "informational_only": True,
-                    "note": "Spectral regime labels; never set SOLVED.",
+                    "note": (
+                        "Spectral labels + VR H0 + graph λ1 are informational; "
+                        "never set SOLVED; λ1 is graph connectivity not λ=γ."
+                    ),
                 }
                 notes.append("spectral_labels_info")
+                notes.append(f"graph_lambda1:{lam.get('lambda_1')}")
         except Exception as exc:  # noqa: BLE001
             graph_labels = {
                 "enabled": False,

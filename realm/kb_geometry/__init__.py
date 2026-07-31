@@ -12,6 +12,7 @@ Provenance cites ACADEMIC sources; transfer notes required.
 from __future__ import annotations
 
 from realm.kb_geometry.graph import knn_graph, spectral_labels, series_point_cloud
+from realm.kb_geometry.rips_h0 import algebraic_connectivity, vietoris_rips_h0
 from realm.kb_geometry.science_annex import (
     SCIENCE_ANNEX_KIND,
     attach_science_theory,
@@ -25,6 +26,7 @@ from realm.kb_geometry.zigzag_windows import (
 
 __all__ = [
     "SCIENCE_ANNEX_KIND",
+    "algebraic_connectivity",
     "attach_science_theory",
     "build_science_annex_base",
     "is_informational_only",
@@ -32,5 +34,6 @@ __all__ = [
     "phase_summary",
     "series_point_cloud",
     "spectral_labels",
+    "vietoris_rips_h0",
     "zigzag_window_barcode",
 ]
