@@ -16,6 +16,7 @@ on:
       - "handoff_accept.py"
       - "handoff_deliver.py"
       - "handoff_ship.py"
+      - "handoff_physics.py"
       - "known_solutions.py"
       - "handoff_science.py"
       - "realm/validate/known_solutions*.py"
@@ -42,6 +43,7 @@ on:
       - "handoff_accept.py"
       - "handoff_deliver.py"
       - "handoff_ship.py"
+      - "handoff_physics.py"
       - "known_solutions.py"
       - "handoff_science.py"
       - "realm/validate/known_solutions*.py"
@@ -77,6 +79,7 @@ jobs:
             tests/test_handoff_structure.py tests/test_handoff_package.py tests/test_handoff_verify.py \
             tests/test_handoff_release.py tests/test_handoff_matrix.py tests/test_handoff_status.py \
             tests/test_handoff_accept.py tests/test_handoff_deliver.py tests/test_handoff_ship.py \
+            tests/test_handoff_physics.py \
             -q --tb=line
       - name: Dual-gate policy pin + verify CLI
         env:

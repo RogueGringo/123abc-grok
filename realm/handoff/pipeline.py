@@ -19,7 +19,7 @@ import numpy as np
 
 from realm.handoff.decorate import select_adapter
 from realm.handoff.generate import generate_structure_ensemble
-from realm.handoff.physics import get_physics_adapter
+from realm.handoff.physics import get_physics_adapter, write_physics_rollup
 from realm.handoff.types import BackboneArtifact, DecorateRequest
 from realm.validate.length_policy import PRODUCTION_RANK, policy_for
 from realm.validate.pdb_write import write_mold_pair
@@ -295,6 +295,8 @@ def export_structure_handoff(
                 json.dumps(phys.to_dict(), indent=2), encoding="utf-8"
             )
             phys_report = phys.to_dict()
+            phys_report["stem"] = stem
+            phys_report["pdb"] = pdb_id.upper()
         ca_text = Path(paths["path_ca"]).read_text(encoding="utf-8")
         bio: dict[str, Any] = {}
         if with_biopython_check:
@@ -332,6 +334,21 @@ def export_structure_handoff(
             logger.warning("enrichment_stamp failed for %s: %s", pdb_id, exc)
             enrich = {"status": "ERROR", "error": str(exc), "read_only": True}
 
+    phys_reports = [
+        dict(m["physics"])
+        for m in index_molds
+        if m.get("physics")
+    ]
+    physics_rollup = None
+    if phys_reports:
+        try:
+            pr_path = write_physics_rollup(
+                phys_reports, out / "PHYSICS_ROLLUP.json", scope=pdb_id.upper()
+            )
+            physics_rollup = json.loads(pr_path.read_text(encoding="utf-8"))
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("physics rollup failed for %s: %s", pdb_id, exc)
+
     index: dict[str, Any] = {
         "pdb": pdb_id.upper(),
         "status": "OK",
@@ -339,6 +356,7 @@ def export_structure_handoff(
         "molds": index_molds,
         "dual_gate": stamp,
         "enrichment": enrich,
+        "physics_rollup": physics_rollup,
         "biopython_summary": {
             "n_checked": n_bio_checked,
             "n_ok": n_bio_ok,

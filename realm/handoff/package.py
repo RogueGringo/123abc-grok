@@ -1254,6 +1254,8 @@ Ontology: **Crit projection molds** (ζ substrate scaffolding only).
 | `ATTESTATION.json` | SHA256 seal over artifacts + pin snapshot (not a digital signature) |
 | `batch_index.json` / `index.json` | Machine-readable index + LengthPolicy snapshot |
 | `SHA256SUMS.txt` | Checksums of packaged files |
+| `PHYSICS_ROLLUP.json` / `.md` | Optional geometry self-check (CA bond vs 3.8 A; informational) |
+| `physics/*.json` | Per-mold geometry self-check when export ran with physics=geometry |
 
 Verify a package with:
 
