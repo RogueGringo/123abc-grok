@@ -22,6 +22,7 @@ from handoff_matrix import main as matrix_main
 from handoff_status import main as status_main
 from realm.handoff.package import (
     build_partner_receipt_bundle,
+    verify_partner_receipt_bundle,
     write_releases_catalog,
     write_ship_md,
 )
@@ -33,6 +34,12 @@ logger = logging.getLogger("handoff_ship")
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
         description="Commercial ship: optional matrix → DELIVERY → verify → status"
+    )
+    p.add_argument(
+        "--verify-bundle",
+        type=Path,
+        default=None,
+        help="verify partner_receipts_*.zip (or extracted dir); skip ship pipeline",
     )
     p.add_argument(
         "--run-matrix",
@@ -92,6 +99,33 @@ def main(argv: list[str] | None = None) -> int:
         level=logging.DEBUG if args.v else logging.INFO,
         format="%(asctime)s - %(levelname)s - %(message)s",
     )
+
+    if args.verify_bundle is not None:
+        report = verify_partner_receipt_bundle(args.verify_bundle)
+        out = Path(args.verify_bundle)
+        if out.is_file():
+            out_report = out.parent / "RECEIPT_BUNDLE_VERIFY.json"
+        else:
+            out_report = out / "RECEIPT_BUNDLE_VERIFY.json"
+        out_report.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+        logger.info(
+            "bundle verify ok=%s reasons=%s → %s",
+            report.get("ok"),
+            report.get("reasons"),
+            out_report,
+        )
+        print(
+            json.dumps(
+                {
+                    "ok": report.get("ok"),
+                    "soft_T": (report.get("pin") or {}).get("soft_T"),
+                    "n_pdb_total": ((report.get("delivery") or {}).get("n_pdb_total")),
+                    "reasons": report.get("reasons"),
+                    "report": str(out_report.resolve()),
+                }
+            )
+        )
+        return 0 if report.get("ok") else 3
 
     pin = verify_dual_gate_pin()
     if not pin.get("ok"):
@@ -220,6 +254,14 @@ def main(argv: list[str] | None = None) -> int:
                 "partner receipt bundle → %s",
                 bundle.get("zip_path"),
             )
+            # self-verify bundle after write
+            bv = verify_partner_receipt_bundle(bundle["zip_path"])
+            ship["partner_receipt_bundle_ok"] = bv.get("ok")
+            if not bv.get("ok"):
+                logger.error("receipt bundle verify failed: %s", bv.get("reasons"))
+                ship["ok"] = False
+            else:
+                logger.info("partner receipt bundle verify ok")
         except Exception as exc:  # noqa: BLE001
             logger.warning("receipt bundle skipped: %s", exc)
 

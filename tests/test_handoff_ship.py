@@ -6,7 +6,10 @@ import json
 from pathlib import Path
 
 from handoff_ship import main as ship_main
-from realm.handoff.package import build_partner_receipt_bundle
+from realm.handoff.package import (
+    build_partner_receipt_bundle,
+    verify_partner_receipt_bundle,
+)
 from realm.handoff.verify import verify_dual_gate_pin
 
 
@@ -97,6 +100,7 @@ def test_handoff_ship_from_existing_matrix(tmp_path: Path):
 
     assert ship.get("partner_receipt_bundle")
     assert Path(ship["partner_receipt_bundle"]).is_file()
+    assert ship.get("partner_receipt_bundle_ok") is True
     assert (releases / "PARTNER_RECEIPT_BUNDLE.json").is_file()
     # rebuild bundle independently
     meta = build_partner_receipt_bundle(
@@ -104,3 +108,9 @@ def test_handoff_ship_from_existing_matrix(tmp_path: Path):
     )
     assert meta["n_files"] >= 3
     assert Path(meta["zip_path"]).is_file()
+    bv = verify_partner_receipt_bundle(meta["zip_path"])
+    assert bv["ok"] is True
+    assert abs(bv["pin"]["soft_T"] - 0.036) < 1e-12
+
+    rc2 = ship_main(["--verify-bundle", meta["zip_path"]])
+    assert rc2 == 0

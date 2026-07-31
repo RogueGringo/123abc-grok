@@ -750,6 +750,7 @@ def build_partner_receipt_bundle(
             "## Verify",
             "",
             "```bash",
+            "python handoff_ship.py --verify-bundle partner_receipts_*.zip",
             "python handoff_deliver.py --verify LATEST_DELIVERY.json",
             "```",
             "",
@@ -782,6 +783,21 @@ def build_partner_receipt_bundle(
             arc = f"matrix/{f.name}" if _under_matrix(f) else f.name
             zf.write(f, arcname=arc)
 
+    # pin snapshot for partner-side offline awareness
+    try:
+        from realm.validate.length_policy import policy_for
+
+        pol = policy_for(12, base_beta=0.20)
+        pin_snap = {
+            "soft_T": float(pol.soft_T),
+            "seq_mix": float(pol.seq_mix),
+            "face_weight": float(pol.face_weight),
+            "expected_soft_T": 0.036,
+            "ok": abs(float(pol.soft_T) - 0.036) < 1e-12,
+        }
+    except Exception as exc:  # noqa: BLE001
+        pin_snap = {"ok": False, "error": str(exc)}
+
     meta = {
         "zip_path": str(zpath.resolve()),
         "zip_sha256": _sha256_file(zpath),
@@ -789,10 +805,24 @@ def build_partner_receipt_bundle(
         "files": [f.name for f in files],
         "created_utc": stamp,
         "label": safe,
+        "pin": pin_snap,
         "ontology": "handoff_partner_receipt_bundle_not_lambda_eq_gamma",
         "note": "Proof-only zip; mold PDBs not included. Openable PDB counts in DELIVERY.",
-        "verify_cli": "python handoff_deliver.py --verify LATEST_DELIVERY.json",
+        "verify_cli": "python handoff_ship.py --verify-bundle <partner_receipts.zip>",
+        "deliver_verify_cli": "python handoff_deliver.py --verify LATEST_DELIVERY.json",
     }
+    (root / "PARTNER_RECEIPT_BUNDLE.json").write_text(
+        json.dumps(meta, indent=2) + "\n", encoding="utf-8"
+    )
+    # include meta inside zip (append)
+    with zipfile.ZipFile(zpath, "a", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr(
+            "PARTNER_RECEIPT_BUNDLE.json",
+            json.dumps(meta, indent=2) + "\n",
+        )
+    # refresh outer sha after append
+    meta["zip_sha256"] = _sha256_file(zpath)
+    meta["n_files"] = int(meta["n_files"]) + 1
     (root / "PARTNER_RECEIPT_BUNDLE.json").write_text(
         json.dumps(meta, indent=2) + "\n", encoding="utf-8"
     )
@@ -803,6 +833,159 @@ def build_partner_receipt_bundle(
         meta["zip_sha256"][:16],
     )
     return meta
+
+
+def verify_partner_receipt_bundle(
+    zip_or_dir: Path | str,
+    *,
+    extract_dir: Path | str | None = None,
+) -> dict[str, Any]:
+    """Verify a partner_receipts_*.zip (or extracted dir) without mold PDBs.
+
+    Checks zip sha if meta present, DELIVERY payload seal, SHIP ok, dual-gate pin.
+    """
+    import tempfile
+
+    from realm.handoff.verify import verify_delivery_receipt, verify_dual_gate_pin
+
+    src = Path(zip_or_dir)
+    pin = verify_dual_gate_pin()
+    reasons: list[str] = []
+    work: Path
+    cleanup = False
+
+    if not src.exists():
+        return {
+            "ok": False,
+            "reasons": ["missing_path"],
+            "path": str(src),
+            "pin": pin,
+            "ontology": "handoff_receipt_bundle_verify_not_lambda_eq_gamma",
+        }
+
+    if src.is_file() and src.suffix.lower() == ".zip":
+        work = Path(extract_dir) if extract_dir else Path(tempfile.mkdtemp(prefix="receipt_bundle_"))
+        cleanup = extract_dir is None
+        work.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(src, "r") as zf:
+            zf.extractall(work)
+        zip_sha = _sha256_file(src)
+    elif src.is_dir():
+        work = src
+        zip_sha = None
+    else:
+        return {
+            "ok": False,
+            "reasons": ["not_zip_or_dir"],
+            "path": str(src),
+            "pin": pin,
+            "ontology": "handoff_receipt_bundle_verify_not_lambda_eq_gamma",
+        }
+
+    try:
+        if pin.get("ok") is not True:
+            reasons.append("live_pin_failed")
+
+        meta_path = work / "PARTNER_RECEIPT_BUNDLE.json"
+        meta = None
+        if meta_path.is_file():
+            try:
+                meta = json.loads(meta_path.read_text(encoding="utf-8"))
+                mpin = (meta.get("pin") or {})
+                if mpin.get("ok") is not True:
+                    reasons.append("bundle_meta_pin_not_ok")
+                if abs(float(mpin.get("soft_T", -1)) - 0.036) > 1e-9:
+                    reasons.append("bundle_meta_soft_T_drift")
+            except Exception as exc:  # noqa: BLE001
+                reasons.append(f"bundle_meta_invalid:{exc}")
+
+        delivery_path = None
+        for name in ("LATEST_DELIVERY.json", "DELIVERY.json"):
+            cand = work / name
+            if cand.is_file():
+                delivery_path = cand
+                break
+        if delivery_path is None:
+            reasons.append("missing_DELIVERY_json")
+            delivery_report = None
+        else:
+            delivery_report = verify_delivery_receipt(
+                delivery_path, require_shippable=True
+            )
+            if delivery_report.get("ok") is not True:
+                reasons.append("delivery_verify_failed")
+                reasons.extend(
+                    f"delivery:{r}" for r in (delivery_report.get("reasons") or [])[:5]
+                )
+
+        ship_report = None
+        ship_path = work / "SHIP.json"
+        if ship_path.is_file():
+            try:
+                ship_report = json.loads(ship_path.read_text(encoding="utf-8"))
+                if ship_report.get("ok") is not True:
+                    reasons.append("ship_not_ok")
+                if ship_report.get("shippable") is not True:
+                    reasons.append("ship_not_shippable")
+                st = ship_report.get("soft_T")
+                if st is not None and abs(float(st) - 0.036) > 1e-9:
+                    reasons.append("ship_soft_T_drift")
+            except Exception as exc:  # noqa: BLE001
+                reasons.append(f"ship_json_invalid:{exc}")
+
+        ma_path = work / "matrix" / "matrix_acceptance.json"
+        if not ma_path.is_file():
+            ma_path = work / "matrix_acceptance.json"
+        matrix_ok = None
+        if ma_path.is_file():
+            try:
+                ma = json.loads(ma_path.read_text(encoding="utf-8"))
+                matrix_ok = ma.get("ok")
+                if matrix_ok is not True:
+                    reasons.append("matrix_acceptance_not_ok")
+            except Exception as exc:  # noqa: BLE001
+                reasons.append(f"matrix_acceptance_invalid:{exc}")
+
+        ok = len(reasons) == 0
+        return {
+            "ok": ok,
+            "reasons": reasons,
+            "path": str(src.resolve()),
+            "work_dir": str(work.resolve()),
+            "zip_sha256": zip_sha,
+            "pin": pin,
+            "delivery": (
+                {
+                    "ok": (delivery_report or {}).get("ok"),
+                    "shippable": (delivery_report or {}).get("shippable"),
+                    "n_pdb_total": (
+                        (delivery_report or {}).get("matrix_acceptance") or {}
+                    ).get("n_pdb_total"),
+                    "path": str(delivery_path) if delivery_path else None,
+                }
+                if delivery_report is not None or delivery_path
+                else None
+            ),
+            "ship": (
+                {
+                    "ok": (ship_report or {}).get("ok"),
+                    "shippable": (ship_report or {}).get("shippable"),
+                    "n_pdb_total": (ship_report or {}).get("n_pdb_total"),
+                }
+                if ship_report
+                else None
+            ),
+            "matrix_acceptance_ok": matrix_ok,
+            "bundle_meta": meta,
+            "ontology": "handoff_receipt_bundle_verify_not_lambda_eq_gamma",
+            "note": "Proof-bundle verify; mold PDBs not required. Not enrichment chase.",
+        }
+    finally:
+        if cleanup and work.exists():
+            try:
+                shutil.rmtree(work, ignore_errors=True)
+            except Exception:  # noqa: BLE001
+                pass
 
 
 def write_latest_pointer(

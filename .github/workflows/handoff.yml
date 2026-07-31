@@ -135,3 +135,65 @@ jobs:
           path: /tmp/handoff_ci_artifact/
           if-no-files-found: ignore
           retention-days: 14
+      - name: Partner receipt bundle self-test
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from realm.handoff.package import (
+              build_partner_receipt_bundle,
+              write_delivery_receipt,
+              write_ship_md,
+          )
+          from realm.handoff.verify import verify_dual_gate_pin
+          from handoff_ship import main as ship_main
+
+          pin = verify_dual_gate_pin()
+          assert pin["ok"]
+          root = Path("/tmp/receipt_bundle_ci")
+          root.mkdir(parents=True, exist_ok=True)
+          ma = {
+              "ok": True,
+              "n_tokens": 1,
+              "n_accepted": 1,
+              "n_pdb_total": 4,
+              "tokens": {
+                  "probe": {
+                      "accepted": True,
+                      "n_pdb": 4,
+                      "archive_dir": None,
+                      "reasons": [],
+                  }
+              },
+          }
+          (root / "matrix_acceptance.json").write_text(json.dumps(ma) + "\n")
+          write_delivery_receipt(
+              path=root / "LATEST_DELIVERY.json",
+              pin=pin,
+              matrix_acceptance=ma,
+              latest={
+                  "label": "probe",
+                  "accepted": True,
+                  "n_pdb": 4,
+                  "archive_dir": str(root),
+              },
+              label="ci-receipt",
+          )
+          ship = {
+              "ok": True,
+              "shippable": True,
+              "soft_T": 0.036,
+              "n_pdb_total": 4,
+              "n_accepted": 1,
+              "delivery": str(root / "LATEST_DELIVERY.json"),
+          }
+          (root / "SHIP.json").write_text(json.dumps(ship) + "\n")
+          write_ship_md(ship, root / "SHIP.md")
+          meta = build_partner_receipt_bundle(
+              releases_dir=root, label="ci-receipt"
+          )
+          rc = ship_main(["--verify-bundle", meta["zip_path"]])
+          raise SystemExit(rc)
+          PY
