@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from realm.validate.known_solutions import run_known_solutions
+from realm.validate.known_solutions import run_compare_modes, run_known_solutions
 
 logger = logging.getLogger("known_solutions")
 
@@ -90,6 +90,15 @@ def main(argv=None) -> int:
         help="decoy difficulty: soft=production jitter; mixed/hard=structured closed-ring",
     )
     p.add_argument(
+        "--compare-modes",
+        type=str,
+        default=None,
+        help=(
+            "comma list e.g. soft,mixed,hard — run each decoy mode and write "
+            "DECOY_MODE_COMPARE + partner table (overrides single --decoy-mode)"
+        ),
+    )
+    p.add_argument(
         "--dry-run",
         action="store_true",
         help="resolve universe + pin only; no ranking",
@@ -110,6 +119,48 @@ def main(argv=None) -> int:
     if args.only_ids and not extra:
         logger.error("--only-ids requires --ids")
         return 2
+
+    if args.compare_modes and not args.dry_run:
+        modes = [m.strip() for m in args.compare_modes.split(",") if m.strip()]
+        bad = [m for m in modes if m not in ("soft", "mixed", "hard")]
+        if bad:
+            logger.error("invalid compare modes: %s", bad)
+            return 2
+        rollup = run_compare_modes(
+            knobs_path=args.knobs,
+            out_dir=args.out_dir,
+            modes=modes,
+            n_decoys=args.n_decoys,
+            n_seeds=args.n_seeds,
+            n_zeros=args.n_zeros,
+            noise=args.noise,
+            skip_expand=args.skip_expand,
+            allow_hf=args.allow_hf,
+            rcsb_list=args.rcsb_list,
+            extra_ids=extra or None,
+            only_ids=args.only_ids,
+            max_expand=args.max_expand,
+            full_seeds=args.full_seeds,
+            kabsch_set=args.kabsch_set,
+            kabsch_max=args.kabsch_max,
+            seed=args.seed,
+        )
+        pin = rollup.get("pin") or {}
+        if not pin.get("ok"):
+            logger.error("dual-gate pin FAIL: %s", pin)
+            return 2
+        cmp_ = rollup.get("compare") or {}
+        print(
+            f"status={rollup.get('status')} pin_ok={pin.get('ok')} "
+            f"soft_T={pin.get('soft_T')} modes={rollup.get('modes')} "
+            f"out={rollup.get('out_dir')}"
+        )
+        for mode, block in (cmp_.get("by_mode") or {}).items():
+            all_ok = block.get("all_ok") or {}
+            enr = all_ok.get("mean_enrichment")
+            enr_s = f"{enr:.1%}" if enr is not None else "n/a"
+            print(f"  {mode}: all_enr={enr_s} n={all_ok.get('n')}")
+        return 0
 
     report = run_known_solutions(
         knobs_path=args.knobs,

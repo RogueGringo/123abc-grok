@@ -16,7 +16,13 @@ on:
       - "handoff_accept.py"
       - "handoff_deliver.py"
       - "handoff_ship.py"
+      - "known_solutions.py"
+      - "realm/validate/known_solutions*.py"
+      - "realm/validate/decoys.py"
+      - "data/known_solutions/**"
       - "tests/test_handoff*.py"
+      - "tests/test_known_solutions.py"
+      - "tests/test_decoys.py"
       - "tests/test_pdb_write.py"
       - ".github/workflows/handoff.yml"
   pull_request:
@@ -33,7 +39,13 @@ on:
       - "handoff_accept.py"
       - "handoff_deliver.py"
       - "handoff_ship.py"
+      - "known_solutions.py"
+      - "realm/validate/known_solutions*.py"
+      - "realm/validate/decoys.py"
+      - "data/known_solutions/**"
       - "tests/test_handoff*.py"
+      - "tests/test_known_solutions.py"
+      - "tests/test_decoys.py"
       - "tests/test_pdb_write.py"
       - ".github/workflows/handoff.yml"
 
@@ -69,6 +81,16 @@ jobs:
           python handoff_matrix.py --dry-run --tokens probe,holdout --out-root /tmp/handoff_matrix_dry
           mkdir -p /tmp/handoff_empty_releases
           python handoff_status.py --releases /tmp/handoff_empty_releases --report /tmp/handoff_status.json
+      - name: Known-solutions unit + dry-run (report-only)
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          pytest tests/test_known_solutions.py tests/test_decoys.py -q --tb=line
+          python known_solutions.py --dry-run --skip-expand --out-dir /tmp/ks_dry
+          # universe + pin only; enrichment never gates CI
+          test -f /tmp/ks_dry/LATEST || test -d /tmp/ks_dry
+          LATEST=$(cat /tmp/ks_dry/LATEST 2>/dev/null || ls -d /tmp/ks_dry/*/ 2>/dev/null | head -1)
+          python -c "import json,sys; p=sys.argv[1].strip(); d=json.load(open(p+'/pin.json')); assert d['ok'] and abs(d['soft_T']-0.036)<1e-12; print('ks pin OK', d['soft_T'])" "$LATEST"
       - name: BioPython open metric (1CSA commercial smoke)
         env:
           PYTHONPATH: ${{ github.workspace }}

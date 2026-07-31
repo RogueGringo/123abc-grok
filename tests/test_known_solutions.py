@@ -11,6 +11,8 @@ from realm.validate.known_solutions import (
     aggregate_kabsch,
     aggregate_rows,
     attach_report_to_dir,
+    build_decoy_mode_compare,
+    write_decoy_mode_compare_md,
     write_partner_annex,
 )
 from realm.validate.known_solutions_ids import (
@@ -153,6 +155,54 @@ def test_partner_annex_not_acceptance(tmp_path: Path):
     assert "Not ACCEPTANCE" in text or "not ACCEPTANCE" in text.lower()
     assert "0.036" in text
     assert "Never λ=γ" in text or "never λ=γ" in text.lower()
+
+
+def test_build_decoy_mode_compare():
+    def _rep(enr_hold: float, enr_all: float) -> dict:
+        return {
+            "status": "OK",
+            "out_dir": "/x",
+            "aggregates": {
+                "n_ok": 2,
+                "n_attempted": 2,
+                "curated_probe": {"n": 1, "mean_enrichment": 0.9, "top20_rate": 1.0},
+                "curated_holdout": {
+                    "n": 1,
+                    "mean_enrichment": enr_hold,
+                    "top20_rate": 0.5,
+                },
+                "all_ok": {"n": 2, "mean_enrichment": enr_all, "top20_rate": 0.5},
+            },
+        }
+
+    cmp_ = build_decoy_mode_compare(
+        {
+            "soft": _rep(0.8, 0.85),
+            "hard": _rep(0.5, 0.6),
+        }
+    )
+    assert "soft" in cmp_["by_mode"] and "hard" in cmp_["by_mode"]
+    assert cmp_["deltas_vs_soft"]["hard"]["delta_all_vs_soft"] == pytest.approx(-0.25)
+    assert cmp_["deltas_vs_soft"]["hard"]["delta_holdout_vs_soft"] == pytest.approx(-0.3)
+
+
+def test_write_decoy_mode_compare_md(tmp_path: Path):
+    cmp_ = build_decoy_mode_compare(
+        {
+            "soft": {
+                "status": "OK",
+                "aggregates": {
+                    "all_ok": {"n": 1, "mean_enrichment": 0.9, "top20_rate": 1.0},
+                    "curated_probe": {"n": 1, "mean_enrichment": 0.9},
+                    "curated_holdout": {"n": 0},
+                },
+            }
+        }
+    )
+    p = write_decoy_mode_compare_md(cmp_, tmp_path / "c.md")
+    text = p.read_text(encoding="utf-8")
+    assert "soft" in text
+    assert "Not ACCEPTANCE" in text
 
 
 def test_attach_report_to_dir(tmp_path: Path):

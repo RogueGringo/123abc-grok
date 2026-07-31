@@ -685,3 +685,276 @@ def run_known_solutions(
         logger.warning("LATEST pointer: %s", exc)
 
     return base
+
+
+def _tag_slice(agg: dict[str, Any], tag: str) -> dict[str, Any]:
+    b = agg.get(tag) or {}
+    return {
+        "n": int(b.get("n") or 0),
+        "mean_enrichment": b.get("mean_enrichment"),
+        "top20_rate": b.get("top20_rate"),
+        "mean_native_rank": b.get("mean_native_rank"),
+    }
+
+
+def build_decoy_mode_compare(
+    mode_reports: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    """Compare aggregates across decoy modes (soft / mixed / hard)."""
+    by_mode: dict[str, Any] = {}
+    for mode, rep in mode_reports.items():
+        agg = rep.get("aggregates") or {}
+        by_mode[mode] = {
+            "status": rep.get("status"),
+            "decoy_mode": mode,
+            "n_ok": agg.get("n_ok"),
+            "n_attempted": agg.get("n_attempted"),
+            "curated_probe": _tag_slice(agg, "curated_probe"),
+            "curated_holdout": _tag_slice(agg, "curated_holdout"),
+            "rcsb_expand": _tag_slice(agg, "rcsb_expand"),
+            "all_ok": _tag_slice(agg, "all_ok"),
+            "out_dir": rep.get("out_dir"),
+        }
+
+    # deltas vs soft baseline when present
+    soft = by_mode.get("soft") or {}
+    deltas: dict[str, Any] = {}
+    soft_all = (soft.get("all_ok") or {}).get("mean_enrichment")
+    soft_hold = (soft.get("curated_holdout") or {}).get("mean_enrichment")
+    for mode, block in by_mode.items():
+        if mode == "soft":
+            continue
+        all_m = (block.get("all_ok") or {}).get("mean_enrichment")
+        hold_m = (block.get("curated_holdout") or {}).get("mean_enrichment")
+        deltas[mode] = {
+            "delta_all_vs_soft": (
+                None
+                if soft_all is None or all_m is None
+                else float(all_m) - float(soft_all)
+            ),
+            "delta_holdout_vs_soft": (
+                None
+                if soft_hold is None or hold_m is None
+                else float(hold_m) - float(soft_hold)
+            ),
+        }
+
+    return {
+        "ontology": "decoy_mode_compare_not_lambda_eq_gamma",
+        "by_mode": by_mode,
+        "deltas_vs_soft": deltas,
+        "note": (
+            "Harder decoys are a science stress test only. "
+            "Commercial accept/ship never uses enrichment or decoy mode."
+        ),
+    }
+
+
+def write_decoy_mode_compare_md(compare: dict[str, Any], path: Path | str) -> Path:
+    dest = Path(path)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    lines = [
+        "# Decoy mode comparison (known solutions)",
+        "",
+        "Report-only stress test: soft (production) vs mixed/hard structured decoys.",
+        "",
+        "| mode | probe enr | holdout enr | expand enr | all enr | top20 all |",
+        "|------|-----------|-------------|------------|---------|-----------|",
+    ]
+    by = compare.get("by_mode") or {}
+    for mode in sorted(by.keys(), key=lambda m: {"soft": 0, "mixed": 1, "hard": 2}.get(m, 9)):
+        b = by[mode]
+
+        def _pct(tag: str) -> str:
+            v = (b.get(tag) or {}).get("mean_enrichment")
+            return f"{v:.1%}" if v is not None else "—"
+
+        def _t20() -> str:
+            v = (b.get("all_ok") or {}).get("top20_rate")
+            return f"{v:.1%}" if v is not None else "—"
+
+        lines.append(
+            f"| {mode} | {_pct('curated_probe')} | {_pct('curated_holdout')} | "
+            f"{_pct('rcsb_expand')} | {_pct('all_ok')} | {_t20()} |"
+        )
+    deltas = compare.get("deltas_vs_soft") or {}
+    if deltas:
+        lines.extend(["", "## Δ vs soft (negative = harder decoys hurt enrichment)", ""])
+        for mode, d in sorted(deltas.items()):
+            da = d.get("delta_all_vs_soft")
+            dh = d.get("delta_holdout_vs_soft")
+            da_s = f"{da:+.1%}" if da is not None else "—"
+            dh_s = f"{dh:+.1%}" if dh is not None else "—"
+            lines.append(f"- **{mode}**: all {da_s}, holdout {dh_s}")
+    lines.extend(
+        [
+            "",
+            "## Disclaimers",
+            "",
+            "- Not ACCEPTANCE / not SHIP success.",
+            "- Pin remains soft_T(n=12)=0.036; never retuned for decoy mode.",
+            "- Never λ=γ.",
+            "",
+        ]
+    )
+    dest.write_text("\n".join(lines), encoding="utf-8")
+    return dest
+
+
+def run_compare_modes(
+    *,
+    knobs_path: Path | str,
+    out_dir: Path | str,
+    modes: list[str] | tuple[str, ...] = ("soft", "mixed", "hard"),
+    n_decoys: int = 24,
+    n_seeds: int = 1,
+    n_zeros: int = 14,
+    noise: float = 0.45,
+    skip_expand: bool = False,
+    allow_hf: bool = False,
+    rcsb_list: Path | str | None = None,
+    extra_ids: list[str] | None = None,
+    only_ids: bool = False,
+    max_expand: int | None = None,
+    full_seeds: bool = False,
+    kabsch_set: str = "curated",
+    kabsch_max: int = 4,
+    seed: int = 0,
+    stamp: str | None = None,
+) -> dict[str, Any]:
+    """Run known-solutions for each decoy mode; write comparison ledger.
+
+    Kabsch runs only for the first mode (cost control); later modes use kabsch none.
+    """
+    stamp = stamp or _utc_stamp()
+    root = Path(out_dir) / stamp
+    root.mkdir(parents=True, exist_ok=True)
+    pin = verify_dual_gate_pin()
+    write_json(root / "pin.json", pin)
+
+    mode_reports: dict[str, dict[str, Any]] = {}
+    modes_clean = [str(m).lower().strip() for m in modes if str(m).strip()]
+    if not modes_clean:
+        modes_clean = ["soft", "mixed", "hard"]
+
+    for i, mode in enumerate(modes_clean):
+        logger.info("=== compare decoy_mode=%s (%s/%s) ===", mode, i + 1, len(modes_clean))
+        rep = run_known_solutions(
+            knobs_path=knobs_path,
+            out_dir=root / "modes",
+            n_decoys=n_decoys,
+            n_seeds=n_seeds,
+            n_zeros=n_zeros,
+            noise=noise,
+            skip_expand=skip_expand,
+            allow_hf=allow_hf,
+            rcsb_list=rcsb_list,
+            extra_ids=extra_ids,
+            only_ids=only_ids,
+            max_expand=max_expand,
+            full_seeds=full_seeds,
+            kabsch_set=kabsch_set if i == 0 else "none",
+            kabsch_max=kabsch_max,
+            decoy_mode=mode,
+            dry_run=False,
+            seed=int(seed) + i * 1009,
+            stamp=f"{mode}",
+        )
+        mode_reports[mode] = rep
+
+    compare = build_decoy_mode_compare(mode_reports)
+    write_json(root / "DECOY_MODE_COMPARE.json", compare)
+    write_decoy_mode_compare_md(compare, root / "DECOY_MODE_COMPARE.md")
+
+    # Partner annex: soft primary stats + comparison table
+    soft_rep = mode_reports.get("soft") or next(iter(mode_reports.values()))
+    annex_base = dict(soft_rep)
+    annex_base["stamp"] = stamp
+    annex_base["decoy_mode_compare"] = compare
+    annex_base["config"] = {
+        **(soft_rep.get("config") or {}),
+        "compare_modes": modes_clean,
+        "n_seeds": n_seeds,
+        "n_decoys": n_decoys,
+    }
+    write_partner_annex(annex_base, root)
+    # Patch annex JSON with compare block explicitly
+    annex_path = root / "PARTNER_SCIENCE_ANNEX.json"
+    if annex_path.is_file():
+        try:
+            annex = json.loads(annex_path.read_text(encoding="utf-8"))
+            annex["decoy_mode_compare"] = {
+                "by_mode": {
+                    m: {
+                        "all_ok": (compare["by_mode"][m].get("all_ok")),
+                        "curated_holdout": (compare["by_mode"][m].get("curated_holdout")),
+                        "curated_probe": (compare["by_mode"][m].get("curated_probe")),
+                        "rcsb_expand": (compare["by_mode"][m].get("rcsb_expand")),
+                    }
+                    for m in compare.get("by_mode") or {}
+                },
+                "deltas_vs_soft": compare.get("deltas_vs_soft"),
+            }
+            annex["disclaimers"] = list(annex.get("disclaimers") or []) + [
+                "decoy_mode_compare is a science stress table; not an acceptance metric.",
+            ]
+            write_json(annex_path, annex)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("annex compare patch failed: %s", exc)
+
+    # Append compare table to partner MD
+    md_path = root / "PARTNER_SCIENCE_ANNEX.md"
+    if md_path.is_file():
+        extra = write_decoy_mode_compare_md(compare, root / "_compare_snippet.md")
+        try:
+            body = md_path.read_text(encoding="utf-8")
+            snip = extra.read_text(encoding="utf-8")
+            md_path.write_text(body.rstrip() + "\n\n" + snip, encoding="utf-8")
+            extra.unlink(missing_ok=True)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("partner md compare append: %s", exc)
+
+    # Internal rollup
+    rollup = {
+        "ontology": "known_solutions_compare_not_lambda_eq_gamma",
+        "stamp": stamp,
+        "pin": pin,
+        "modes": modes_clean,
+        "compare": compare,
+        "mode_out_dirs": {m: r.get("out_dir") for m, r in mode_reports.items()},
+        "status": "OK" if pin.get("ok") and mode_reports else "FAIL",
+        "out_dir": str(root),
+        "note": "Multi-mode decoy comparison; report-only; never λ=γ.",
+    }
+    write_json(root / "KNOWN_SOLUTIONS_COMPARE.json", rollup)
+    write_internal_md(
+        {
+            **soft_rep,
+            "stamp": stamp,
+            "aggregates": soft_rep.get("aggregates") or {},
+            "kabsch_aggregates": soft_rep.get("kabsch_aggregates") or {},
+            "pin": pin,
+        },
+        root / "KNOWN_SOLUTIONS.md",
+    )
+    # extend internal md with compare path
+    try:
+        p = root / "KNOWN_SOLUTIONS.md"
+        p.write_text(
+            p.read_text(encoding="utf-8")
+            + "\n## Decoy mode comparison\n\n"
+            + f"See `DECOY_MODE_COMPARE.md` (modes={modes_clean}).\n",
+            encoding="utf-8",
+        )
+    except Exception:  # noqa: BLE001
+        pass
+
+    latest = Path(out_dir) / "LATEST"
+    try:
+        if latest.is_file() or latest.is_symlink():
+            latest.unlink()
+        latest.write_text(str(root.resolve()), encoding="utf-8")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("LATEST pointer: %s", exc)
+
+    return rollup
