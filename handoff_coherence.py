@@ -88,6 +88,14 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="treat decorate=null as incoherent (negotiate toward sequence/polyala)",
     )
+    p.add_argument(
+        "--with-science",
+        action="store_true",
+        help=(
+            "enable soft enrichment science channel (informational proposals only; "
+            "never retunes dual-gate pin or gates commercial accept)"
+        ),
+    )
     p.add_argument("-v", action="store_true")
     args = p.parse_args(argv)
 
@@ -137,6 +145,7 @@ def main(argv: list[str] | None = None) -> int:
         max_rounds=int(args.max_rounds),
         verify=not args.no_verify,
         n_zeros=int(args.k),
+        with_science=bool(args.with_science),
     )
 
     print(

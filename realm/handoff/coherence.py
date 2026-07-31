@@ -1,12 +1,16 @@
 """Cyclic coherence protocol for dual-gate handoff routines.
 
-Loop: observe → score → negotiate free parameters → re-execute → until solved.
+Loop: observe → multi-section proposals → merge → re-execute → until solved.
 
 LOCKED (never adapted):
   dual-gate LengthPolicy pin soft_T(n=12)=0.036, seq_mix=0, face_weight=0.08
 
 NEGOTIABLE (bounded free parameters only):
   decorate mode, physics mode, top_k
+
+Sections (sheaf-style local proposals):
+  export | decorate | physics | science | verify
+  Merge ranks by priority; never proposes pin retune.
 
 Ontology: Crit projection molds; never λ=γ.
 Commercial accept remains openable PDBs + pin — not enrichment score-chase.
@@ -16,7 +20,6 @@ from __future__ import annotations
 
 import json
 import logging
-from copy import deepcopy
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -29,6 +32,16 @@ logger = logging.getLogger(__name__)
 DECORATE_ORDER = ("sequence", "polyala", "null")
 PHYSICS_ORDER = ("geometry", "none")
 TOP_K_BOUNDS = (1, 8)
+
+# Merge priority: lower number wins when proposals conflict
+SECTION_PRIORITY = {
+    "pin": 0,  # only abort; never param
+    "export": 1,
+    "verify": 2,
+    "physics": 3,
+    "decorate": 4,
+    "science": 5,  # informational — free-param only, never pin
+}
 
 
 @dataclass
@@ -89,9 +102,31 @@ class Observations:
     physics_n_fail: int
     out_dir: str
     notes: list[str] = field(default_factory=list)
+    # Optional science channel (informational; never accept gate)
+    science_soft_enrichment: float | None = None
+    science_n_ok: int = 0
+    science_n_attempted: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+
+@dataclass
+class SectionProposal:
+    """One section's proposed free-param move (never pin)."""
+
+    section: str
+    params: FreeParams
+    reason: str
+    priority: int = 99
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "section": self.section,
+            "params": self.params.to_dict(),
+            "reason": self.reason,
+            "priority": self.priority,
+        }
 
 
 def observe(
@@ -215,89 +250,265 @@ def coherence_score(obs: Observations, thr: CoherenceThresholds, params: FreePar
     return float(sum(parts) / len(parts))
 
 
+def _fresh(cand: FreeParams, tried: set[str]) -> FreeParams | None:
+    c = cand.clamp()
+    ck = json.dumps(c.to_dict(), sort_keys=True)
+    if ck in tried:
+        return None
+    return c
+
+
+def collect_section_proposals(
+    obs: Observations,
+    params: FreeParams,
+    thr: CoherenceThresholds,
+    *,
+    tried: set[str],
+) -> list[SectionProposal]:
+    """Each section proposes at most one free-param move (never pin)."""
+    p = params.clamp()
+    props: list[SectionProposal] = []
+
+    # --- export ---
+    if obs.n_ids and obs.n_export_ok < obs.n_ids and p.top_k < TOP_K_BOUNDS[1]:
+        cand = _fresh(
+            FreeParams(
+                decorate=p.decorate,
+                physics=p.physics,
+                top_k=min(TOP_K_BOUNDS[1], p.top_k + 2),
+            ),
+            tried,
+        )
+        if cand:
+            props.append(
+                SectionProposal(
+                    "export",
+                    cand,
+                    "increase_top_k_export_incomplete",
+                    SECTION_PRIORITY["export"],
+                )
+            )
+
+    # --- verify ---
+    if obs.verify_ok is False and obs.n_export_ok > 0 and p.decorate == "null":
+        cand = _fresh(
+            FreeParams(decorate="sequence", physics=p.physics, top_k=p.top_k),
+            tried,
+        )
+        if cand:
+            props.append(
+                SectionProposal(
+                    "verify",
+                    cand,
+                    "sequence_after_verify_fail",
+                    SECTION_PRIORITY["verify"],
+                )
+            )
+
+    # --- physics ---
+    if obs.physics_n_fail > thr.max_physics_fail:
+        if p.top_k < TOP_K_BOUNDS[1]:
+            cand = _fresh(
+                FreeParams(decorate=p.decorate, physics=p.physics, top_k=p.top_k + 1),
+                tried,
+            )
+            if cand:
+                props.append(
+                    SectionProposal(
+                        "physics",
+                        cand,
+                        "increase_top_k_after_physics_fail",
+                        SECTION_PRIORITY["physics"],
+                    )
+                )
+        if p.physics != "none":
+            cand = _fresh(
+                FreeParams(decorate=p.decorate, physics="none", top_k=p.top_k),
+                tried,
+            )
+            if cand:
+                props.append(
+                    SectionProposal(
+                        "physics",
+                        cand,
+                        "disable_physics_after_fail",
+                        SECTION_PRIORITY["physics"] + 1,  # prefer top_k first
+                    )
+                )
+
+    # --- decorate ---
+    if p.decorate == "null" and (
+        thr.require_decorate
+        or obs.decorate_n_paths == 0
+        or "decorate_zero" in obs.notes
+    ):
+        cand = _fresh(
+            FreeParams(decorate="sequence", physics=p.physics, top_k=p.top_k),
+            tried,
+        )
+        if cand:
+            props.append(
+                SectionProposal(
+                    "decorate",
+                    cand,
+                    "enable_sequence_decorate",
+                    SECTION_PRIORITY["decorate"],
+                )
+            )
+
+    if p.decorate == "sequence" and obs.decorate_n_molds > 0:
+        dfrac = obs.decorate_n_ok / max(obs.decorate_n_molds, 1)
+        if dfrac + 1e-12 < thr.min_decorate_ok_fraction:
+            cand = _fresh(
+                FreeParams(decorate="polyala", physics=p.physics, top_k=p.top_k),
+                tried,
+            )
+            if cand:
+                props.append(
+                    SectionProposal(
+                        "decorate",
+                        cand,
+                        "fallback_polyala_decorate",
+                        SECTION_PRIORITY["decorate"],
+                    )
+                )
+
+    if p.decorate == "polyala" and obs.decorate_n_molds > 0:
+        dfrac = obs.decorate_n_ok / max(obs.decorate_n_molds, 1)
+        if dfrac + 1e-12 < thr.min_decorate_ok_fraction:
+            cand = _fresh(
+                FreeParams(decorate="sequence", physics=p.physics, top_k=p.top_k),
+                tried,
+            )
+            if cand:
+                props.append(
+                    SectionProposal(
+                        "decorate",
+                        cand,
+                        "retry_sequence_decorate",
+                        SECTION_PRIORITY["decorate"],
+                    )
+                )
+
+    # --- science (informational only: nudge top_k if soft enrichment weak; never pin) ---
+    if (
+        obs.science_soft_enrichment is not None
+        and obs.science_n_ok > 0
+        and float(obs.science_soft_enrichment) < 0.5
+        and p.top_k < TOP_K_BOUNDS[1]
+    ):
+        cand = _fresh(
+            FreeParams(
+                decorate=p.decorate if p.decorate != "null" else "sequence",
+                physics=p.physics,
+                top_k=min(TOP_K_BOUNDS[1], p.top_k + 1),
+            ),
+            tried,
+        )
+        if cand:
+            props.append(
+                SectionProposal(
+                    "science",
+                    cand,
+                    "nudge_top_k_weak_science_enrichment_info_only",
+                    SECTION_PRIORITY["science"],
+                )
+            )
+
+    return props
+
+
+def merge_proposals(
+    proposals: list[SectionProposal],
+    current: FreeParams,
+) -> tuple[FreeParams | None, str, list[dict[str, Any]]]:
+    """Sheaf-style merge: highest-priority (lowest number) proposal wins.
+
+    On field conflicts between equal-priority sections, earlier in sorted list wins.
+    """
+    if not proposals:
+        return None, "stuck_no_free_param_move", []
+    ranked = sorted(proposals, key=lambda x: (x.priority, x.section, x.reason))
+    winner = ranked[0]
+    # Field-wise: allow higher-priority sections to own their primary field
+    # Start from winner full params (clean single-move protocol)
+    return (
+        winner.params.clamp(),
+        f"merge[{winner.section}]:{winner.reason}",
+        [pr.to_dict() for pr in ranked],
+    )
+
+
 def negotiate(
     obs: Observations,
     params: FreeParams,
     thr: CoherenceThresholds,
     *,
     tried: set[str],
-) -> tuple[FreeParams | None, str]:
-    """Propose next free params from observations. None = stuck / coherent.
+) -> tuple[FreeParams | None, str, list[dict[str, Any]]]:
+    """Multi-section propose + merge. Never proposes dual-gate pin changes.
 
-    Never proposes dual-gate pin changes.
+    Returns (next_params|None, reason, proposal_board).
     """
     p = params.clamp()
     key = json.dumps(p.to_dict(), sort_keys=True)
     tried.add(key)
 
     if thr.require_pin and not obs.pin_ok:
-        return None, "pin_locked_fail_cannot_negotiate"
+        return None, "pin_locked_fail_cannot_negotiate", []
 
     if is_solved(obs, thr, p):
-        return None, "already_coherent"
+        return None, "already_coherent", []
 
-    # 1) decorate path: null → sequence → polyala
-    if p.decorate == "null" and (
-        thr.require_decorate
-        or obs.decorate_n_paths == 0
-        or "decorate_zero" in obs.notes
-    ):
-        cand = FreeParams(decorate="sequence", physics=p.physics, top_k=p.top_k).clamp()
-        ck = json.dumps(cand.to_dict(), sort_keys=True)
-        if ck not in tried:
-            return cand, "enable_sequence_decorate"
+    proposals = collect_section_proposals(obs, p, thr, tried=tried)
+    nxt, reason, board = merge_proposals(proposals, p)
+    if nxt is not None:
+        tried.add(json.dumps(nxt.to_dict(), sort_keys=True))
+    return nxt, reason, board
 
-    if p.decorate == "sequence" and obs.decorate_n_molds > 0:
-        dfrac = obs.decorate_n_ok / max(obs.decorate_n_molds, 1)
-        if dfrac + 1e-12 < thr.min_decorate_ok_fraction:
-            cand = FreeParams(decorate="polyala", physics=p.physics, top_k=p.top_k).clamp()
-            ck = json.dumps(cand.to_dict(), sort_keys=True)
-            if ck not in tried:
-                return cand, "fallback_polyala_decorate"
 
-    if p.decorate == "polyala" and obs.decorate_n_molds > 0:
-        dfrac = obs.decorate_n_ok / max(obs.decorate_n_molds, 1)
-        if dfrac + 1e-12 < thr.min_decorate_ok_fraction:
-            cand = FreeParams(decorate="sequence", physics=p.physics, top_k=p.top_k).clamp()
-            ck = json.dumps(cand.to_dict(), sort_keys=True)
-            if ck not in tried:
-                return cand, "retry_sequence_decorate"
+def _science_soft_probe(
+    pdb_ids: list[str],
+    knobs: dict[str, Any],
+    *,
+    n_zeros: int = 14,
+    n_decoys: int = 12,
+    max_ids: int = 2,
+) -> dict[str, Any]:
+    """Lightweight soft enrichment stamp (info only; never gates accept/pin)."""
+    from realm.handoff.pipeline import enrichment_stamp
 
-    # 2) physics fail: cannot retune pin; try slightly more molds then disable physics filter
-    if obs.physics_n_fail > thr.max_physics_fail:
-        if p.top_k < TOP_K_BOUNDS[1]:
-            cand = FreeParams(
-                decorate=p.decorate, physics=p.physics, top_k=p.top_k + 1
-            ).clamp()
-            ck = json.dumps(cand.to_dict(), sort_keys=True)
-            if ck not in tried:
-                return cand, "increase_top_k_after_physics_fail"
-        if p.physics != "none":
-            cand = FreeParams(decorate=p.decorate, physics="none", top_k=p.top_k).clamp()
-            ck = json.dumps(cand.to_dict(), sort_keys=True)
-            if ck not in tried:
-                return cand, "disable_physics_after_fail"
-
-    # 3) export incomplete: try larger top_k once
-    if obs.n_ids and obs.n_export_ok < obs.n_ids:
-        if p.top_k < TOP_K_BOUNDS[1]:
-            cand = FreeParams(
-                decorate=p.decorate, physics=p.physics, top_k=min(TOP_K_BOUNDS[1], p.top_k + 2)
-            ).clamp()
-            ck = json.dumps(cand.to_dict(), sort_keys=True)
-            if ck not in tried:
-                return cand, "increase_top_k_export_incomplete"
-
-    # 4) verify failed but export ok: often decorate remark issues — already stamped;
-    #    try sequence decorate if null
-    if obs.verify_ok is False and obs.n_export_ok > 0:
-        if p.decorate == "null":
-            cand = FreeParams(decorate="sequence", physics=p.physics, top_k=p.top_k).clamp()
-            ck = json.dumps(cand.to_dict(), sort_keys=True)
-            if ck not in tried:
-                return cand, "sequence_after_verify_fail"
-
-    return None, "stuck_no_free_param_move"
+    rows = []
+    for pid in list(pdb_ids)[: max(1, int(max_ids))]:
+        try:
+            row = enrichment_stamp(
+                str(pid),
+                knobs,
+                n_zeros=int(n_zeros),
+                n_decoys=int(n_decoys),
+                n_seeds=1,
+            )
+            rows.append(row)
+        except Exception as exc:  # noqa: BLE001
+            rows.append({"pdb": pid, "status": "ERROR", "error": str(exc)})
+    ok = [r for r in rows if r.get("status") == "OK" and "enrichment" in r]
+    mean = None
+    if ok:
+        mean = float(sum(float(r["enrichment"]) for r in ok) / len(ok))
+    return {
+        "n_attempted": len(rows),
+        "n_ok": len(ok),
+        "mean_enrichment": mean,
+        "rows": [
+            {
+                "pdb": r.get("pdb"),
+                "status": r.get("status"),
+                "enrichment": r.get("enrichment"),
+            }
+            for r in rows
+        ],
+        "note": "science channel informational only; never pin retune",
+    }
 
 
 def run_coherence_loop(
@@ -310,8 +521,9 @@ def run_coherence_loop(
     max_rounds: int = 6,
     verify: bool = True,
     n_zeros: int = 14,
+    with_science: bool = False,
 ) -> dict[str, Any]:
-    """Execute cyclic observe→negotiate→export until coherent or budget ends.
+    """Execute cyclic observe→multi-section propose→merge→export until coherent.
 
     Dual-gate pin is re-checked every round and never written/adapted.
     """
@@ -434,6 +646,21 @@ def run_coherence_loop(
             verify_report=vreport,
             out_dir=cycle_dir,
         )
+        science_pack = None
+        if with_science:
+            try:
+                science_pack = _science_soft_probe(
+                    list(pdb_ids), knobs, n_zeros=n_zeros
+                )
+                obs.science_soft_enrichment = science_pack.get("mean_enrichment")
+                obs.science_n_ok = int(science_pack.get("n_ok") or 0)
+                obs.science_n_attempted = int(science_pack.get("n_attempted") or 0)
+                (cycle_dir / "science_probe.json").write_text(
+                    json.dumps(science_pack, indent=2) + "\n", encoding="utf-8"
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("science probe skipped: %s", exc)
+
         score = coherence_score(obs, thr, params)
         solved = is_solved(obs, thr, params)
         entry = {
@@ -451,19 +678,22 @@ def run_coherence_loop(
             "export_n_ok": summary.get("n_ok"),
             "export_n_ids": summary.get("n_ids"),
             "cycle_dir": str(cycle_dir.resolve()),
+            "science_probe": science_pack,
         }
 
         if solved:
             entry["action"] = "halt"
             entry["reason"] = "coherent"
+            entry["proposals"] = []
             ledger.append(entry)
             stop_reason = "coherent"
             logger.info("coherence SOLVED at round %s score=%.3f", rnd, score)
             break
 
-        nxt, reason = negotiate(obs, params, thr, tried=tried)
+        nxt, reason, board = negotiate(obs, params, thr, tried=tried)
         entry["action"] = "negotiate" if nxt is not None else "stuck"
         entry["reason"] = reason
+        entry["proposals"] = board
         entry["next_params"] = nxt.to_dict() if nxt is not None else None
         ledger.append(entry)
         (cycle_dir / "coherence_round.json").write_text(
@@ -474,7 +704,12 @@ def run_coherence_loop(
             stop_reason = reason
             logger.info("coherence stuck: %s", reason)
             break
-        logger.info("negotiate → %s (%s)", nxt.to_dict(), reason)
+        logger.info(
+            "negotiate → %s (%s) board=%s",
+            nxt.to_dict(),
+            reason,
+            [b.get("section") for b in board],
+        )
         params = nxt
 
     result = {
@@ -483,6 +718,7 @@ def run_coherence_loop(
         "stop_reason": stop_reason,
         "n_rounds": len(ledger),
         "max_rounds": int(max_rounds),
+        "with_science": bool(with_science),
         "thresholds": thr.to_dict(),
         "final_params": params.to_dict(),
         "pin_locked": {
@@ -496,8 +732,10 @@ def run_coherence_loop(
         "out_root": str(out_root.resolve()),
         "pdb_ids": list(pdb_ids),
         "note": (
-            "Cyclic observe→negotiate→export loop. Free params only: decorate/physics/top_k. "
-            "Dual-gate pin locked. Not enrichment score-chase. Never lambda=gamma."
+            "Cyclic observe→multi-section propose→merge→export. "
+            "Free params only: decorate/physics/top_k. "
+            "Dual-gate pin locked. Science channel informational. "
+            "Not enrichment score-chase. Never lambda=gamma."
         ),
     }
     (out_root / "COHERENCE.json").write_text(
@@ -530,6 +768,18 @@ def _write_coherence_md(result: dict[str, Any], path: Path) -> Path:
             f"{p.get('top_k')} | {e.get('coherence_score')} | {e.get('solved')} | "
             f"{e.get('action')} | {e.get('reason')} |"
         )
-    lines.append("")
+    lines.extend(["", "## Proposal boards (multi-section)", ""])
+    for e in result.get("ledger") or []:
+        board = e.get("proposals") or []
+        if not board:
+            continue
+        lines.append(f"### Round {e.get('round')}")
+        lines.append("")
+        for pr in board:
+            lines.append(
+                f"- **{pr.get('section')}** (pri={pr.get('priority')}): "
+                f"`{pr.get('reason')}` → `{pr.get('params')}`"
+            )
+        lines.append("")
     path.write_text("\n".join(lines), encoding="utf-8")
     return path

@@ -81,10 +81,11 @@ def test_negotiate_enable_sequence():
     )
     assert is_solved(obs, thr, params) is False
     tried: set[str] = set()
-    nxt, reason = negotiate(obs, params, thr, tried=tried)
+    nxt, reason, board = negotiate(obs, params, thr, tried=tried)
     assert nxt is not None
     assert nxt.decorate == "sequence"
     assert "sequence" in reason
+    assert board and board[0]["section"] == "decorate"
 
 
 def test_negotiate_never_suggests_pin_change_on_pin_fail():
@@ -106,9 +107,44 @@ def test_negotiate_never_suggests_pin_change_on_pin_fail():
         out_dir="/tmp",
         notes=["pin_fail"],
     )
-    nxt, reason = negotiate(obs, params, thr, tried=set())
+    nxt, reason, board = negotiate(obs, params, thr, tried=set())
     assert nxt is None
     assert "pin" in reason
+    assert board == []
+
+
+def test_multi_section_merge_priority():
+    from realm.handoff.coherence import collect_section_proposals, merge_proposals
+
+    thr = CoherenceThresholds(require_decorate=True, max_physics_fail=0)
+    params = FreeParams(decorate="null", physics="geometry", top_k=2)
+    obs = Observations(
+        pin_ok=True,
+        soft_T=0.036,
+        n_ids=2,
+        n_export_ok=1,  # incomplete export
+        n_pdb_ontology=2,
+        verify_ok=True,
+        decorate_n_ok=0,
+        decorate_n_molds=0,
+        decorate_n_paths=0,
+        physics_n_ok=0,
+        physics_n_warn=0,
+        physics_n_fail=1,  # physics wants a move too
+        out_dir="/tmp",
+        notes=["export_incomplete", "physics_fail", "decorate_zero"],
+    )
+    tried: set[str] = set()
+    props = collect_section_proposals(obs, params, thr, tried=tried)
+    sections = {p.section for p in props}
+    assert "export" in sections or "decorate" in sections or "physics" in sections
+    nxt, reason, board = merge_proposals(props, params)
+    assert nxt is not None
+    assert reason.startswith("merge[")
+    assert len(board) >= 1
+    # export priority beats decorate/science when both present
+    if any(p.section == "export" for p in props):
+        assert "export" in reason
 
 
 def test_observe_from_summary():
