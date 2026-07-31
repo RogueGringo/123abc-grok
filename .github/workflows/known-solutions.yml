@@ -1,0 +1,116 @@
+# Scheduled / manual known-solutions science smoke (report-only).
+# Never gates commercial accept/ship. Pin soft_T(n=12)=0.036 locked.
+name: known-solutions
+
+on:
+  schedule:
+    # Mondays 06:15 UTC
+    - cron: "15 6 * * 1"
+  workflow_dispatch:
+  push:
+    paths:
+      - "known_solutions.py"
+      - "handoff_science.py"
+      - "realm/validate/known_solutions*.py"
+      - "realm/validate/decoys.py"
+      - "pdb_batch.py"
+      - "evolve_result.json"
+      - "requirements-handoff.txt"
+      - ".github/workflows/known-solutions.yml"
+
+jobs:
+  science-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-handoff.txt
+      - name: Dual-gate pin
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python -c "from realm.validate.length_policy import policy_for; p=policy_for(12,base_beta=0.20); assert abs(p.soft_T-0.036)<1e-12; assert p.seq_mix==0.0; print('dual-gate OK', p.soft_T)"
+      - name: Unit tests (science path)
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          pytest tests/test_known_solutions.py tests/test_known_solutions_pdf.py \
+            tests/test_decoys.py tests/test_handoff_science.py -q --tb=line
+      - name: Dry-run + PDF golden path
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          mkdir -p /tmp/ks_rel
+          python handoff_science.py --dry-run --skip-expand \
+            --out-dir /tmp/ks_dry \
+            --pdf --attach-releases /tmp/ks_rel \
+            --status --releases /tmp/ks_rel
+          test -f /tmp/ks_rel/PARTNER_SCIENCE_ONEPAGER.pdf
+          python -c "import json; s=json.load(open('/tmp/ks_rel/STATUS.json')); assert s['ok'] is True; assert (s.get('known_solutions') or {}).get('has_science_pdf') is True"
+      - name: Soft rank smoke (probe IDs via RCSB)
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          # Live RCSB fetch; small decoy budget; report-only
+          python known_solutions.py \
+            --only-ids 1CSA,2X2C,4M6E \
+            --n-seeds 1 --n-decoys 12 \
+            --kabsch-set none \
+            --decoy-mode soft \
+            --out-dir /tmp/ks_soft_smoke \
+            --pdf
+          LATEST=$(cat /tmp/ks_soft_smoke/LATEST)
+          python - <<PY
+          import json
+          from pathlib import Path
+          latest = Path(open("/tmp/ks_soft_smoke/LATEST").read().strip())
+          d = json.loads((latest / "KNOWN_SOLUTIONS.json").read_text())
+          assert d.get("status") == "OK", d.get("status")
+          pin = d.get("pin") or {}
+          assert pin.get("ok") is True
+          assert abs(float(pin.get("soft_T")) - 0.036) < 1e-12
+          agg = d.get("aggregates") or {}
+          assert int(agg.get("n_ok") or 0) >= 1, agg
+          print("soft smoke OK n_ok=", agg.get("n_ok"), "mean=", (agg.get("all_ok") or {}).get("mean_enrichment"))
+          pdf = latest / "PARTNER_SCIENCE_ONEPAGER.pdf"
+          assert pdf.is_file() and pdf.stat().st_size > 500
+          print("pdf", pdf, pdf.stat().st_size)
+          PY
+      - name: Mixed decoy stress (1CSA only)
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python known_solutions.py \
+            --only-ids 1CSA \
+            --n-seeds 1 --n-decoys 12 \
+            --kabsch-set none \
+            --decoy-mode mixed \
+            --out-dir /tmp/ks_mixed_smoke
+          python - <<PY
+          import json
+          from pathlib import Path
+          latest = Path(open("/tmp/ks_mixed_smoke/LATEST").read().strip())
+          d = json.loads((latest / "KNOWN_SOLUTIONS.json").read_text())
+          assert d["status"] == "OK"
+          row = (d.get("rows") or [{}])[0]
+          print("mixed 1CSA enrichment", row.get("enrichment"), "decoy_mode", row.get("decoy_mode"))
+          assert row.get("status") == "OK"
+          assert row.get("decoy_mode") == "mixed"
+          PY
+      - name: Upload science smoke artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: known-solutions-smoke
+          path: |
+            /tmp/ks_rel/
+            /tmp/ks_soft_smoke/
+            /tmp/ks_mixed_smoke/
+          if-no-files-found: ignore
+          retention-days: 14

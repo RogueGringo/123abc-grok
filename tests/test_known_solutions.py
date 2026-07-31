@@ -271,12 +271,19 @@ def test_update_known_solutions_index(tmp_path: Path):
     (stamp / "pin.json").write_text(
         json.dumps({"ok": True, "soft_T": 0.036}), encoding="utf-8"
     )
+    (stamp / "PARTNER_SCIENCE_ONEPAGER.pdf").write_bytes(b"%PDF-1.4")
     (tmp_path / "LATEST").write_text(str(stamp.resolve()), encoding="utf-8")
     idx_path = update_known_solutions_index(tmp_path)
     idx = json.loads(idx_path.read_text(encoding="utf-8"))
     assert idx["n_stamps"] == 1
     assert idx["entries"][0]["pin_ok"] is True
+    assert idx["entries"][0]["has_science_pdf"] is True
     assert "not_lambda_eq_gamma" in idx["ontology"]
+    md = tmp_path / "INDEX.md"
+    assert md.is_file()
+    text = md.read_text(encoding="utf-8")
+    assert "not" in text.lower() and "ACCEPTANCE" in text
+    assert "0.036" in text
 
 
 def test_dry_run_cli(tmp_path: Path):

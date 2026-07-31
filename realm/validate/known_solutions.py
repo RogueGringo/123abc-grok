@@ -458,6 +458,7 @@ def update_known_solutions_index(out_dir: Path | str) -> Path:
             except Exception:  # noqa: BLE001
                 pass
         kind = "compare" if compare_p.is_file() else "single"
+        pdf_p = child / "PARTNER_SCIENCE_ONEPAGER.pdf"
         entries.append(
             {
                 "stamp": child.name,
@@ -467,6 +468,7 @@ def update_known_solutions_index(out_dir: Path | str) -> Path:
                 "soft_T": soft_T,
                 "has_annex": annex_p.is_file(),
                 "has_compare": compare_p.is_file(),
+                "has_science_pdf": pdf_p.is_file(),
             }
         )
     latest = None
@@ -484,6 +486,37 @@ def update_known_solutions_index(out_dir: Path | str) -> Path:
     }
     dest = root / "INDEX.json"
     write_json(dest, idx)
+    # Human catalog
+    lines = [
+        "# Known-solutions science catalog",
+        "",
+        f"- Root: `{root}`",
+        f"- Stamps: **{len(entries)}**",
+        f"- Latest: `{latest}`",
+        "",
+        "Science evidence only — **not** commercial ACCEPTANCE / SHIP.",
+        "Pin lock: soft_T(n=12)=0.036. Never lambda=gamma.",
+        "",
+        "| stamp | kind | pin_ok | soft_T | annex | compare | pdf |",
+        "|-------|------|--------|--------|-------|---------|-----|",
+    ]
+    for e in entries[:50]:
+        lines.append(
+            f"| {e.get('stamp')} | {e.get('kind')} | {e.get('pin_ok')} | "
+            f"{e.get('soft_T')} | {e.get('has_annex')} | {e.get('has_compare')} | "
+            f"{e.get('has_science_pdf')} |"
+        )
+    lines.extend(
+        [
+            "",
+            "```bash",
+            "python known_solutions.py --pdf-from <stamp_or_parent>",
+            "python handoff_science.py --skip-expand --attach-releases out/releases --status",
+            "```",
+            "",
+        ]
+    )
+    (root / "INDEX.md").write_text("\n".join(lines), encoding="utf-8")
     return dest
 
 
