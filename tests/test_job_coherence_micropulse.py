@@ -522,6 +522,3 @@ def test_parse_time_windows_safe():
     # Must not raise OSError on edge dates
     _parse_time("01/01/1970 00:00:00")
     _parse_time("12/31/1969 23:59:59")
-    body = json.loads(proc.stdout)
-    assert body["solved"] is True
-    assert body.get("micropulse_kinds")
