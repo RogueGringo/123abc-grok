@@ -30,3 +30,27 @@ def test_matrix_dry_run(tmp_path: Path):
     data = json.loads(acc.read_text(encoding="utf-8"))
     assert data.get("ok") is True
     assert data.get("n_tokens") == 2
+
+
+def test_matrix_attach_known_solutions_after_dry_does_not_run(tmp_path: Path):
+    """dry-run skips attach; attach path only applied when not dry-run."""
+    ks = tmp_path / "ks"
+    ks.mkdir()
+    (ks / "PARTNER_SCIENCE_ANNEX.json").write_text("{}", encoding="utf-8")
+    (ks / "PARTNER_SCIENCE_ANNEX.md").write_text("a", encoding="utf-8")
+    out = tmp_path / "matrix"
+    rc = matrix_main(
+        [
+            "--tokens",
+            "probe",
+            "--out-root",
+            str(out),
+            "--dry-run",
+            "--attach-known-solutions",
+            str(ks),
+            "--no-biopython-check",
+        ]
+    )
+    assert rc == 0
+    # dry-run: no attach files
+    assert not (out / "KNOWN_SOLUTIONS_ATTACH.json").is_file()

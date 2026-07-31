@@ -10,6 +10,7 @@ import pytest
 from realm.validate.known_solutions import (
     aggregate_kabsch,
     aggregate_rows,
+    attach_report_to_dir,
     write_partner_annex,
 )
 from realm.validate.known_solutions_ids import (
@@ -152,6 +153,44 @@ def test_partner_annex_not_acceptance(tmp_path: Path):
     assert "Not ACCEPTANCE" in text or "not ACCEPTANCE" in text.lower()
     assert "0.036" in text
     assert "Never λ=γ" in text or "never λ=γ" in text.lower()
+
+
+def test_attach_report_to_dir(tmp_path: Path):
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "PARTNER_SCIENCE_ANNEX.json").write_text(
+        json.dumps({"kind": "partner_science_annex", "pin": {"ok": True, "soft_T": 0.036}}),
+        encoding="utf-8",
+    )
+    (src / "PARTNER_SCIENCE_ANNEX.md").write_text("# annex\n", encoding="utf-8")
+    (src / "pin.json").write_text(
+        json.dumps({"ok": True, "soft_T": 0.036}), encoding="utf-8"
+    )
+    (src / "KNOWN_SOLUTIONS.json").write_text("{}", encoding="utf-8")
+    dest = tmp_path / "matrix_out"
+    meta = attach_report_to_dir(src, dest)
+    assert meta["ok"] is True
+    assert meta["pin_ok"] is True
+    assert (dest / "PARTNER_SCIENCE_ANNEX.json").is_file()
+    assert (dest / "known_solutions" / "KNOWN_SOLUTIONS.json").is_file()
+    assert (dest / "KNOWN_SOLUTIONS_ATTACH.json").is_file()
+    attach = json.loads((dest / "KNOWN_SOLUTIONS_ATTACH.json").read_text(encoding="utf-8"))
+    assert "not_lambda_eq_gamma" in attach["ontology"]
+    assert "accepted" not in attach
+
+
+def test_attach_via_latest_pointer(tmp_path: Path):
+    stamp = tmp_path / "stamp"
+    stamp.mkdir()
+    (stamp / "PARTNER_SCIENCE_ANNEX.json").write_text("{}", encoding="utf-8")
+    (stamp / "PARTNER_SCIENCE_ANNEX.md").write_text("x", encoding="utf-8")
+    parent = tmp_path / "ks"
+    parent.mkdir()
+    (parent / "LATEST").write_text(str(stamp.resolve()), encoding="utf-8")
+    dest = tmp_path / "dest"
+    meta = attach_report_to_dir(parent, dest, include_full_ledger=False)
+    assert meta["ok"] is True
+    assert (dest / "known_solutions" / "PARTNER_SCIENCE_ANNEX.json").is_file()
 
 
 def test_dry_run_cli(tmp_path: Path):

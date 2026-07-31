@@ -230,7 +230,7 @@ python known_solutions.py \
 | `handoff_campaign` / matrix / ship | Unchanged |
 | ACCEPTANCE / DELIVERY / SHIP | Unchanged |
 | Partner receipt zip | Unchanged |
-| Optional later | Copy annex path into matrix outdir via flag — **not** v1 ownership |
+| Optional attach | `handoff_matrix --attach-known-solutions PATH` or `--run-known-solutions` copies annex into matrix out-root; never gates accept |
 
 Enrichment_stamp on campaigns remains informational; this report is the **canonical multi-source science ledger**.
 

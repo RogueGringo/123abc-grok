@@ -82,6 +82,34 @@ def main(argv: list[str] | None = None) -> int:
     )
     p.add_argument("--resume", action="store_true")
     p.add_argument("--dry-run", action="store_true")
+    p.add_argument(
+        "--attach-known-solutions",
+        type=Path,
+        default=None,
+        help=(
+            "copy known-solutions report/annex into matrix out-root "
+            "(stamp dir or parent with LATEST); does not gate accept"
+        ),
+    )
+    p.add_argument(
+        "--run-known-solutions",
+        action="store_true",
+        help=(
+            "after matrix, run known_solutions into out-root/known_solutions "
+            "and attach annex (report-only; not accept gate)"
+        ),
+    )
+    p.add_argument(
+        "--ks-n-seeds",
+        type=int,
+        default=1,
+        help="when --run-known-solutions: n_seeds (default 1)",
+    )
+    p.add_argument(
+        "--ks-skip-expand",
+        action="store_true",
+        help="when --run-known-solutions: curated only",
+    )
     p.add_argument("-v", action="store_true")
     args = p.parse_args(argv)
 
@@ -252,6 +280,46 @@ def main(argv: list[str] | None = None) -> int:
     acc_path.write_text(json.dumps(acceptance, indent=2) + "\n", encoding="utf-8")
     logger.info("matrix ok=%s acceptance=%s → %s", matrix["ok"], acceptance.get("ok"), matrix_path)
     logger.info("matrix_acceptance → %s n_accepted=%s n_pdb_total=%s", acc_path, n_accept, n_pdb_total)
+
+    # Optional science annex attach (never gates commercial accept)
+    ks_meta = None
+    if not args.dry_run and (args.attach_known_solutions or args.run_known_solutions):
+        from realm.validate.known_solutions import (
+            attach_report_to_dir,
+            run_known_solutions,
+        )
+
+        ks_src = args.attach_known_solutions
+        if args.run_known_solutions:
+            ks_out = out_root / "known_solutions_run"
+            logger.info(
+                "running known-solutions report → %s (report-only)", ks_out
+            )
+            ks_report = run_known_solutions(
+                knobs_path=args.knobs,
+                out_dir=ks_out,
+                n_seeds=int(args.ks_n_seeds),
+                n_decoys=24,
+                skip_expand=bool(args.ks_skip_expand),
+                kabsch_set="curated",
+                kabsch_max=4,
+            )
+            ks_src = Path(ks_report.get("out_dir") or ks_out)
+            matrix["known_solutions_status"] = ks_report.get("status")
+            matrix["known_solutions_aggregates"] = ks_report.get("aggregates")
+        if ks_src is not None:
+            ks_meta = attach_report_to_dir(ks_src, out_root)
+            matrix["known_solutions_attach"] = ks_meta
+            # re-write matrix report with attach meta
+            matrix_path.write_text(
+                json.dumps(matrix, indent=2) + "\n", encoding="utf-8"
+            )
+            logger.info(
+                "known-solutions attach ok=%s → %s",
+                ks_meta.get("ok"),
+                out_root / "KNOWN_SOLUTIONS_ATTACH.json",
+            )
+            # attach does not affect overall_ok / acceptance
 
     if not args.no_delivery and not args.dry_run and matrix["ok"]:
         latest = None

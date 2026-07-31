@@ -8,7 +8,9 @@ Never retunes LengthPolicy. Never λ=γ.
 from __future__ import annotations
 
 import csv
+import json
 import logging
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -295,6 +297,92 @@ def write_internal_md(report: dict[str, Any], path: Path) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines), encoding="utf-8")
     return path
+
+
+def attach_report_to_dir(
+    report_dir: Path | str,
+    dest_dir: Path | str,
+    *,
+    include_full_ledger: bool = True,
+) -> dict[str, Any]:
+    """Copy science annex (+ optional full ledger) into a commercial out dir.
+
+    Does not change ACCEPTANCE/SHIP success. Report-only science evidence.
+    """
+    src = Path(report_dir)
+    dest = Path(dest_dir)
+    dest.mkdir(parents=True, exist_ok=True)
+    # Resolve LATEST pointer file if given a parent with LATEST
+    if (src / "PARTNER_SCIENCE_ANNEX.json").is_file():
+        root = src
+    elif src.is_file() and src.name == "LATEST":
+        root = Path(src.read_text(encoding="utf-8").strip())
+    elif (src / "LATEST").is_file():
+        root = Path((src / "LATEST").read_text(encoding="utf-8").strip())
+    else:
+        root = src
+
+    copied: list[str] = []
+    missing: list[str] = []
+    names = [
+        "PARTNER_SCIENCE_ANNEX.json",
+        "PARTNER_SCIENCE_ANNEX.md",
+        "pin.json",
+    ]
+    if include_full_ledger:
+        names.extend(
+            [
+                "KNOWN_SOLUTIONS.json",
+                "KNOWN_SOLUTIONS.md",
+                "summary.tsv",
+                "id_universe.json",
+            ]
+        )
+    science_dest = dest / "known_solutions"
+    science_dest.mkdir(parents=True, exist_ok=True)
+    for name in names:
+        sp = root / name
+        if not sp.is_file():
+            missing.append(name)
+            continue
+        dp = science_dest / name
+        shutil.copy2(sp, dp)
+        try:
+            copied.append(str(dp.relative_to(dest)))
+        except ValueError:
+            copied.append(str(dp))
+
+    # Also place thin annex at dest root for partner glance
+    for name in ("PARTNER_SCIENCE_ANNEX.json", "PARTNER_SCIENCE_ANNEX.md"):
+        sp = science_dest / name
+        if sp.is_file():
+            shutil.copy2(sp, dest / name)
+            if name not in copied:
+                copied.append(name)
+
+    pin_ok = None
+    pin_path = science_dest / "pin.json"
+    if pin_path.is_file():
+        try:
+            pin_ok = json.loads(pin_path.read_text(encoding="utf-8")).get("ok")
+        except Exception:  # noqa: BLE001
+            pin_ok = None
+
+    annex_ok = (science_dest / "PARTNER_SCIENCE_ANNEX.json").is_file() or (
+        dest / "PARTNER_SCIENCE_ANNEX.json"
+    ).is_file()
+    meta = {
+        "ok": annex_ok,
+        "source": str(root.resolve()) if root.exists() else str(root),
+        "dest": str(dest.resolve()),
+        "copied": copied,
+        "missing": missing,
+        "pin_ok": pin_ok,
+        "ontology": "known_solutions_attach_not_lambda_eq_gamma",
+        "note": "Science annex attached for partner glance; not ACCEPTANCE/SHIP gate.",
+    }
+    write_json(dest / "KNOWN_SOLUTIONS_ATTACH.json", meta)
+    return meta
 
 
 def write_summary_tsv(report: dict[str, Any], path: Path | str) -> Path:
