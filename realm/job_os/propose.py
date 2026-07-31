@@ -156,8 +156,18 @@ def collect_section_proposals(
                     )
                 )
 
-    # --- align: weak glue → enable depth_primary or change null_policy ---
-    if obs.align_score + 1e-12 < thr.min_align_score or "align_weak" in obs.notes:
+    # --- align: weak glue → free-param align_mode / null_policy only ---
+    # P2: multi-source glue_incomplete also triggers (structural, not score-chase)
+    align_weak = (
+        obs.align_score + 1e-12 < thr.min_align_score
+        or "align_weak" in obs.notes
+        or "glue_incomplete" in obs.notes
+        or (
+            getattr(obs, "glue_score", 1.0) + 1e-12 < thr.min_align_score
+            and getattr(obs, "has_micropulse", False)
+        )
+    )
+    if align_weak:
         if p.align_mode == "none":
             cand = _fresh(
                 FreeParams(
@@ -180,7 +190,7 @@ def collect_section_proposals(
                     )
                 )
         elif p.align_mode == "survey_anchor":
-            # P1 has no survey — fall back to depth_primary
+            # No survey stalk yet (P3) — fall back to depth_primary
             cand = _fresh(
                 FreeParams(
                     align_mode="depth_primary",
@@ -201,6 +211,76 @@ def collect_section_proposals(
                         SECTION_PRIORITY["align"],
                     )
                 )
+        elif p.align_mode == "depth_primary" and getattr(obs, "has_micropulse", False):
+            # Prefer trying time_primary when depth glue is incomplete on multi-source
+            cand = _fresh(
+                FreeParams(
+                    align_mode="time_primary",
+                    window_scale=p.window_scale,
+                    channel_pack=p.channel_pack,
+                    null_policy=p.null_policy,
+                    survey_gate=p.survey_gate,
+                    regime_mode=p.regime_mode,
+                ),
+                tried,
+            )
+            if cand:
+                props.append(
+                    SectionProposal(
+                        "align",
+                        cand,
+                        "try_time_primary_glue_incomplete",
+                        SECTION_PRIORITY["align"],
+                    )
+                )
+            if p.null_policy == "mark_only":
+                cand = _fresh(
+                    _with_pack(p, p.channel_pack, null_policy="hold_last"), tried
+                )
+                if cand:
+                    props.append(
+                        SectionProposal(
+                            "align",
+                            cand,
+                            "hold_last_nulls_for_glue",
+                            SECTION_PRIORITY["align"] + 1,
+                        )
+                    )
+        elif p.align_mode == "time_primary" and getattr(obs, "has_micropulse", False):
+            # Time domain weak → try depth_primary
+            cand = _fresh(
+                FreeParams(
+                    align_mode="depth_primary",
+                    window_scale=p.window_scale,
+                    channel_pack=p.channel_pack,
+                    null_policy=p.null_policy,
+                    survey_gate=p.survey_gate,
+                    regime_mode=p.regime_mode,
+                ),
+                tried,
+            )
+            if cand:
+                props.append(
+                    SectionProposal(
+                        "align",
+                        cand,
+                        "try_depth_primary_glue_incomplete",
+                        SECTION_PRIORITY["align"],
+                    )
+                )
+            if p.null_policy == "mark_only":
+                cand = _fresh(
+                    _with_pack(p, p.channel_pack, null_policy="hold_last"), tried
+                )
+                if cand:
+                    props.append(
+                        SectionProposal(
+                            "align",
+                            cand,
+                            "hold_last_nulls_for_glue",
+                            SECTION_PRIORITY["align"] + 1,
+                        )
+                    )
         elif p.null_policy == "mark_only":
             cand = _fresh(_with_pack(p, p.channel_pack, null_policy="hold_last"), tried)
             if cand:

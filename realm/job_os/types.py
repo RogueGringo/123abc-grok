@@ -16,13 +16,28 @@ NULL_POLICIES = ("drop", "hold_last", "mark_only")
 SURVEY_GATES = ("off", "qc_only", "holonomy")  # P3 stalk; default off in P1
 REGIME_MODES = ("off", "persist_h0", "dual_gate_windows")  # P4 stalk; default off
 
-# Required channels per pack (uppercase curve mnemonics)
+# Required channels per pack (uppercase curve mnemonics).
+# P2: mwd_full / job_union require downhole MicroPulse fibers (GAMMA/SHOCK/VIBE…).
+# surface_* remain surface-only so LAS-only jobs still solve without MP.
 PACK_REQUIRED: dict[str, tuple[str, ...]] = {
     "surface_min": ("DEPT", "WOB", "RPM"),
     "surface_full": ("DEPT", "WOB", "RPM", "TOR", "SPP", "SSSI"),
-    "mwd_full": ("DEPT", "WOB", "RPM", "TOR", "SPP"),
-    "job_union": ("DEPT", "WOB", "RPM", "TOR", "SPP", "SSSI"),
+    "mwd_full": ("DEPT", "WOB", "RPM", "TOR", "SPP", "GAMMA"),
+    "job_union": (
+        "DEPT",
+        "WOB",
+        "RPM",
+        "TOR",
+        "SPP",
+        "SSSI",
+        "GAMMA",
+        "SHOCK",
+        "VIBE",
+    ),
 }
+
+# Downhole mnemonics recognized for pack / select (MicroPulse join)
+DOWNHOLE_PACK_CHANNELS = ("GAMMA", "SHOCK", "VIBE", "PULSE", "TELEM", "TEMP", "FLOW")
 
 # Merge priority: lower number wins when proposals conflict
 SECTION_PRIORITY = {
@@ -119,6 +134,13 @@ class Observations:
     survey_n_stations: int = 0
     survey_qc_fail: int = 0
     regime_note: str | None = None
+    # P2 MicroPulse / multi-source glue (structural — not ROP score)
+    has_micropulse: bool = False
+    glue_score: float = 0.0
+    glue_method: str | None = None
+    mp_n_fibers: int = 0
+    mp_kinds: list[str] = field(default_factory=list)
+    glue_notes: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

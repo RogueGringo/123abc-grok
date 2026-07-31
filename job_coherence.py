@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
-"""Oilfield Job Coherence OS CLI (P1 core).
+"""Oilfield Job Coherence OS CLI (P2: MicroPulse fiber join).
 
 observe → negotiate free parameters → re-ingest → until coherent or budget.
 
 LOCKED: QC pin (depth mono, required channels for pack, unit sanity).
 FREE: align_mode, window_scale, channel_pack, null_policy.
+
+P2: --micropulse joins GAMMA/SHOCK/VIBE/PULSE/TELEM/TEMP/FLOW fibers;
+structural depth/time glue (not score-chase).
 
 Never ROP score-chase. Never retune SOP pin mid-run. Never ζ→ROP.
 Mirror of handoff_coherence OS v2 without protein adapters.
@@ -32,7 +35,8 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
         description=(
             "Oilfield Job Coherence OS: negotiate align/window/pack/null until "
-            "job routine fixed-point. QC pin locked. Not ROP score-chase."
+            "job routine fixed-point. QC pin locked. Optional MicroPulse join. "
+            "Not ROP score-chase."
         )
     )
     p.add_argument(
@@ -40,6 +44,12 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         default=None,
         help="path to EDR LAS 2.0 file",
+    )
+    p.add_argument(
+        "--micropulse",
+        type=Path,
+        default=None,
+        help="MicroPulse memory path: directory of CSVs or a single CSV fiber",
     )
     p.add_argument(
         "--out-dir",
@@ -94,7 +104,7 @@ def main(argv: list[str] | None = None) -> int:
         "--min-align-score",
         type=float,
         default=0.5,
-        help="min align score for is_solved",
+        help="min align/glue score for is_solved",
     )
     p.add_argument(
         "--max-physics-fail",
@@ -123,6 +133,7 @@ def main(argv: list[str] | None = None) -> int:
         try:
             result = run_job_coherence_loop(
                 las_path=args.las,
+                micropulse_path=args.micropulse,
                 out_root=args.out_dir,
                 max_rounds=int(args.max_rounds),
                 resume_dir=args.resume,
@@ -139,9 +150,13 @@ def main(argv: list[str] | None = None) -> int:
         if args.las is None or not args.las.is_file():
             logger.error("--las required and must exist (got %s)", args.las)
             return 2
+        if args.micropulse is not None and not args.micropulse.exists():
+            logger.error("--micropulse path not found: %s", args.micropulse)
+            return 2
         try:
             result = run_job_coherence_loop(
                 las_path=args.las,
+                micropulse_path=args.micropulse,
                 out_root=args.out_dir,
                 initial=FreeParams(
                     align_mode=args.align_mode,
@@ -194,8 +209,9 @@ def main(argv: list[str] | None = None) -> int:
                 "final_params": result.get("final_params"),
                 "partner_recipe": result.get("partner_recipe"),
                 "pin_ok": (result.get("pin_locked") or {}).get("last_ok"),
+                "micropulse_kinds": result.get("micropulse_kinds"),
                 "out": result.get("out_root"),
-                "note": "pin locked; free params only; OS fixed-point K; not ROP",
+                "note": "pin locked; free params only; OS fixed-point K; glue structural; not ROP",
             },
             indent=2,
         )

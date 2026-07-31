@@ -246,8 +246,12 @@ def select_channel_pack(
     series: dict[str, Any],
     pack: str = "surface_min",
 ) -> dict[str, Any]:
-    """Filter channels to those relevant for pack (keeps DEPT always)."""
-    from realm.job_os.types import PACK_REQUIRED
+    """Filter channels to those relevant for pack (keeps DEPT always).
+
+    P2: mwd_full keeps required surface + downhole fibers present;
+    job_union keeps the full joined manifold (surface + MicroPulse).
+    """
+    from realm.job_os.types import DOWNHOLE_PACK_CHANNELS, PACK_REQUIRED
 
     pack_l = (pack or "surface_min").lower().strip()
     required = PACK_REQUIRED.get(pack_l, PACK_REQUIRED["surface_min"])
@@ -255,12 +259,15 @@ def select_channel_pack(
     channels_u = {str(k).upper(): v for k, v in channels.items()}
 
     if pack_l == "job_union":
-        # keep all
+        # keep all surface + downhole fibers
         selected = channels_u
     else:
         want = {r.upper() for r in required}
         want.add("DEPT")
         want.add("DEPTH")
+        if pack_l == "mwd_full":
+            # Keep any present downhole pack channels (joined MicroPulse)
+            want.update(c.upper() for c in DOWNHOLE_PACK_CHANNELS)
         # surface_full etc. — also keep any present required
         selected = {k: v for k, v in channels_u.items() if k in want}
         # Always keep depth key

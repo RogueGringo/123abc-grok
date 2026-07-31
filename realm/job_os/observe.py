@@ -1,6 +1,7 @@
-"""Observe job cycle: pin + export completeness + align + physics.
+"""Observe job cycle: pin + export completeness + align/glue + physics.
 
 Builds Observations from ingest series + pin report + free params.
+P2: multi-source glue_score (surface LAS + MicroPulse fibers) feeds align_score.
 """
 
 from __future__ import annotations
@@ -8,17 +9,25 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from realm.job_os.glue import compute_glue
 from realm.job_os.pin import verify_job_pin
 from realm.job_os.types import FreeParams, JobThresholds, Observations, PACK_REQUIRED
 
 
-def _align_score(series: dict[str, Any], params: FreeParams) -> float:
-    """P1 single-source align score.
+def _align_score(
+    series: dict[str, Any],
+    params: FreeParams,
+    glue: dict[str, Any] | None = None,
+) -> float:
+    """Align / glue score for is_solved.
 
-    depth_primary / time_primary: 1.0 if depths present and monotonic-ish rows > 0
-    none: 0.5 (no glue attempted)
-    survey_anchor: 0.0 until survey stalk (P3) — signals need for survey
+    P1 single-source: depth presence.
+    P2 multi-source: structural glue_score from compute_glue (depth/time
+    proximity or honest fiber-join — not score-chase).
     """
+    if glue is not None and glue.get("multi_source"):
+        return float(glue.get("score") or 0.0)
+
     depths = series.get("depths") or []
     n = len(depths)
     if n <= 0:
@@ -27,7 +36,7 @@ def _align_score(series: dict[str, Any], params: FreeParams) -> float:
     if am == "none":
         return 0.5
     if am == "survey_anchor":
-        # No survey fiber in P1 — incomplete glue
+        # No survey fiber in P1/P2 core — incomplete glue until P3
         return 0.25
     # depth_primary or time_primary on single LAS: rows present → good
     finite = sum(1 for d in depths if d == d)  # not nan
@@ -64,7 +73,7 @@ def _physics_rollups(
     else:
         n_ok += 1
 
-    # Soft bound warnings (WOB negative etc.)
+    # Soft bound warnings (WOB negative etc.) — surface channels only
     channels = {str(k).upper(): v for k, v in (series.get("channels") or {}).items()}
     for name, lo in (("WOB", -1.0), ("RPM", -1.0), ("SPP", -1.0)):
         arr = channels.get(name)
@@ -95,8 +104,9 @@ def observe_job(
     thr: JobThresholds | None = None,
     out_dir: Path | str = ".",
     pin: dict[str, Any] | None = None,
+    glue: dict[str, Any] | None = None,
 ) -> Observations:
-    """Extract observations from one execute (ingest + pin + align)."""
+    """Extract observations from one execute (ingest + pin + align/glue)."""
     thr = thr or JobThresholds()
     p = params.clamp()
     if pin is None:
@@ -105,6 +115,24 @@ def observe_job(
             pack=p.channel_pack,
             depth_mono_eps=float(thr.depth_mono_eps),
         )
+
+    # Glue: use provided report or compute from series.micropulse bundle-like
+    if glue is None:
+        mp = series.get("micropulse")
+        if mp:
+            # Reconstruct minimal bundle for glue from joined summary
+            bundle = {
+                "n_fibers": int(mp.get("n_fibers") or 0),
+                "times_union": list(mp.get("times_union") or []),
+                "depths_union": list(mp.get("depths_union") or []),
+                "downhole_kinds_present": list(mp.get("downhole_kinds_present") or []),
+                "pack_channels": {
+                    k: True for k in (mp.get("pack_channels") or [])
+                },
+            }
+            glue = compute_glue(series, bundle, align_mode=p.align_mode)
+        else:
+            glue = compute_glue(series, None, align_mode=p.align_mode)
 
     required = PACK_REQUIRED.get(p.channel_pack, PACK_REQUIRED["surface_min"])
     present = pin.get("present_channels") or []
@@ -122,7 +150,7 @@ def observe_job(
     if n_rows <= 0:
         export_ok_fraction = 0.0
 
-    align = _align_score(series, p)
+    align = _align_score(series, p, glue=glue)
     n_ok, n_warn, n_fail, phys_notes = _physics_rollups(series, pin, thr)
 
     notes: list[str] = []
@@ -134,11 +162,17 @@ def observe_job(
         notes.append("physics_fail")
     if align + 1e-12 < thr.min_align_score:
         notes.append("align_weak")
+    glue_notes = list(glue.get("notes") or [])
+    if "glue_incomplete" in glue_notes:
+        notes.append("glue_incomplete")
     notes.extend(phys_notes)
 
     verify_ok = bool(pin.get("ok")) and export_ok_fraction + 1e-12 >= thr.min_export_ok_fraction
     if thr.require_verify_ok and n_fail > thr.max_physics_fail:
         verify_ok = False
+
+    mp_info = series.get("micropulse") or {}
+    has_mp = bool(series.get("has_micropulse") or glue.get("has_micropulse"))
 
     return Observations(
         pin_ok=bool(pin.get("ok")),
@@ -156,11 +190,17 @@ def observe_job(
         unit_sanity_ok=bool(pin.get("unit_sanity_ok", False)),
         out_dir=str(out_dir),
         notes=notes,
+        has_micropulse=has_mp,
+        glue_score=float(glue.get("score") or 0.0),
+        glue_method=str(glue.get("method") or "") or None,
+        mp_n_fibers=int(mp_info.get("n_fibers") or 0),
+        mp_kinds=list(mp_info.get("kinds") or []),
+        glue_notes=glue_notes,
     )
 
 
 def is_solved(obs: Observations, thr: JobThresholds, params: FreeParams) -> bool:
-    """Job routine coherence gate: pin + export + physics + align (not ROP)."""
+    """Job routine coherence gate: pin + export + physics + align/glue (not ROP)."""
     p = params.clamp()
     if thr.require_pin and not obs.pin_ok:
         return False
@@ -175,7 +215,7 @@ def is_solved(obs: Observations, thr: JobThresholds, params: FreeParams) -> bool
     if thr.require_align and p.align_mode == "none":
         return False
     if obs.align_score + 1e-12 < thr.min_align_score:
-        # survey_anchor without survey won't pass — honest unsolved until P3
+        # survey_anchor without survey / weak multi-source glue → honest unsolved
         return False
     return True
 
@@ -197,4 +237,6 @@ def coherence_score(obs: Observations, thr: JobThresholds, params: FreeParams) -
     else:
         parts.append(0.5)
     parts.append(max(0.0, min(1.0, float(obs.align_score))))
+    if obs.has_micropulse:
+        parts.append(max(0.0, min(1.0, float(obs.glue_score))))
     return float(sum(parts) / len(parts))

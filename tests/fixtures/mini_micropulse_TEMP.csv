@@ -1,0 +1,18 @@
+MicroPulse
+Temp Log
+Download time:, 07/18/2025 10:37:11
+Software Version:, 4.11.20
+Firmware Version:, 2.9.21
+Hardware Version:, 2.9
+Tool Serial Number:, 799
+Tool UID:, test-fixture
+Mode:, MWD
+Operator:,
+Job:, ,Run:,
+Comments:, mini fixture for Job OS P2
+LOGTAG_RTC_TIME, TEMPERATURE, TEMPERATURE_ADC
+MM/dd/yyyy hh:mm:ss, Celcius
+07/14/2025 21:53:44,33.54,1904.762573
+07/14/2025 21:54:04,33.80,1910.000000
+07/14/2025 21:54:24,34.10,1915.500000
+07/14/2025 21:54:44,34.25,1918.000000

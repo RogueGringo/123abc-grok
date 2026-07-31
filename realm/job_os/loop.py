@@ -14,7 +14,9 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from realm.job_os.glue import compute_glue
 from realm.job_os.ingest_las import apply_null_policy, parse_las, select_channel_pack
+from realm.job_os.ingest_micropulse import join_surface_micropulse, load_micropulse_bundle
 from realm.job_os.observe import coherence_score, is_solved, observe_job
 from realm.job_os.pin import verify_job_pin
 from realm.job_os.propose import collect_section_proposals, negotiate
@@ -37,10 +39,12 @@ def write_partner_recipe(
     run_id: str,
     las_path: str | None,
     solved: bool,
+    micropulse_path: str | None = None,
 ) -> Path:
     """Machine-readable free-param recipe for partner re-run (not ACCEPTANCE)."""
     dest = Path(path)
     dest.parent.mkdir(parents=True, exist_ok=True)
+    mp_cli = f" --micropulse {micropulse_path}" if micropulse_path else ""
     body = {
         "kind": "partner_recipe",
         "ontology": "job_partner_recipe_not_rop_score",
@@ -57,8 +61,10 @@ def write_partner_recipe(
         },
         "free_params": free_params.to_dict(),
         "las_path": las_path,
+        "micropulse_path": micropulse_path,
         "re_run_cli": (
-            f"python job_coherence.py --os --las {las_path or '<LAS>'} "
+            f"python job_coherence.py --os --las {las_path or '<LAS>'}"
+            f"{mp_cli} "
             f"--align-mode {free_params.align_mode} "
             f"--window-scale {free_params.window_scale} "
             f"--channel-pack {free_params.channel_pack} "
@@ -69,6 +75,7 @@ def write_partner_recipe(
             "Not ACCEPTANCE / not SHIP success / not ROP prediction.",
             "Commercial success remains gluing sources + QC pin.",
             "Never retune SOP pin for score. Never ζ→ROP claim.",
+            "Glue is structural (depth/time proximity); not score-chase.",
         ],
     }
     dest.write_text(json.dumps(body, indent=2) + "\n", encoding="utf-8")
@@ -147,12 +154,15 @@ def execute_job_cycle(
     params: FreeParams,
     thr: JobThresholds,
     cycle_dir: Path,
+    mp_bundle: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], Any]:
-    """Ingest LAS → null policy → pack select → pin → observe."""
+    """Ingest LAS (+ optional MicroPulse) → null policy → pack select → pin → observe."""
     cycle_dir.mkdir(parents=True, exist_ok=True)
     p = params.clamp()
     raw = parse_las(las_path)
-    series = apply_null_policy(raw, p.null_policy)
+    # Join downhole fibers before null_policy / pack so pack required channels resolve
+    series = join_surface_micropulse(raw, mp_bundle)
+    series = apply_null_policy(series, p.null_policy)
     series = select_channel_pack(series, p.channel_pack)
 
     pin = verify_job_pin(
@@ -163,7 +173,25 @@ def execute_job_cycle(
     (cycle_dir / "pin.json").write_text(
         json.dumps(pin, indent=2) + "\n", encoding="utf-8"
     )
+
+    glue = compute_glue(series, mp_bundle, align_mode=p.align_mode)
+    (cycle_dir / "glue.json").write_text(
+        json.dumps(glue, indent=2) + "\n", encoding="utf-8"
+    )
+
     # Store lightweight series summary (not full arrays in json for large files)
+    mp_summary = None
+    if series.get("micropulse"):
+        mp = series["micropulse"]
+        mp_summary = {
+            "n_fibers": mp.get("n_fibers"),
+            "kinds": mp.get("kinds"),
+            "source_path": mp.get("source_path"),
+            "pack_channels": mp.get("pack_channels"),
+            "downhole_kinds_present": mp.get("downhole_kinds_present"),
+            "n_times": len(mp.get("times_union") or []),
+            "n_depths": len(mp.get("depths_union") or []),
+        }
     summary = {
         "n_rows": series.get("n_rows"),
         "curve_names": series.get("curve_names"),
@@ -174,6 +202,15 @@ def execute_job_cycle(
         "units": series.get("units"),
         "n_channels": len(series.get("channels") or {}),
         "pack_required": series.get("pack_required"),
+        "has_micropulse": bool(series.get("has_micropulse")),
+        "micropulse": mp_summary,
+        "glue": {
+            "score": glue.get("score"),
+            "method": glue.get("method"),
+            "multi_source": glue.get("multi_source"),
+            "shared_domain": glue.get("shared_domain"),
+            "notes": glue.get("notes"),
+        },
     }
     (cycle_dir / "sources_summary.json").write_text(
         json.dumps(summary, indent=2) + "\n", encoding="utf-8"
@@ -185,6 +222,7 @@ def execute_job_cycle(
         thr=thr,
         out_dir=cycle_dir,
         pin=pin,
+        glue=glue,
     )
     (cycle_dir / "observations.json").write_text(
         json.dumps(obs.to_dict(), indent=2) + "\n", encoding="utf-8"
@@ -195,6 +233,7 @@ def execute_job_cycle(
 def run_job_coherence_loop(
     *,
     las_path: Path | str | None = None,
+    micropulse_path: Path | str | None = None,
     out_root: Path | str = "out/job_os",
     initial: FreeParams | None = None,
     thresholds: JobThresholds | None = None,
@@ -212,6 +251,8 @@ def run_job_coherence_loop(
     PARTNER_RECIPE on SOLVED, optional resume.
 
     Fixed-point: is_solved ∧ empty free-param board for K consecutive cycles.
+
+    P2: optional micropulse_path (dir of CSVs or single file) joins downhole fibers.
     """
     thr = thresholds or JobThresholds()
     params = (initial or FreeParams()).clamp()
@@ -225,6 +266,7 @@ def run_job_coherence_loop(
     stability_streak = 0
     run_doc: dict[str, Any] | None = None
     las_str: str | None = str(las_path) if las_path is not None else None
+    mp_str: str | None = str(micropulse_path) if micropulse_path is not None else None
 
     if resume_dir is not None:
         state = load_resume_state(Path(resume_dir))
@@ -260,6 +302,9 @@ def run_job_coherence_loop(
         if run_meta.get("las_path"):
             las_str = str(run_meta["las_path"])
             las_path = las_str
+        if run_meta.get("micropulse_path"):
+            mp_str = str(run_meta["micropulse_path"])
+            micropulse_path = mp_str
         run_doc = dict(run_meta)
         run_doc["status"] = "resuming"
         logger.info(
@@ -286,6 +331,20 @@ def run_job_coherence_loop(
         raise FileNotFoundError(f"LAS not found: {las_path}")
     las_str = str(las_path.resolve())
 
+    # Load MicroPulse bundle once (immutable sources; free params don't re-parse SOP)
+    mp_bundle: dict[str, Any] | None = None
+    if mp_str or micropulse_path is not None:
+        mp_path = Path(mp_str or micropulse_path)  # type: ignore[arg-type]
+        if not mp_path.exists():
+            raise FileNotFoundError(f"MicroPulse path not found: {mp_path}")
+        mp_str = str(mp_path.resolve())
+        mp_bundle = load_micropulse_bundle(mp_path)
+        logger.info(
+            "micropulse fibers=%s kinds=%s",
+            mp_bundle.get("n_fibers"),
+            mp_bundle.get("kinds"),
+        )
+
     ledger: list[dict[str, Any]] = list(resume_ledger)
     solved = False
     stop_reason = "max_rounds"
@@ -306,8 +365,9 @@ def run_job_coherence_loop(
     if os_mode and resume_dir is None:
         run_doc = {
             "run_id": run_id,
-            "ontology": "job_coherence_os_p1_not_rop_score",
+            "ontology": "job_coherence_os_p2_not_rop_score",
             "las_path": las_str,
+            "micropulse_path": mp_str,
             "thresholds": thr.to_dict(),
             "stability_k": stability_k,
             "max_rounds": int(max_rounds),
@@ -376,6 +436,7 @@ def run_job_coherence_loop(
                 params=params,
                 thr=thr,
                 cycle_dir=cycle_dir,
+                mp_bundle=mp_bundle,
             )
             pin0 = pin
 
@@ -446,6 +507,9 @@ def run_job_coherence_loop(
                 },
                 "export_ok_fraction": obs.export_ok_fraction,
                 "n_rows": obs.n_rows,
+                "glue_score": obs.glue_score,
+                "glue_method": obs.glue_method,
+                "has_micropulse": obs.has_micropulse,
                 "cycle_dir": str(cycle_dir.resolve()),
                 "proposals": [pr.to_dict() for pr in board_props],
                 "sources": summary,
@@ -513,6 +577,7 @@ def run_job_coherence_loop(
             params=params,
             thr=thr,
             cycle_dir=out_root / "cycle_final_pin",
+            mp_bundle=mp_bundle,
         )
         recipe_path = out_root / "PARTNER_RECIPE.json"
         write_partner_recipe(
@@ -522,6 +587,7 @@ def run_job_coherence_loop(
             run_id=str(run_id),
             las_path=las_str,
             solved=True,
+            micropulse_path=mp_str,
         )
         partner_recipe_path = str(recipe_path.resolve())
 
@@ -540,7 +606,7 @@ def run_job_coherence_loop(
 
     result = {
         "ontology": (
-            "job_coherence_os_p1_not_rop_score"
+            "job_coherence_os_p2_not_rop_score"
             if os_mode
             else "job_coherence_protocol_not_rop_score"
         ),
@@ -565,10 +631,14 @@ def run_job_coherence_loop(
         "ledger": ledger,
         "out_root": str(out_root.resolve()),
         "las_path": las_str,
+        "micropulse_path": mp_str,
+        "micropulse_n_fibers": (mp_bundle or {}).get("n_fibers") if mp_bundle else 0,
+        "micropulse_kinds": (mp_bundle or {}).get("kinds") if mp_bundle else [],
         "note": (
             "Cyclic observe→multi-section propose→merge→ingest. "
             "Fixed-point: is_solved ∧ empty board × K. "
             "Free params: align_mode/window_scale/channel_pack/null_policy. "
+            "P2: MicroPulse fiber join + structural glue. "
             "QC pin locked. Not ROP score-chase. Never ζ→ROP."
         ),
     }
