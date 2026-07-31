@@ -411,6 +411,20 @@ def attach_report_to_dir(
     return meta
 
 
+def _write_latest_pointer(out_dir: Path | str, stamp_dir: Path | str) -> None:
+    """Windows-friendly LATEST pointer file under out_dir → stamp_dir."""
+    latest = Path(out_dir) / "LATEST"
+    root = Path(stamp_dir)
+    try:
+        if latest.is_symlink() or latest.is_file():
+            latest.unlink()
+        if latest.is_dir() and not any(latest.iterdir()):
+            latest.rmdir()
+        latest.write_text(str(root.resolve()), encoding="utf-8")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("LATEST pointer: %s", exc)
+
+
 def update_known_solutions_index(out_dir: Path | str) -> Path:
     """Catalog stamp dirs under out_dir (LATEST pointer + INDEX.json)."""
     root = Path(out_dir)
@@ -680,7 +694,13 @@ def run_known_solutions(
 
     if not pin.get("ok"):
         base["status"] = "PIN_FAIL"
+        base["out_dir"] = str(root)
         _write_all(base)
+        _write_latest_pointer(out_dir, root)
+        try:
+            update_known_solutions_index(out_dir)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("known_solutions INDEX: %s", exc)
         return base
 
     if dry_run:
@@ -691,11 +711,22 @@ def run_known_solutions(
         base["kabsch_aggregates"] = aggregate_kabsch([])
         base["out_dir"] = str(root)
         _write_all(base)
+        _write_latest_pointer(out_dir, root)
+        try:
+            update_known_solutions_index(out_dir)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("known_solutions INDEX: %s", exc)
         return base
 
     if universe_doc.get("n_total", 0) < 1:
         base["status"] = "EMPTY_UNIVERSE"
+        base["out_dir"] = str(root)
         _write_all(base)
+        _write_latest_pointer(out_dir, root)
+        try:
+            update_known_solutions_index(out_dir)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("known_solutions INDEX: %s", exc)
         return base
 
     knobs = load_knobs(knobs_path)
@@ -749,18 +780,7 @@ def run_known_solutions(
     base["out_dir"] = str(root)
 
     _write_all(base)
-
-    # LATEST pointer (best-effort)
-    latest = Path(out_dir) / "LATEST"
-    try:
-        if latest.is_symlink() or latest.is_file():
-            latest.unlink()
-        if latest.is_dir() and not any(latest.iterdir()):
-            latest.rmdir()
-        # Windows-friendly: write pointer file
-        latest.write_text(str(root.resolve()), encoding="utf-8")
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("LATEST pointer: %s", exc)
+    _write_latest_pointer(out_dir, root)
 
     try:
         update_known_solutions_index(out_dir)
@@ -1032,13 +1052,7 @@ def run_compare_modes(
     except Exception:  # noqa: BLE001
         pass
 
-    latest = Path(out_dir) / "LATEST"
-    try:
-        if latest.is_file() or latest.is_symlink():
-            latest.unlink()
-        latest.write_text(str(root.resolve()), encoding="utf-8")
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("LATEST pointer: %s", exc)
+    _write_latest_pointer(out_dir, root)
 
     try:
         update_known_solutions_index(out_dir)

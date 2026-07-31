@@ -17,6 +17,7 @@ on:
       - "handoff_deliver.py"
       - "handoff_ship.py"
       - "known_solutions.py"
+      - "handoff_science.py"
       - "realm/validate/known_solutions*.py"
       - "realm/validate/decoys.py"
       - "data/known_solutions/**"
@@ -40,6 +41,7 @@ on:
       - "handoff_deliver.py"
       - "handoff_ship.py"
       - "known_solutions.py"
+      - "handoff_science.py"
       - "realm/validate/known_solutions*.py"
       - "realm/validate/decoys.py"
       - "data/known_solutions/**"
@@ -85,8 +87,9 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: |
-          pytest tests/test_known_solutions.py tests/test_decoys.py -q --tb=line
+          pytest tests/test_known_solutions.py tests/test_decoys.py tests/test_handoff_science.py -q --tb=line
           python known_solutions.py --dry-run --skip-expand --out-dir /tmp/ks_dry
+          python handoff_science.py --dry-run --skip-expand --out-dir /tmp/ks_science_dry
           # universe + pin only; enrichment never gates CI
           test -f /tmp/ks_dry/LATEST || test -d /tmp/ks_dry
           LATEST=$(cat /tmp/ks_dry/LATEST 2>/dev/null || ls -d /tmp/ks_dry/*/ 2>/dev/null | head -1)

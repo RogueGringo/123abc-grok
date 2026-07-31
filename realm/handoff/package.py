@@ -1265,6 +1265,23 @@ python handoff_verify.py . --require-sha256
   ```
 - REMARK lines carry `ONTOLOGY … not_lambda_eq_gamma` and rank metadata.
 
+## Optional science evidence (not acceptance)
+
+Partner receipt / releases drops may also include:
+
+| Path | Description |
+|------|-------------|
+| `PARTNER_SCIENCE_ANNEX.md` | Dual-gate ranking on public natives (informational) |
+| `DECOY_MODE_COMPARE.md` | soft vs mixed vs hard decoy stress table (informational) |
+
+These **do not** accept or reject a package. Commercial success remains openable PDBs + dual-gate pin.
+
+```bash
+python known_solutions.py --compare-modes soft,mixed,hard
+python handoff_science.py --skip-expand --attach-releases out/releases --status
+python handoff_ship.py --verify-bundle partner_receipts_*.zip
+```
+
 ## Ranking note
 
 Molds are selected with a **locked dual-gate LengthPolicy** (projection-primary Kabsch

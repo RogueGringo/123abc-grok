@@ -1,7 +1,7 @@
 # Design: Known-Solutions Report (Public Natives → Science Ledger + Partner Annex)
 
 **Date:** 2026-07-30  
-**Status:** Implemented (v1) — human gate approved 2026-07-30  
+**Status:** Landed (commercial + science closed loop) — 2026-07-30/31  
 **Branch context:** commercial dual-gate handoff closed; science external test next  
 **Related:** `2026-07-30-handoff-protocol-design.md`, `2026-07-30-validation-ladder-design.md`, dual-gate pin lock  
 
@@ -230,7 +230,9 @@ python known_solutions.py \
 | `handoff_campaign` / matrix / ship | Unchanged |
 | ACCEPTANCE / DELIVERY / SHIP | Unchanged |
 | Partner receipt zip | Unchanged |
-| Optional attach | `handoff_matrix --attach-known-solutions PATH` or `--run-known-solutions` copies annex into matrix out-root; never gates accept |
+| Optional attach | `handoff_matrix` / `handoff_ship` / `handoff_science` attach annex + optional DECOY_MODE_COMPARE; never gates accept |
+| Ops surface | `handoff_status --known-solutions` (science only; commercial ok independent) |
+| Golden path | `python handoff_science.py --compare-modes soft,mixed,hard --attach-releases out/releases --status` |
 
 Enrichment_stamp on campaigns remains informational; this report is the **canonical multi-source science ledger**.
 
