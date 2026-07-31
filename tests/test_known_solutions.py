@@ -12,6 +12,7 @@ from realm.validate.known_solutions import (
     aggregate_rows,
     attach_report_to_dir,
     build_decoy_mode_compare,
+    update_known_solutions_index,
     write_decoy_mode_compare_md,
     write_partner_annex,
 )
@@ -241,6 +242,41 @@ def test_attach_via_latest_pointer(tmp_path: Path):
     meta = attach_report_to_dir(parent, dest, include_full_ledger=False)
     assert meta["ok"] is True
     assert (dest / "known_solutions" / "PARTNER_SCIENCE_ANNEX.json").is_file()
+
+
+def test_attach_compare_artifacts(tmp_path: Path):
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "PARTNER_SCIENCE_ANNEX.json").write_text("{}", encoding="utf-8")
+    (src / "PARTNER_SCIENCE_ANNEX.md").write_text("a", encoding="utf-8")
+    (src / "pin.json").write_text(
+        json.dumps({"ok": True, "soft_T": 0.036}), encoding="utf-8"
+    )
+    (src / "DECOY_MODE_COMPARE.json").write_text(
+        json.dumps({"by_mode": {"soft": {}}}), encoding="utf-8"
+    )
+    (src / "DECOY_MODE_COMPARE.md").write_text("# cmp\n", encoding="utf-8")
+    dest = tmp_path / "dest"
+    meta = attach_report_to_dir(src, dest)
+    assert meta["ok"] is True
+    assert meta["has_decoy_mode_compare"] is True
+    assert (dest / "DECOY_MODE_COMPARE.md").is_file()
+    assert (dest / "known_solutions" / "DECOY_MODE_COMPARE.json").is_file()
+
+
+def test_update_known_solutions_index(tmp_path: Path):
+    stamp = tmp_path / "20260101T000000Z"
+    stamp.mkdir()
+    (stamp / "PARTNER_SCIENCE_ANNEX.json").write_text("{}", encoding="utf-8")
+    (stamp / "pin.json").write_text(
+        json.dumps({"ok": True, "soft_T": 0.036}), encoding="utf-8"
+    )
+    (tmp_path / "LATEST").write_text(str(stamp.resolve()), encoding="utf-8")
+    idx_path = update_known_solutions_index(tmp_path)
+    idx = json.loads(idx_path.read_text(encoding="utf-8"))
+    assert idx["n_stamps"] == 1
+    assert idx["entries"][0]["pin_ok"] is True
+    assert "not_lambda_eq_gamma" in idx["ontology"]
 
 
 def test_dry_run_cli(tmp_path: Path):

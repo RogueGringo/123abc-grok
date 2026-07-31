@@ -331,6 +331,10 @@ def attach_report_to_dir(
         "PARTNER_SCIENCE_ANNEX.json",
         "PARTNER_SCIENCE_ANNEX.md",
         "pin.json",
+        # multi-mode compare (optional; present when --compare-modes used)
+        "DECOY_MODE_COMPARE.json",
+        "DECOY_MODE_COMPARE.md",
+        "KNOWN_SOLUTIONS_COMPARE.json",
     ]
     if include_full_ledger:
         names.extend(
@@ -346,7 +350,17 @@ def attach_report_to_dir(
     for name in names:
         sp = root / name
         if not sp.is_file():
-            missing.append(name)
+            # compare files optional — only note missing for core annex
+            if name not in (
+                "DECOY_MODE_COMPARE.json",
+                "DECOY_MODE_COMPARE.md",
+                "KNOWN_SOLUTIONS_COMPARE.json",
+                "KNOWN_SOLUTIONS.json",
+                "KNOWN_SOLUTIONS.md",
+                "summary.tsv",
+                "id_universe.json",
+            ):
+                missing.append(name)
             continue
         dp = science_dest / name
         shutil.copy2(sp, dp)
@@ -355,8 +369,13 @@ def attach_report_to_dir(
         except ValueError:
             copied.append(str(dp))
 
-    # Also place thin annex at dest root for partner glance
-    for name in ("PARTNER_SCIENCE_ANNEX.json", "PARTNER_SCIENCE_ANNEX.md"):
+    # Also place thin annex (+ compare) at dest root for partner glance
+    for name in (
+        "PARTNER_SCIENCE_ANNEX.json",
+        "PARTNER_SCIENCE_ANNEX.md",
+        "DECOY_MODE_COMPARE.json",
+        "DECOY_MODE_COMPARE.md",
+    ):
         sp = science_dest / name
         if sp.is_file():
             shutil.copy2(sp, dest / name)
@@ -371,6 +390,9 @@ def attach_report_to_dir(
         except Exception:  # noqa: BLE001
             pin_ok = None
 
+    has_compare = (science_dest / "DECOY_MODE_COMPARE.json").is_file() or (
+        dest / "DECOY_MODE_COMPARE.json"
+    ).is_file()
     annex_ok = (science_dest / "PARTNER_SCIENCE_ANNEX.json").is_file() or (
         dest / "PARTNER_SCIENCE_ANNEX.json"
     ).is_file()
@@ -381,11 +403,67 @@ def attach_report_to_dir(
         "copied": copied,
         "missing": missing,
         "pin_ok": pin_ok,
+        "has_decoy_mode_compare": has_compare,
         "ontology": "known_solutions_attach_not_lambda_eq_gamma",
         "note": "Science annex attached for partner glance; not ACCEPTANCE/SHIP gate.",
     }
     write_json(dest / "KNOWN_SOLUTIONS_ATTACH.json", meta)
     return meta
+
+
+def update_known_solutions_index(out_dir: Path | str) -> Path:
+    """Catalog stamp dirs under out_dir (LATEST pointer + INDEX.json)."""
+    root = Path(out_dir)
+    root.mkdir(parents=True, exist_ok=True)
+    entries: list[dict[str, Any]] = []
+    for child in sorted(root.iterdir(), key=lambda p: p.name, reverse=True):
+        if not child.is_dir():
+            continue
+        if child.name in ("modes",):
+            continue
+        pin_p = child / "pin.json"
+        annex_p = child / "PARTNER_SCIENCE_ANNEX.json"
+        compare_p = child / "DECOY_MODE_COMPARE.json"
+        ks_p = child / "KNOWN_SOLUTIONS.json"
+        if not (annex_p.is_file() or ks_p.is_file() or compare_p.is_file()):
+            continue
+        pin_ok = None
+        soft_T = None
+        if pin_p.is_file():
+            try:
+                pin = json.loads(pin_p.read_text(encoding="utf-8"))
+                pin_ok = pin.get("ok")
+                soft_T = pin.get("soft_T")
+            except Exception:  # noqa: BLE001
+                pass
+        kind = "compare" if compare_p.is_file() else "single"
+        entries.append(
+            {
+                "stamp": child.name,
+                "path": str(child.resolve()),
+                "kind": kind,
+                "pin_ok": pin_ok,
+                "soft_T": soft_T,
+                "has_annex": annex_p.is_file(),
+                "has_compare": compare_p.is_file(),
+            }
+        )
+    latest = None
+    if (root / "LATEST").is_file():
+        try:
+            latest = (root / "LATEST").read_text(encoding="utf-8").strip()
+        except Exception:  # noqa: BLE001
+            latest = None
+    idx = {
+        "ontology": "known_solutions_index_not_lambda_eq_gamma",
+        "n_stamps": len(entries),
+        "latest": latest,
+        "entries": entries[:50],
+        "note": "Catalog of science ledgers; not commercial ACCEPTANCE.",
+    }
+    dest = root / "INDEX.json"
+    write_json(dest, idx)
+    return dest
 
 
 def write_summary_tsv(report: dict[str, Any], path: Path | str) -> Path:
@@ -684,6 +762,11 @@ def run_known_solutions(
     except Exception as exc:  # noqa: BLE001
         logger.warning("LATEST pointer: %s", exc)
 
+    try:
+        update_known_solutions_index(out_dir)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("known_solutions INDEX: %s", exc)
+
     return base
 
 
@@ -956,5 +1039,10 @@ def run_compare_modes(
         latest.write_text(str(root.resolve()), encoding="utf-8")
     except Exception as exc:  # noqa: BLE001
         logger.warning("LATEST pointer: %s", exc)
+
+    try:
+        update_known_solutions_index(out_dir)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("known_solutions INDEX: %s", exc)
 
     return rollup

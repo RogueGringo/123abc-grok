@@ -110,6 +110,15 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="when --run-known-solutions: curated only",
     )
+    p.add_argument(
+        "--ks-compare-modes",
+        type=str,
+        default=None,
+        help=(
+            "when --run-known-solutions: comma list soft,mixed,hard "
+            "(runs decoy-mode compare instead of single mode)"
+        ),
+    )
     p.add_argument("-v", action="store_true")
     args = p.parse_args(argv)
 
@@ -286,6 +295,7 @@ def main(argv: list[str] | None = None) -> int:
     if not args.dry_run and (args.attach_known_solutions or args.run_known_solutions):
         from realm.validate.known_solutions import (
             attach_report_to_dir,
+            run_compare_modes,
             run_known_solutions,
         )
 
@@ -295,18 +305,39 @@ def main(argv: list[str] | None = None) -> int:
             logger.info(
                 "running known-solutions report → %s (report-only)", ks_out
             )
-            ks_report = run_known_solutions(
-                knobs_path=args.knobs,
-                out_dir=ks_out,
-                n_seeds=int(args.ks_n_seeds),
-                n_decoys=24,
-                skip_expand=bool(args.ks_skip_expand),
-                kabsch_set="curated",
-                kabsch_max=4,
-            )
-            ks_src = Path(ks_report.get("out_dir") or ks_out)
-            matrix["known_solutions_status"] = ks_report.get("status")
-            matrix["known_solutions_aggregates"] = ks_report.get("aggregates")
+            if args.ks_compare_modes:
+                modes = [
+                    m.strip()
+                    for m in str(args.ks_compare_modes).split(",")
+                    if m.strip()
+                ]
+                ks_report = run_compare_modes(
+                    knobs_path=args.knobs,
+                    out_dir=ks_out,
+                    modes=modes,
+                    n_seeds=int(args.ks_n_seeds),
+                    n_decoys=24,
+                    skip_expand=bool(args.ks_skip_expand),
+                    kabsch_set="curated",
+                    kabsch_max=4,
+                )
+                ks_src = Path(ks_report.get("out_dir") or ks_out)
+                matrix["known_solutions_status"] = ks_report.get("status")
+                matrix["known_solutions_compare"] = ks_report.get("compare")
+                matrix["known_solutions_modes"] = ks_report.get("modes")
+            else:
+                ks_report = run_known_solutions(
+                    knobs_path=args.knobs,
+                    out_dir=ks_out,
+                    n_seeds=int(args.ks_n_seeds),
+                    n_decoys=24,
+                    skip_expand=bool(args.ks_skip_expand),
+                    kabsch_set="curated",
+                    kabsch_max=4,
+                )
+                ks_src = Path(ks_report.get("out_dir") or ks_out)
+                matrix["known_solutions_status"] = ks_report.get("status")
+                matrix["known_solutions_aggregates"] = ks_report.get("aggregates")
         if ks_src is not None:
             ks_meta = attach_report_to_dir(ks_src, out_root)
             matrix["known_solutions_attach"] = ks_meta

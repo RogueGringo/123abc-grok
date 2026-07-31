@@ -666,8 +666,10 @@ def write_ship_md(ship: dict[str, Any], path: Path | str) -> Path:
                 "## Optional science annex (not acceptance)",
                 "",
                 f"- attached: **{ks.get('ok')}** pin_ok={ks.get('pin_ok')}",
+                f"- decoy_mode_compare: **{ks.get('has_decoy_mode_compare')}**",
                 f"- source: `{ks.get('source')}`",
-                "- see `PARTNER_SCIENCE_ANNEX.md` — enrichment is informational only",
+                "- see `PARTNER_SCIENCE_ANNEX.md` / `DECOY_MODE_COMPARE.md`",
+                "- enrichment is informational only",
                 "",
             ]
         )
@@ -735,6 +737,8 @@ def build_partner_receipt_bundle(
             "PARTNER_SCIENCE_ANNEX.json",
             "PARTNER_SCIENCE_ANNEX.md",
             "KNOWN_SOLUTIONS_ATTACH.json",
+            "DECOY_MODE_COMPARE.json",
+            "DECOY_MODE_COMPARE.md",
         ):
             p = mdir / name
             if p.is_file() and p not in files:
@@ -744,6 +748,8 @@ def build_partner_receipt_bundle(
             "PARTNER_SCIENCE_ANNEX.json",
             "PARTNER_SCIENCE_ANNEX.md",
             "pin.json",
+            "DECOY_MODE_COMPARE.json",
+            "DECOY_MODE_COMPARE.md",
         ):
             p = mdir / "known_solutions" / name
             if p.is_file() and p not in files:
@@ -754,6 +760,8 @@ def build_partner_receipt_bundle(
         "PARTNER_SCIENCE_ANNEX.json",
         "PARTNER_SCIENCE_ANNEX.md",
         "KNOWN_SOLUTIONS_ATTACH.json",
+        "DECOY_MODE_COMPARE.json",
+        "DECOY_MODE_COMPARE.md",
     ):
         p = root / name
         if p.is_file() and p not in files:
@@ -775,6 +783,7 @@ def build_partner_receipt_bundle(
             "- `INDEX.json` / `.md` — catalog of full drops (PDB zips live in archive dirs)",
             "- `matrix_acceptance.json` — probe/holdout partner-accept rollup",
             "- `PARTNER_SCIENCE_ANNEX.*` — optional known-solutions evidence (not accept)",
+            "- `DECOY_MODE_COMPARE.*` — optional soft/mixed/hard stress table (not accept)",
             "",
             "## Acceptance criteria",
             "",
