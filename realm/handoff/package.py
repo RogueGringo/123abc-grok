@@ -1257,6 +1257,7 @@ Ontology: **Crit projection molds** (ζ substrate scaffolding only).
 | `PHYSICS_ROLLUP.json` / `.md` | Optional geometry self-check (CA bond vs 3.8 A; informational) |
 | `physics/*.json` | Per-mold geometry self-check when export ran with physics=geometry |
 | `decorated/*_polyala.pdb` | Optional poly-ALA + CB stubs (partner convenience; not full packing) |
+| `decorated/*_seq.pdb` | Optional native resnames + CB stubs on non-GLY (not full packing) |
 | `DECORATE_ROLLUP.json` | Decorate OK/SKIP counts (informational) |
 
 Verify a package with:
@@ -1268,8 +1269,10 @@ python handoff_verify.py . --require-sha256
 ## How to open
 
 - **PyMOL / ChimeraX / VMD**: load `*_bb.pdb` (N–CA–C–O idealized) or `*_ca.pdb`.
-- **Poly-ALA stubs** (when present): `decorated/*_polyala.pdb` — resnames ALA + CB stubs only
-  (not full sidechain packing; safe default for tools that want a sidechain atom).
+- **Decorated stubs** (when present):
+  - `decorated/*_seq.pdb` — native resnames + CB stubs on non-GLY
+  - `decorated/*_polyala.pdb` — all ALA + CB stubs
+  (not full sidechain packing; convenience for tools that want a sidechain atom).
 - **BioPython**:
   ```python
   from Bio.PDB import PDBParser

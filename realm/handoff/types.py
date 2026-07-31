@@ -50,7 +50,8 @@ class BackboneArtifact:
 @dataclass
 class DecorateRequest:
     backbone: BackboneArtifact
-    sequence: str | None = None
+    sequence: str | None = None  # optional 1-letter sequence
+    resnames: list[str] | None = None  # optional 3-letter residue names (preferred)
     poly_ala: bool = True
 
 

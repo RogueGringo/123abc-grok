@@ -48,9 +48,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument(
         "--decorate",
         type=str,
-        default="polyala",
-        choices=("null", "polyala", "auto"),
-        help="sidechain decorate adapter (default: polyala for partner packages)",
+        default="sequence",
+        choices=("null", "polyala", "sequence", "auto"),
+        help=(
+            "sidechain decorate: sequence=native resnames+CB stubs when available "
+            "(default); polyala=all ALA; null=skip"
+        ),
     )
     p.add_argument(
         "--physics",

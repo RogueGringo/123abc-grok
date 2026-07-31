@@ -280,6 +280,7 @@ def generate_structure_ensemble(
                     "pdb_id": pdb_id.upper(),
                     "sector": si,
                     "n_ca_native": n_ca,
+                    "resnames": list(resnames) if resnames is not None else None,
                 },
             )
         )
@@ -292,6 +293,7 @@ def generate_structure_ensemble(
             meta["spectral_action"] = spectral
             meta["pdb_id"] = pdb_id.upper()
             meta["n_ca_native"] = n_ca
+            meta["resnames"] = list(resnames) if resnames is not None else None
             arr = np.asarray(cm.xyz, float)[:, :3]
             if arr.shape[0] < 3:
                 continue

@@ -76,7 +76,7 @@ def main(argv=None) -> int:
         "--decorate",
         type=str,
         default="null",
-        choices=("null", "polyala", "auto"),
+        choices=("null", "polyala", "sequence", "auto"),
     )
     p.add_argument(
         "--physics",

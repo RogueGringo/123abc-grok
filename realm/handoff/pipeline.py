@@ -282,12 +282,24 @@ def export_structure_handoff(
             twist=m.twist,
             maxop_gap=m.maxop_gap,
         )
+        meta = dict(m.meta or {})
         art = BackboneArtifact(
             path_ca=Path(paths["path_ca"]),
             path_bb=Path(paths["path_bb"]),
-            meta=dict(m.meta or {}),
+            meta=meta,
         )
-        dec = decorate_ad.decorate(DecorateRequest(backbone=art, poly_ala=True))
+        resnames = meta.get("resnames")
+        if isinstance(resnames, list):
+            resnames = [str(x) for x in resnames]
+        else:
+            resnames = None
+        dec = decorate_ad.decorate(
+            DecorateRequest(
+                backbone=art,
+                resnames=resnames,
+                poly_ala=(decorate in ("polyala", "null")),
+            )
+        )
         phys_report = None
         if physics_ad is not None:
             phys = physics_ad.filter(art.path_bb)
