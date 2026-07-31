@@ -23,12 +23,124 @@ from realm.handoff.verify import verify_archive_dir, verify_dual_gate_pin
 logger = logging.getLogger("handoff_status")
 
 
+def _load_known_solutions(
+    ks_dir: Path | None,
+    releases_dir: Path,
+    matrix_report: Path | None,
+) -> dict | None:
+    """Optional science stamp summary. Never affects commercial ok."""
+    candidates: list[Path] = []
+    if ks_dir is not None:
+        candidates.append(Path(ks_dir))
+    candidates.extend(
+        [
+            Path("out/known_solutions"),
+            Path("out/ks_compare_multiseed"),
+            Path("out/ks_compare_curated"),
+            releases_dir / "known_solutions",
+        ]
+    )
+    if matrix_report:
+        parent = Path(matrix_report).parent
+        candidates.append(parent / "known_solutions_run")
+        candidates.append(parent / "known_solutions")
+
+    root = None
+    for c in candidates:
+        if (c / "LATEST").is_file() or (c / "PARTNER_SCIENCE_ANNEX.json").is_file():
+            root = c
+            break
+        if (c / "INDEX.json").is_file():
+            root = c
+            break
+    if root is None:
+        # releases root may have annex attached flat
+        if (releases_dir / "PARTNER_SCIENCE_ANNEX.json").is_file():
+            annex = {}
+            try:
+                annex = json.loads(
+                    (releases_dir / "PARTNER_SCIENCE_ANNEX.json").read_text(
+                        encoding="utf-8"
+                    )
+                )
+            except Exception as exc:  # noqa: BLE001
+                return {"error": str(exc), "path": str(releases_dir)}
+            return {
+                "attached_at_releases": True,
+                "path": str(releases_dir.resolve()),
+                "pin": annex.get("pin"),
+                "has_compare": (releases_dir / "DECOY_MODE_COMPARE.json").is_file(),
+                "mean_enrichment_by_tag": annex.get("mean_enrichment_by_tag"),
+                "note": "Science annex on releases; not ACCEPTANCE.",
+            }
+        return None
+
+    stamp = root
+    if (root / "LATEST").is_file():
+        try:
+            stamp = Path((root / "LATEST").read_text(encoding="utf-8").strip())
+        except Exception:  # noqa: BLE001
+            stamp = root
+
+    out: dict = {
+        "root": str(root.resolve()) if root.exists() else str(root),
+        "stamp": str(stamp.resolve()) if stamp.exists() else str(stamp),
+        "note": "Science evidence only; never gates commercial accept/ship.",
+    }
+    pin_p = stamp / "pin.json"
+    if pin_p.is_file():
+        try:
+            out["pin"] = json.loads(pin_p.read_text(encoding="utf-8"))
+        except Exception as exc:  # noqa: BLE001
+            out["pin_error"] = str(exc)
+    annex_p = stamp / "PARTNER_SCIENCE_ANNEX.json"
+    if not annex_p.is_file():
+        annex_p = root / "PARTNER_SCIENCE_ANNEX.json"
+    if annex_p.is_file():
+        try:
+            annex = json.loads(annex_p.read_text(encoding="utf-8"))
+            out["annex_kind"] = annex.get("kind")
+            out["mean_enrichment_by_tag"] = annex.get("mean_enrichment_by_tag")
+            out["counts"] = annex.get("counts")
+            if annex.get("decoy_mode_compare"):
+                out["decoy_mode_compare"] = annex.get("decoy_mode_compare")
+        except Exception as exc:  # noqa: BLE001
+            out["annex_error"] = str(exc)
+    cmp_p = stamp / "DECOY_MODE_COMPARE.json"
+    if not cmp_p.is_file():
+        cmp_p = root / "DECOY_MODE_COMPARE.json"
+    if cmp_p.is_file():
+        try:
+            cmp_ = json.loads(cmp_p.read_text(encoding="utf-8"))
+            out["has_compare"] = True
+            out["compare_deltas_vs_soft"] = cmp_.get("deltas_vs_soft")
+            out["compare_modes"] = list((cmp_.get("by_mode") or {}).keys())
+            # slim all_ok per mode
+            out["compare_all_enr"] = {
+                m: (b.get("all_ok") or {}).get("mean_enrichment")
+                for m, b in (cmp_.get("by_mode") or {}).items()
+            }
+        except Exception as exc:  # noqa: BLE001
+            out["compare_error"] = str(exc)
+    else:
+        out["has_compare"] = False
+    idx_p = root / "INDEX.json"
+    if idx_p.is_file():
+        try:
+            idx = json.loads(idx_p.read_text(encoding="utf-8"))
+            out["index_n_stamps"] = idx.get("n_stamps")
+        except Exception:  # noqa: BLE001
+            pass
+    return out
+
+
 def build_status(
     *,
     releases_dir: Path,
     matrix_report: Path | None = None,
     verify_latest: bool = False,
     rebuild_catalog: bool = True,
+    known_solutions_dir: Path | None = None,
 ) -> dict:
     pin = verify_dual_gate_pin()
     catalog_path = None
@@ -141,8 +253,14 @@ def build_status(
         ),
         "matrix_acceptance": matrix_acceptance,
         "delivery": _load_delivery(releases_dir, matrix_report),
+        "known_solutions": _load_known_solutions(
+            known_solutions_dir, releases_dir, matrix_report
+        ),
         "ontology": "handoff_status_not_lambda_eq_gamma",
-        "note": "Ops view only; acceptance metric is openable PDBs + pin.",
+        "note": (
+            "Ops view only; acceptance metric is openable PDBs + pin. "
+            "known_solutions is informational science evidence only."
+        ),
     }
 
 
@@ -208,6 +326,15 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="write status JSON (default: <releases>/STATUS.json)",
     )
+    p.add_argument(
+        "--known-solutions",
+        type=Path,
+        default=None,
+        help=(
+            "optional known-solutions out dir (stamp parent with LATEST); "
+            "auto-detects common out/ paths if omitted"
+        ),
+    )
     p.add_argument("-v", action="store_true")
     args = p.parse_args(argv)
 
@@ -227,6 +354,7 @@ def main(argv: list[str] | None = None) -> int:
         matrix_report=matrix_path,
         verify_latest=bool(args.verify_latest),
         rebuild_catalog=not bool(args.no_rebuild_catalog),
+        known_solutions_dir=args.known_solutions,
     )
 
     out = Path(args.report) if args.report else Path(args.releases) / "STATUS.json"
@@ -255,6 +383,14 @@ def main(argv: list[str] | None = None) -> int:
             ma.get("ok"),
             ma.get("n_accepted"),
             ma.get("n_pdb_total"),
+        )
+    if status.get("known_solutions"):
+        ks = status["known_solutions"] or {}
+        logger.info(
+            "known_solutions has_compare=%s modes=%s all_enr=%s (science only)",
+            ks.get("has_compare"),
+            ks.get("compare_modes"),
+            ks.get("compare_all_enr"),
         )
     if status.get("delivery"):
         logger.info(

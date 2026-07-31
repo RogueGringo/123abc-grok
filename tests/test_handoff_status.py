@@ -65,11 +65,45 @@ def test_handoff_status_build_and_cli(tmp_path: Path):
         encoding="utf-8",
     )
 
+    # optional science stamp (must not flip commercial ok)
+    ks = tmp_path / "ks"
+    stamp = ks / "S1"
+    stamp.mkdir(parents=True)
+    (stamp / "pin.json").write_text(
+        json.dumps({"ok": True, "soft_T": 0.036}), encoding="utf-8"
+    )
+    (stamp / "PARTNER_SCIENCE_ANNEX.json").write_text(
+        json.dumps(
+            {
+                "kind": "partner_science_annex",
+                "pin": {"ok": True, "soft_T": 0.036},
+                "mean_enrichment_by_tag": {
+                    "all_ok": {"n": 2, "mean_enrichment": 0.8}
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    (stamp / "DECOY_MODE_COMPARE.json").write_text(
+        json.dumps(
+            {
+                "by_mode": {
+                    "soft": {"all_ok": {"mean_enrichment": 0.9}},
+                    "hard": {"all_ok": {"mean_enrichment": 0.6}},
+                },
+                "deltas_vs_soft": {"hard": {"delta_all_vs_soft": -0.3}},
+            }
+        ),
+        encoding="utf-8",
+    )
+    (ks / "LATEST").write_text(str(stamp.resolve()), encoding="utf-8")
+
     st = build_status(
         releases_dir=releases,
         matrix_report=matrix,
         verify_latest=True,
         rebuild_catalog=True,
+        known_solutions_dir=ks,
     )
     assert st["ok"] is True
     assert st["pin"]["ok"] is True
@@ -78,6 +112,12 @@ def test_handoff_status_build_and_cli(tmp_path: Path):
     assert st["latest"] is not None
     assert st["archive_verify"]["ok"] is True
     assert st.get("acceptance", {}).get("accepted") is True
+    ks_st = st.get("known_solutions") or {}
+    assert ks_st.get("has_compare") is True
+    assert ks_st.get("compare_all_enr", {}).get("soft") == 0.9
+    assert "not" in (ks_st.get("note") or "").lower() or "Science" in (
+        ks_st.get("note") or ""
+    )
     assert st.get("attestation", {}).get("n_digests", 0) >= 1
     assert (releases / "INDEX.json").is_file()
     assert (releases / "STATUS.json").is_file() or True  # written by CLI
