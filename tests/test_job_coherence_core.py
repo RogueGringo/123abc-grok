@@ -389,15 +389,174 @@ def test_resume_already_solved(tmp_path: Path):
     assert r2["solved"] is True
 
 
+def test_export_prefers_narrow_not_broaden_when_channels_missing():
+    """Missing required pack channels → first merge is surface_min, not richer pack."""
+    thr = JobThresholds()
+    params = FreeParams(
+        align_mode="depth_primary",
+        channel_pack="surface_full",
+        null_policy="mark_only",
+    )
+    # surface_full requires DEPT,WOB,RPM,TOR,SPP,SSSI — only 2 present
+    obs = Observations(
+        pin_ok=False,  # soft pack fail
+        n_rows=20,
+        n_channels=2,
+        n_required=6,
+        n_required_present=2,
+        export_ok_fraction=2.0 / 6.0,
+        verify_ok=False,
+        align_score=1.0,
+        physics_n_ok=1,
+        physics_n_warn=0,
+        physics_n_fail=1,
+        depth_mono_ok=True,
+        unit_sanity_ok=True,
+        out_dir="/tmp",
+        notes=["export_incomplete", "pin_fail"],
+    )
+    tried: set[str] = set()
+    props = collect_section_proposals(obs, params, thr, tried=tried)
+    assert props
+    nxt, reason, board = merge_proposals(props, params)
+    assert nxt is not None
+    assert nxt.channel_pack == "surface_min", (
+        f"expected narrow to surface_min first, got {nxt.channel_pack} reason={reason}"
+    )
+    assert "narrow" in reason or "surface_min" in reason
+    # No broaden winner at equal/higher precedence
+    richer = {"mwd_full", "job_union", "surface_full"}
+    assert nxt.channel_pack not in richer
+
+
+def test_negotiate_soft_pack_fail_allows_pack_move():
+    """Missing channels only (hard pin ok) may negotiate channel_pack."""
+    thr = JobThresholds()
+    params = FreeParams(channel_pack="surface_full")
+    obs = Observations(
+        pin_ok=False,
+        n_rows=20,
+        n_channels=3,
+        n_required=6,
+        n_required_present=3,
+        export_ok_fraction=0.5,
+        verify_ok=False,
+        align_score=1.0,
+        physics_n_ok=2,
+        physics_n_warn=0,
+        physics_n_fail=1,
+        depth_mono_ok=True,
+        unit_sanity_ok=True,
+        out_dir="/tmp",
+        notes=["export_incomplete"],
+    )
+    nxt, reason, board = negotiate(obs, params, thr, tried=set())
+    assert nxt is not None
+    assert nxt.channel_pack == "surface_min"
+    assert reason != "pin_locked_fail_cannot_negotiate"
+
+
+def test_no_window_scale_proposals_in_p1():
+    thr = JobThresholds(max_physics_fail=0)
+    params = FreeParams(window_scale=1, null_policy="mark_only")
+    obs = Observations(
+        pin_ok=True,
+        n_rows=10,
+        n_channels=3,
+        n_required=3,
+        n_required_present=3,
+        export_ok_fraction=1.0,
+        verify_ok=True,
+        align_score=1.0,
+        physics_n_ok=0,
+        physics_n_warn=0,
+        physics_n_fail=2,
+        depth_mono_ok=True,
+        unit_sanity_ok=True,
+        out_dir="/tmp",
+        notes=["physics_fail"],
+    )
+    props = collect_section_proposals(obs, params, thr, tried=set())
+    for pr in props:
+        assert "window_scale" not in pr.reason
+        # may keep window_scale field equal to current; must not bump it as the move
+        if pr.params.window_scale != params.window_scale:
+            raise AssertionError("P1 must not propose window_scale changes")
+
+
+def test_solved_implies_empty_proposal_board_without_force_clear():
+    """Invariant: is_solved thresholds align with proposal triggers."""
+    thr = JobThresholds()
+    params = FreeParams(
+        align_mode="depth_primary",
+        channel_pack="surface_min",
+        null_policy="mark_only",
+        window_scale=1,
+    )
+    obs = Observations(
+        pin_ok=True,
+        n_rows=20,
+        n_channels=6,
+        n_required=3,
+        n_required_present=3,
+        export_ok_fraction=1.0,
+        verify_ok=True,
+        align_score=1.0,
+        physics_n_ok=4,
+        physics_n_warn=0,
+        physics_n_fail=0,
+        depth_mono_ok=True,
+        unit_sanity_ok=True,
+        out_dir="/tmp",
+    )
+    assert is_solved(obs, thr, params) is True
+    props = collect_section_proposals(obs, params, thr, tried=set())
+    assert props == []
+
+
+def test_fixed_point_k2_requires_two_consecutive_solved_cycles(tmp_path: Path):
+    result = run_job_coherence_loop(
+        las_path=FIXTURE,
+        out_root=tmp_path / "job_os_k2",
+        initial=FreeParams(
+            align_mode="depth_primary",
+            channel_pack="surface_min",
+            null_policy="mark_only",
+        ),
+        thresholds=JobThresholds(),
+        max_rounds=6,
+        stability_k=2,
+        os_mode=True,
+        run_id="test_fixed_k2",
+    )
+    assert result["solved"] is True
+    assert result["stability_k"] == 2
+    assert result["stability_streak"] >= 2
+    ledger = result["ledger"]
+    actions = [e.get("action") for e in ledger if isinstance(e.get("round"), int)]
+    assert "stability_hold" in actions
+    assert "halt" in actions
+    # hold before halt
+    hold_i = actions.index("stability_hold")
+    halt_i = actions.index("halt")
+    assert hold_i < halt_i
+    halt_entry = next(e for e in ledger if e.get("action") == "halt")
+    assert int(halt_entry.get("stability_streak") or 0) >= 2
+
+
 def test_cli_exit_codes(tmp_path: Path):
     import subprocess
     import sys
 
+    root = Path(__file__).resolve().parents[1]
+    cli = str(root / "job_coherence.py")
+
+    # --- exit 0: solved ---
     out = tmp_path / "cli_out"
     proc = subprocess.run(
         [
             sys.executable,
-            str(Path(__file__).resolve().parents[1] / "job_coherence.py"),
+            cli,
             "--os",
             "--las",
             str(FIXTURE),
@@ -412,8 +571,119 @@ def test_cli_exit_codes(tmp_path: Path):
         ],
         capture_output=True,
         text=True,
-        cwd=str(Path(__file__).resolve().parents[1]),
+        cwd=str(root),
     )
     assert proc.returncode == 0, proc.stdout + proc.stderr
     data = json.loads(proc.stdout)
     assert data["solved"] is True
+
+    # --- exit 2: missing --las ---
+    proc2 = subprocess.run(
+        [sys.executable, cli, "--os", "--out-dir", str(tmp_path / "cli_missing")],
+        capture_output=True,
+        text=True,
+        cwd=str(root),
+    )
+    assert proc2.returncode == 2, proc2.stdout + proc2.stderr
+
+    # --- exit 2: bad resume path ---
+    proc2b = subprocess.run(
+        [
+            sys.executable,
+            cli,
+            "--resume",
+            str(tmp_path / "no_such_run"),
+            "--out-dir",
+            str(tmp_path / "cli_bad_resume"),
+        ],
+        capture_output=True,
+        text=True,
+        cwd=str(root),
+    )
+    assert proc2b.returncode == 2, proc2b.stdout + proc2b.stderr
+
+    # --- exit 4: hard pin fail (non-monotonic depth) ---
+    bad_las = tmp_path / "non_mono.las"
+    lines = FIXTURE.read_text(encoding="utf-8").splitlines()
+    # Swap two depth values in ~A section to break mono
+    out_lines = []
+    in_a = False
+    rows: list[str] = []
+    for line in lines:
+        if line.strip().upper().startswith("~A"):
+            in_a = True
+            out_lines.append(line)
+            continue
+        if in_a and line.strip() and not line.strip().startswith("~"):
+            rows.append(line)
+        else:
+            if in_a and rows:
+                # break mono: put a high depth early
+                parts = rows[0].split()
+                parts[0] = "9999.00"
+                rows[0] = " ".join(parts)
+                out_lines.extend(rows)
+                rows = []
+                in_a = False
+            out_lines.append(line)
+    if rows:
+        parts = rows[0].split()
+        parts[0] = "9999.00"
+        rows[0] = " ".join(parts)
+        # also make a later row lower to ensure violation after first
+        if len(rows) > 1:
+            p2 = rows[1].split()
+            p2[0] = "1000.00"
+            rows[1] = " ".join(p2)
+        out_lines.extend(rows)
+    bad_las.write_text("\n".join(out_lines) + "\n", encoding="utf-8")
+
+    proc4 = subprocess.run(
+        [
+            sys.executable,
+            cli,
+            "--os",
+            "--las",
+            str(bad_las),
+            "--out-dir",
+            str(tmp_path / "cli_pin"),
+            "--run-id",
+            "cli_pin_fail",
+        ],
+        capture_output=True,
+        text=True,
+        cwd=str(root),
+    )
+    assert proc4.returncode == 4, proc4.stdout + proc4.stderr
+    data4 = json.loads(proc4.stdout)
+    assert data4.get("stop_reason") == "pin_fail"
+
+
+def test_wrap_yes_best_effort_parse(tmp_path: Path):
+    """WRAP=YES token-stream chunking (best-effort; P1 fixture is WRAP=NO)."""
+    las = tmp_path / "wrap.las"
+    las.write_text(
+        "\n".join(
+            [
+                "~VERSION INFORMATION",
+                "VERS.                           2.0 : CWLS",
+                "WRAP.                          YES : Multiple lines per depth",
+                "~WELL INFORMATION",
+                "NULL.                        -999.25 : NULL",
+                "~CURVE INFORMATION",
+                "DEPT.FT                              : Depth",
+                "WOB.klbf                             : WOB",
+                "RPM.rpm                              : RPM",
+                "~A",
+                "1000.0 20.0",
+                "50.0",
+                "1001.0 21.0 52.0",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    series = parse_las(las)
+    assert series["wrap"] is True
+    assert series["n_rows"] >= 2
+    assert series["depths"][0] == pytest.approx(1000.0)

@@ -121,7 +121,9 @@ def parse_las(path: str | Path) -> dict[str, Any]:
         return v
 
     if wrap:
-        # Flatten tokens then chunk by n_curves
+        # Best-effort WRAP=YES: flatten tokens then chunk by n_curves.
+        # P1 fixture uses WRAP=NO; wrapped support is partial (no multi-line
+        # depth-first continuation beyond token stream chunking).
         tokens: list[str] = []
         for dl in data_lines:
             tokens.extend(dl.split())
@@ -135,7 +137,7 @@ def parse_las(path: str | Path) -> dict[str, Any]:
         for dl in data_lines:
             parts = dl.split()
             if len(parts) < n_curves:
-                # pad missing
+                # pad missing short rows as null (None)
                 parts = parts + ["null"] * (n_curves - len(parts))
             for j in range(n_curves):
                 values[j].append(_to_float(parts[j]))

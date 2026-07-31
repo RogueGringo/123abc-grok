@@ -175,9 +175,14 @@ def verify_job_pin(
     details["unit_notes"] = unit_notes
     details["units"] = units
 
-    ok = depth_mono_ok and not missing and unit_sanity_ok
+    pack_ok = not missing
+    hard_ok = bool(depth_mono_ok and unit_sanity_ok)
+    ok = hard_ok and pack_ok
     return {
         "ok": bool(ok),
+        # hard_ok: mono + unit — never negotiable; pack_ok: required channels for pack
+        "hard_ok": hard_ok,
+        "pack_ok": bool(pack_ok),
         "reasons": reasons,
         "depth_mono_ok": depth_mono_ok,
         "unit_sanity_ok": unit_sanity_ok,

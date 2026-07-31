@@ -379,48 +379,44 @@ def run_job_coherence_loop(
             )
             pin0 = pin
 
-            if thr.require_pin and not pin.get("ok"):
-                # Pin fail: abort negotiate; may still try free moves only if
-                # pin can recover via pack/null? Spec: pin locked fail cannot
-                # negotiate when require_pin — but pack choice affects pin
-                # (required channels). That is free-param channel_pack, not pin
-                # threshold retune. allow negotiate when missing_channels only.
-                missing_only = (
-                    not pin.get("depth_mono_ok")
-                    or not pin.get("unit_sanity_ok")
-                )
-                # Hard pin fails (mono / unit) cannot negotiate
-                if missing_only and (
-                    not pin.get("depth_mono_ok") or not pin.get("unit_sanity_ok")
-                ):
-                    # If depth/unit hard fail → abort
-                    stop_reason = "pin_fail"
-                    _commit_entry(
-                        {
-                            "round": rnd,
-                            "params": params.to_dict(),
-                            "pin": {
-                                "ok": pin.get("ok"),
-                                "reasons": pin.get("reasons"),
-                                "depth_mono_ok": pin.get("depth_mono_ok"),
-                                "unit_sanity_ok": pin.get("unit_sanity_ok"),
-                            },
-                            "observations": obs.to_dict(),
-                            "solved": False,
-                            "is_solved_slice": False,
-                            "stability_streak": 0,
-                            "action": "abort",
-                            "reason": "job_qc_pin_failed_locked",
-                            "proposals": [],
+            # Hard pin = depth mono / unit sanity (never free-param negotiable).
+            # Pack incompleteness (missing channels for pack) is soft: free-param
+            # channel_pack / null_policy may recover without retuning pin ε.
+            hard_pin_fail = thr.require_pin and not bool(
+                pin.get("hard_ok", pin.get("depth_mono_ok") and pin.get("unit_sanity_ok"))
+            )
+            if hard_pin_fail:
+                stop_reason = "pin_fail"
+                _commit_entry(
+                    {
+                        "round": rnd,
+                        "params": params.to_dict(),
+                        "pin": {
+                            "ok": pin.get("ok"),
+                            "hard_ok": pin.get("hard_ok"),
+                            "pack_ok": pin.get("pack_ok"),
+                            "reasons": pin.get("reasons"),
+                            "depth_mono_ok": pin.get("depth_mono_ok"),
+                            "unit_sanity_ok": pin.get("unit_sanity_ok"),
                         },
-                        cycle_dir,
-                    )
-                    break
+                        "observations": obs.to_dict(),
+                        "solved": False,
+                        "is_solved_slice": False,
+                        "stability_streak": 0,
+                        "action": "abort",
+                        "reason": "job_qc_pin_failed_locked",
+                        "proposals": [],
+                    },
+                    cycle_dir,
+                )
+                break
 
             score = coherence_score(obs, thr, params)
             solved_slice = is_solved(obs, thr, params)
             tried.add(json.dumps(params.to_dict(), sort_keys=True))
             board_props = collect_section_proposals(obs, params, thr, tried=tried)
+            # When solved, board should already be empty (invariant); force-clear
+            # mirrors handoff OS v2 so fixed-point cannot be blocked by drift.
             if solved_slice:
                 board_props = []
             empty_board = len(board_props) == 0
@@ -441,6 +437,8 @@ def run_job_coherence_loop(
                 "stability_k": stability_k,
                 "pin": {
                     "ok": pin.get("ok"),
+                    "hard_ok": pin.get("hard_ok"),
+                    "pack_ok": pin.get("pack_ok"),
                     "reasons": pin.get("reasons"),
                     "depth_mono_ok": pin.get("depth_mono_ok"),
                     "unit_sanity_ok": pin.get("unit_sanity_ok"),
@@ -486,33 +484,8 @@ def run_job_coherence_loop(
                 )
                 continue
 
-            # Pin hard fail (depth/unit) already aborted; missing channels can negotiate
-            if thr.require_pin and not pin.get("ok"):
-                if not pin.get("depth_mono_ok") or not pin.get("unit_sanity_ok"):
-                    stop_reason = "pin_fail"
-                    entry["action"] = "abort"
-                    entry["reason"] = "job_qc_pin_failed_locked"
-                    entry["proposals"] = []
-                    _commit_entry(entry, cycle_dir)
-                    break
-
+            # negotiate: hard pin already aborted; soft pack fail may recover
             nxt, reason, board = negotiate(obs, params, thr, tried=tried)
-            # negotiate returns pin_locked when pin not ok — but for missing channels
-            # only, pin.ok is False; we still want pack negotiation.
-            if (
-                nxt is None
-                and reason == "pin_locked_fail_cannot_negotiate"
-                and pin.get("missing_channels")
-                and pin.get("depth_mono_ok")
-                and pin.get("unit_sanity_ok")
-            ):
-                # Temporarily allow proposals despite pin.ok False (pack incompleteness)
-                proposals = collect_section_proposals(obs, params, thr, tried=tried)
-                from realm.job_os.propose import merge_proposals
-
-                nxt, reason, board = merge_proposals(proposals, params)
-                if nxt is not None:
-                    tried.add(json.dumps(nxt.to_dict(), sort_keys=True))
 
             entry["action"] = "negotiate" if nxt is not None else "stuck"
             entry["reason"] = reason

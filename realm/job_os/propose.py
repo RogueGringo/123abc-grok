@@ -4,6 +4,11 @@ Sections (P1): export | verify | align | physics
 Merge ranks by priority; never proposes pin retune.
 
 Priority (lower wins): export=1, verify=2, align=3, physics=5
+
+Hard pin (depth mono / unit sanity) is never negotiable.
+Pack-completeness pin fails may negotiate channel_pack / null_policy only.
+window_scale is a free-param field (recipe stability / later stalks) but is
+not proposed in P1 until a stalk consumes it (honest free board).
 """
 
 from __future__ import annotations
@@ -17,12 +22,14 @@ from realm.job_os.types import (
     NULL_POLICIES,
     PIN_FORBIDDEN_KEYS,
     SECTION_PRIORITY,
-    WINDOW_SCALE_BOUNDS,
     FreeParams,
     JobThresholds,
     Observations,
     SectionProposal,
 )
+
+# Pack richness order: index 0 = narrowest. Prefer narrowing when channels missing.
+_PACK_RICHNESS = ("surface_min", "surface_full", "mwd_full", "job_union")
 
 
 def _fresh(cand: FreeParams, tried: set[str]) -> FreeParams | None:
@@ -37,6 +44,17 @@ def _fresh(cand: FreeParams, tried: set[str]) -> FreeParams | None:
     return c
 
 
+def _with_pack(p: FreeParams, pack: str, *, null_policy: str | None = None) -> FreeParams:
+    return FreeParams(
+        align_mode=p.align_mode,
+        window_scale=p.window_scale,
+        channel_pack=pack,
+        null_policy=null_policy if null_policy is not None else p.null_policy,
+        survey_gate=p.survey_gate,
+        regime_mode=p.regime_mode,
+    )
+
+
 def collect_section_proposals(
     obs: Observations,
     params: FreeParams,
@@ -44,98 +62,79 @@ def collect_section_proposals(
     *,
     tried: set[str],
 ) -> list[SectionProposal]:
-    """Each section proposes at most one free-param move (never pin)."""
+    """Each section proposes free-param moves (never pin)."""
     p = params.clamp()
     props: list[SectionProposal] = []
+    pack_incomplete = obs.n_required_present < obs.n_required
 
-    # --- export: incomplete channel pack → broaden pack or change null policy ---
+    # --- export: incomplete → prefer narrowing pack when channels missing ---
     if obs.export_ok_fraction + 1e-12 < thr.min_export_ok_fraction:
-        # Prefer stepping up pack if current missing optional channels
-        pack_order = list(CHANNEL_PACKS)
-        try:
-            idx = pack_order.index(p.channel_pack)
-        except ValueError:
-            idx = 0
-        if idx + 1 < len(pack_order):
-            cand = _fresh(
-                FreeParams(
-                    align_mode=p.align_mode,
-                    window_scale=p.window_scale,
-                    channel_pack=pack_order[idx + 1],
-                    null_policy=p.null_policy,
-                    survey_gate=p.survey_gate,
-                    regime_mode=p.regime_mode,
-                ),
-                tried,
-            )
+        if pack_incomplete and p.channel_pack != "surface_min":
+            # Prefer surface_min first (highest export precedence among pack moves)
+            cand = _fresh(_with_pack(p, "surface_min"), tried)
             if cand:
                 props.append(
                     SectionProposal(
                         "export",
                         cand,
-                        "broaden_channel_pack_export_incomplete",
+                        "narrow_to_surface_min_missing_channels",
                         SECTION_PRIORITY["export"],
                     )
                 )
-        # Also try hold_last if mark_only and nulls likely
+            # Also offer single-step narrow if richer than surface_full intermediate
+            try:
+                idx = _PACK_RICHNESS.index(p.channel_pack)
+            except ValueError:
+                idx = 0
+            if idx > 1:
+                step = _PACK_RICHNESS[idx - 1]
+                if step != "surface_min":
+                    cand = _fresh(_with_pack(p, step), tried)
+                    if cand:
+                        props.append(
+                            SectionProposal(
+                                "export",
+                                cand,
+                                "narrow_channel_pack_one_step",
+                                SECTION_PRIORITY["export"] + 1,
+                            )
+                        )
+        elif not pack_incomplete:
+            # All required present; export incomplete for another reason (e.g. empty rows)
+            # — may broaden only when nothing is missing
+            try:
+                idx = _PACK_RICHNESS.index(p.channel_pack)
+            except ValueError:
+                idx = 0
+            if idx + 1 < len(_PACK_RICHNESS):
+                cand = _fresh(_with_pack(p, _PACK_RICHNESS[idx + 1]), tried)
+                if cand:
+                    props.append(
+                        SectionProposal(
+                            "export",
+                            cand,
+                            "broaden_channel_pack_export_incomplete",
+                            SECTION_PRIORITY["export"] + 2,
+                        )
+                    )
+
+        # null_policy adjust (does not change required set)
         if p.null_policy == "mark_only":
-            cand = _fresh(
-                FreeParams(
-                    align_mode=p.align_mode,
-                    window_scale=p.window_scale,
-                    channel_pack=p.channel_pack,
-                    null_policy="hold_last",
-                    survey_gate=p.survey_gate,
-                    regime_mode=p.regime_mode,
-                ),
-                tried,
-            )
+            cand = _fresh(_with_pack(p, p.channel_pack, null_policy="hold_last"), tried)
             if cand:
                 props.append(
                     SectionProposal(
                         "export",
                         cand,
                         "null_policy_hold_last_export_incomplete",
-                        SECTION_PRIORITY["export"] + 1,
-                    )
-                )
-        # If pack is too rich and missing, try surface_min
-        if p.channel_pack != "surface_min" and obs.n_required_present < obs.n_required:
-            cand = _fresh(
-                FreeParams(
-                    align_mode=p.align_mode,
-                    window_scale=p.window_scale,
-                    channel_pack="surface_min",
-                    null_policy=p.null_policy,
-                    survey_gate=p.survey_gate,
-                    regime_mode=p.regime_mode,
-                ),
-                tried,
-            )
-            if cand:
-                props.append(
-                    SectionProposal(
-                        "export",
-                        cand,
-                        "fallback_surface_min_export_incomplete",
-                        SECTION_PRIORITY["export"],
+                        SECTION_PRIORITY["export"] + 3,
                     )
                 )
 
-    # --- verify: pin ok but verify_ok false → adjust pack/null ---
-    if obs.verify_ok is False and obs.pin_ok and obs.n_rows > 0:
+    # --- verify: pin hard ok but verify_ok false → adjust pack/null ---
+    if obs.verify_ok is False and obs.depth_mono_ok and obs.unit_sanity_ok and obs.n_rows > 0:
         if p.channel_pack != "surface_min":
-            cand = _fresh(
-                FreeParams(
-                    align_mode=p.align_mode,
-                    window_scale=p.window_scale,
-                    channel_pack="surface_min",
-                    null_policy=p.null_policy,
-                    survey_gate=p.survey_gate,
-                    regime_mode=p.regime_mode,
-                ),
-                tried,
-            )
+            cand = _fresh(_with_pack(p, "surface_min"), tried)
             if cand:
                 props.append(
                     SectionProposal(
@@ -146,17 +145,7 @@ def collect_section_proposals(
                     )
                 )
         elif p.null_policy != "drop":
-            cand = _fresh(
-                FreeParams(
-                    align_mode=p.align_mode,
-                    window_scale=p.window_scale,
-                    channel_pack=p.channel_pack,
-                    null_policy="drop",
-                    survey_gate=p.survey_gate,
-                    regime_mode=p.regime_mode,
-                ),
-                tried,
-            )
+            cand = _fresh(_with_pack(p, p.channel_pack, null_policy="drop"), tried)
             if cand:
                 props.append(
                     SectionProposal(
@@ -213,17 +202,7 @@ def collect_section_proposals(
                     )
                 )
         elif p.null_policy == "mark_only":
-            cand = _fresh(
-                FreeParams(
-                    align_mode=p.align_mode,
-                    window_scale=p.window_scale,
-                    channel_pack=p.channel_pack,
-                    null_policy="hold_last",
-                    survey_gate=p.survey_gate,
-                    regime_mode=p.regime_mode,
-                ),
-                tried,
-            )
+            cand = _fresh(_with_pack(p, p.channel_pack, null_policy="hold_last"), tried)
             if cand:
                 props.append(
                     SectionProposal(
@@ -234,47 +213,29 @@ def collect_section_proposals(
                     )
                 )
 
-    # --- physics: hard fails → window_scale nudge or null_policy (never pin eps) ---
+    # --- physics: hard fails → null_policy only (never pin eps; no window_scale in P1) ---
+    # window_scale is not consumed by P1 observe/execute; do not propose no-op moves.
     if obs.physics_n_fail > thr.max_physics_fail:
-        if p.window_scale < WINDOW_SCALE_BOUNDS[1]:
-            cand = _fresh(
-                FreeParams(
-                    align_mode=p.align_mode,
-                    window_scale=min(WINDOW_SCALE_BOUNDS[1], p.window_scale + 1),
-                    channel_pack=p.channel_pack,
-                    null_policy=p.null_policy,
-                    survey_gate=p.survey_gate,
-                    regime_mode=p.regime_mode,
-                ),
-                tried,
-            )
-            if cand:
-                props.append(
-                    SectionProposal(
-                        "physics",
-                        cand,
-                        "increase_window_scale_after_physics_fail",
-                        SECTION_PRIORITY["physics"],
-                    )
-                )
         if p.null_policy != "drop":
-            cand = _fresh(
-                FreeParams(
-                    align_mode=p.align_mode,
-                    window_scale=p.window_scale,
-                    channel_pack=p.channel_pack,
-                    null_policy="drop",
-                    survey_gate=p.survey_gate,
-                    regime_mode=p.regime_mode,
-                ),
-                tried,
-            )
+            cand = _fresh(_with_pack(p, p.channel_pack, null_policy="drop"), tried)
             if cand:
                 props.append(
                     SectionProposal(
                         "physics",
                         cand,
                         "drop_nulls_after_physics_fail",
+                        SECTION_PRIORITY["physics"],
+                    )
+                )
+        # If pack incomplete is driving physics missing-channel fails, narrow pack
+        if pack_incomplete and p.channel_pack != "surface_min":
+            cand = _fresh(_with_pack(p, "surface_min"), tried)
+            if cand:
+                props.append(
+                    SectionProposal(
+                        "physics",
+                        cand,
+                        "narrow_pack_after_physics_fail",
                         SECTION_PRIORITY["physics"] + 1,
                     )
                 )
@@ -322,6 +283,10 @@ def negotiate(
 ) -> tuple[FreeParams | None, str, list[dict[str, Any]]]:
     """Multi-section propose + merge. Never proposes QC pin changes.
 
+    Hard pin (depth mono / unit sanity): cannot negotiate.
+    Pack-completeness pin fail (missing channels only): may negotiate free params
+    (channel_pack / null_policy) so export can recover.
+
     Returns (next_params|None, reason, proposal_board).
     """
     from realm.job_os.observe import is_solved
@@ -330,7 +295,11 @@ def negotiate(
     key = json.dumps(p.to_dict(), sort_keys=True)
     tried.add(key)
 
-    if thr.require_pin and not obs.pin_ok:
+    # Hard pin locked — never free-param retune of mono/unit
+    hard_pin_fail = thr.require_pin and (
+        (not obs.depth_mono_ok) or (not obs.unit_sanity_ok)
+    )
+    if hard_pin_fail:
         return None, "pin_locked_fail_cannot_negotiate", []
 
     if is_solved(obs, thr, p):
