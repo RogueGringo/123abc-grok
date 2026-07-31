@@ -44,7 +44,7 @@ def dual_gate_windows(
     notes: list[str] = []
     if not native_chs:
         notes.append("science_no_regime_channels")
-        return {
+        empty = {
             "enabled": True,
             "kind": "dual_gate_windows",
             "informational_only": True,
@@ -70,6 +70,9 @@ def dual_gate_windows(
                 "Never retunes QC pin for score.",
             ],
         }
+        from realm.kb_geometry.science_annex import attach_science_theory
+
+        return attach_science_theory(empty, split="unspecified")
 
     rng = random.Random(int(seed))
 
@@ -91,7 +94,7 @@ def dual_gate_windows(
     notes.append(f"decoy_scramble={decoy_score:.4f}")
     notes.append("native_beats_decoy" if beats else "decoy_not_beaten")
 
-    return {
+    annex = {
         "enabled": True,
         "kind": "dual_gate_windows",
         "informational_only": True,
@@ -127,6 +130,9 @@ def dual_gate_windows(
             "Decoy = time-scramble of same channels under locked pin context.",
         ],
     }
+    from realm.kb_geometry.science_annex import attach_science_theory
+
+    return attach_science_theory(annex, split="unspecified")
 
 
 def evaluate_science(

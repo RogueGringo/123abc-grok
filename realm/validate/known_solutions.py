@@ -561,6 +561,13 @@ def write_partner_annex(report: dict[str, Any], out_dir: Path) -> tuple[Path, Pa
             "mean_enrichment": b.get("mean_enrichment"),
         }
 
+    mean_by_tag = {
+        "curated_probe": _mean("curated_probe"),
+        "curated_holdout": _mean("curated_holdout"),
+        "rcsb_expand": _mean("rcsb_expand"),
+        "cpsea2_demo": _mean("cpsea2_demo"),
+        "all_ok": _mean("all_ok"),
+    }
     annex = {
         "kind": "partner_science_annex",
         "ontology": "partner_science_annex_not_lambda_eq_gamma",
@@ -578,13 +585,7 @@ def write_partner_annex(report: dict[str, Any], out_dir: Path) -> tuple[Path, Pa
             "n_fail": agg.get("n_fail"),
             "n_universe": (report.get("id_universe") or {}).get("n_total"),
         },
-        "mean_enrichment_by_tag": {
-            "curated_probe": _mean("curated_probe"),
-            "curated_holdout": _mean("curated_holdout"),
-            "rcsb_expand": _mean("rcsb_expand"),
-            "cpsea2_demo": _mean("cpsea2_demo"),
-            "all_ok": _mean("all_ok"),
-        },
+        "mean_enrichment_by_tag": mean_by_tag,
         "kabsch_subset": {
             "n_ok": kagg.get("n_kabsch_ok", 0),
             "mean_best_rank_score": kagg.get("mean_best_rank_score"),
@@ -604,6 +605,13 @@ def write_partner_annex(report: dict[str, Any], out_dir: Path) -> tuple[Path, Pa
         ],
         "note": "Thin partner science annex; mold PDBs not included.",
     }
+    from realm.kb_geometry.science_annex import attach_science_theory
+
+    annex = attach_science_theory(
+        annex,
+        split="mixed",
+        mean_by_split=mean_by_tag,
+    )
     out_dir = Path(out_dir)
     jp = write_json(out_dir / "PARTNER_SCIENCE_ANNEX.json", annex)
     md_lines = [

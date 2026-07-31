@@ -53,12 +53,18 @@ def crit_action_filtration(
     action,
     n_grid: int = 2000,
     n_levels: int = 24,
+    *,
+    with_zigzag: bool = False,
+    zigzag_windows: int = 4,
 ) -> dict[str, Any]:
     """Axioms 4.2–4.3: sublevel filtration of S on S¹ (circular 0-homology).
 
     Add grid points in order of increasing S; union with active neighbors.
     Younger component dies on merge (standard elder rule). Bars that survive
     to the global max are essential Crit-basin structure.
+
+    Optional ``with_zigzag``: multi-window barcode summary (KB geometry stalk A;
+    informational only — never pin retune / never ACCEPTANCE).
     """
     del n_levels  # full vertex filtration; kept for API stability
     grid = np.linspace(0.0, 2 * np.pi, n_grid, endpoint=False)
@@ -120,7 +126,7 @@ def crit_action_filtration(
     thr = 0.10 * span
     n_persistent = sum(1 for p in persistences if p > thr)
 
-    return {
+    out: dict[str, Any] = {
         "n_levels": n_grid,
         "s_min": s_min,
         "s_max": s_max,
@@ -134,6 +140,19 @@ def crit_action_filtration(
         "n_essential": len(infinite),
         "axioms": ["4.2", "4.3"],
     }
+    if with_zigzag:
+        try:
+            from realm.kb_geometry.zigzag_windows import zigzag_from_crit_filtration
+
+            out["zigzag_windows"] = zigzag_from_crit_filtration(
+                out, n_windows=int(zigzag_windows)
+            )
+            out["zigzag_note"] = (
+                "Multi-window H0 summary (info only); not ACCEPTANCE; not pin."
+            )
+        except Exception as exc:  # noqa: BLE001
+            out["zigzag_windows"] = {"error": str(exc), "not_acceptance": True}
+    return out
 
 
 def basin_persistence_weights(
