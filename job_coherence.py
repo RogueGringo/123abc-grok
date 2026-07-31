@@ -189,6 +189,24 @@ def main(argv: list[str] | None = None) -> int:
             "(never pretends commercial fixed-point)"
         ),
     )
+    p.add_argument(
+        "--chunk-rows",
+        type=int,
+        default=None,
+        help="KB D: out-of-core chunk size for CHUNK_INSPECT.json (row windows)",
+    )
+    p.add_argument(
+        "--max-chunks",
+        type=int,
+        default=32,
+        help="KB D: max chunks to inspect when --chunk-rows set",
+    )
+    p.add_argument(
+        "--max-rows",
+        type=int,
+        default=None,
+        help="KB D: cap LAS ASCII rows loaded into the negotiate cycle (huge files)",
+    )
     p.add_argument("-v", action="store_true")
     args = p.parse_args(argv)
 
@@ -219,6 +237,9 @@ def main(argv: list[str] | None = None) -> int:
                 with_science=bool(args.with_science),
                 eow_package=args.eow_package,
                 force_ship=bool(args.force_ship),
+                chunk_rows=args.chunk_rows,
+                max_chunks=int(args.max_chunks),
+                max_rows=args.max_rows,
             )
         except FileNotFoundError as exc:
             logger.error("%s", exc)
@@ -268,6 +289,9 @@ def main(argv: list[str] | None = None) -> int:
                 with_science=bool(args.with_science),
                 eow_package=args.eow_package,
                 force_ship=bool(args.force_ship),
+                chunk_rows=args.chunk_rows,
+                max_chunks=int(args.max_chunks),
+                max_rows=args.max_rows,
             )
         except FileNotFoundError as exc:
             logger.error("%s", exc)
@@ -312,11 +336,12 @@ def main(argv: list[str] | None = None) -> int:
                 "require_regime": result.get("require_regime"),
                 "with_regime": result.get("with_regime"),
                 "with_science": result.get("with_science"),
+                "chunk_inspect_n": (result.get("chunk_inspect") or {}).get("n_chunks"),
                 "out": result.get("out_root"),
                 "note": (
                     "pin locked; free params only; OS fixed-point K; "
                     "glue structural; survey never invents Inc/Azi; "
-                    "science info only; EOW ship post-SOLVED; not ROP"
+                    "science info only; EOW ship post-SOLVED; chunk inspect optional; not ROP"
                 ),
             },
             indent=2,

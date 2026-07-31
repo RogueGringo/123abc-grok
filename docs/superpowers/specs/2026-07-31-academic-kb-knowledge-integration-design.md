@@ -1,7 +1,7 @@
 # Design: Academic KB Knowledge Integration (A–D Stalks + E Horizon)
 
 **Date:** 2026-07-31  
-**Status:** P1+P2 implemented (zigzag + science annex); P3–P6 pending  
+**Status:** Implemented P1–P6 (zigzag, science annex, graph, regime multi-scale, chunk inspect)  
 **Human L0:** “all if possible” (A+B+C+D; E = parent-KB aperture later)  
 **Source KB:** `C:\LM_STUDIO_MODELS\01.AI-ML-NN-MATH-PHYSICS-KNOWLEDGE-DEVELOPMENT PROJECTS-KB-00-1JUN26\ACADEMIC`  
 **Repo:** `123abc-grok` — dual-gate / Crit / sheaf / Coherence OS v2 / Job OS  

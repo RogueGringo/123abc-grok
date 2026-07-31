@@ -14,6 +14,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from realm.job_os.chunk_inspect import run_las_chunk_inspect
 from realm.job_os.eow_ship import ship_eow_package
 from realm.job_os.glue import compute_glue
 from realm.job_os.ingest_las import apply_null_policy, parse_las, select_channel_pack
@@ -186,11 +187,12 @@ def execute_job_cycle(
     survey: dict[str, Any] | None = None,
     with_regime: bool = False,
     with_science: bool = False,
+    max_rows: int | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], Any]:
     """Ingest LAS (+ optional MicroPulse/survey/regime) → pin → observe."""
     cycle_dir.mkdir(parents=True, exist_ok=True)
     p = params.clamp()
-    raw = parse_las(las_path)
+    raw = parse_las(las_path, max_rows=max_rows)
     # Null-policy on surface skeleton first; then join presence-only MP fibers
     # so length-mismatched channels never drive surface row drops.
     series = apply_null_policy(raw, p.null_policy)
@@ -361,6 +363,9 @@ def run_job_coherence_loop(
     with_science: bool = False,
     eow_package: Path | str | None = None,
     force_ship: bool = False,
+    chunk_rows: int | None = None,
+    max_chunks: int = 32,
+    max_rows: int | None = None,
 ) -> dict[str, Any]:
     """Execute cyclic observe→multi-section propose→merge→ingest until coherent.
 
@@ -375,6 +380,7 @@ def run_job_coherence_loop(
     P3: optional survey_path and/or SURVEY fiber in MicroPulse; survey_gate free param.
     P4: --with-regime / --with-science dual-gate info; --require-regime optional gate.
     P5: optional eow_package after SOLVED (or --force-ship → UNSOLVED_SHIP banner).
+    KB D: chunk_rows / max_chunks → out-of-core CHUNK_INSPECT.json; max_rows caps LAS load.
     """
     thr = thresholds or JobThresholds()
     params = (initial or FreeParams()).clamp()
@@ -383,6 +389,10 @@ def run_job_coherence_loop(
     parent_for_latest: Path | None = None
     with_regime = bool(with_regime)
     with_science = bool(with_science)
+    chunk_rows_i = int(chunk_rows) if chunk_rows is not None else None
+    max_chunks_i = max(1, int(max_chunks))
+    max_rows_i = int(max_rows) if max_rows is not None else None
+    chunk_inspect_report: dict[str, Any] | None = None
 
     resume_ledger: list[dict[str, Any]] = []
     start_round = 1
@@ -544,6 +554,54 @@ def run_job_coherence_loop(
 
     ledger_path = out_root / "ledger.jsonl"
 
+    # KB D: out-of-core chunk inspect (optional) before negotiate loop
+    if las_path is not None and chunk_rows_i is not None and chunk_rows_i > 0:
+        try:
+            chunk_inspect_report = run_las_chunk_inspect(
+                las_path,
+                chunk_rows=chunk_rows_i,
+                max_chunks=max_chunks_i,
+                pack=params.channel_pack,
+                depth_mono_eps=float(thr.depth_mono_eps),
+                out_path=out_root / "CHUNK_INSPECT.json",
+            )
+            logger.info(
+                "chunk inspect n_chunks=%s coverage=%.2f all_hard_ok=%s",
+                chunk_inspect_report.get("n_chunks"),
+                chunk_inspect_report.get("coverage_frac"),
+                chunk_inspect_report.get("all_hard_ok"),
+            )
+            if run_doc is not None:
+                run_doc["chunk_inspect"] = {
+                    "chunk_rows": chunk_rows_i,
+                    "max_chunks": max_chunks_i,
+                    "n_chunks": chunk_inspect_report.get("n_chunks"),
+                    "coverage_frac": chunk_inspect_report.get("coverage_frac"),
+                    "all_hard_ok": chunk_inspect_report.get("all_hard_ok"),
+                    "not_acceptance": True,
+                }
+                _write_run_json(out_root, run_doc)
+            # P6: science annex attachment when with_science
+            if with_science:
+                sci_path = out_root / "CHUNK_SCIENCE_ANNEX.json"
+                sci_body = dict(chunk_inspect_report)
+                sci_body["kind"] = "chunk_science_annex"
+                sci_body["with_science"] = True
+                from realm.kb_geometry.science_annex import attach_science_theory
+
+                sci_body = attach_science_theory(sci_body, split="unspecified")
+                sci_path.write_text(
+                    json.dumps(sci_body, indent=2) + "\n", encoding="utf-8"
+                )
+                chunk_inspect_report["science_annex_path"] = str(sci_path.resolve())
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("chunk inspect skipped: %s", exc)
+            chunk_inspect_report = {
+                "enabled": False,
+                "error": str(exc),
+                "not_acceptance": True,
+            }
+
     def _commit_entry(entry: dict[str, Any], cycle_dir: Path | None = None) -> None:
         ledger.append(entry)
         if os_mode:
@@ -594,6 +652,7 @@ def run_job_coherence_loop(
                 survey=survey_table,
                 with_regime=with_regime,
                 with_science=with_science,
+                max_rows=max_rows_i,
             )
             pin0 = pin
 
@@ -748,6 +807,7 @@ def run_job_coherence_loop(
             survey=survey_table,
             with_regime=with_regime,
             with_science=with_science,
+            max_rows=max_rows_i,
         )
         recipe_path = out_root / "PARTNER_RECIPE.json"
         write_partner_recipe(
@@ -872,6 +932,10 @@ def run_job_coherence_loop(
         "require_regime": bool(thr.require_regime),
         "with_regime": with_regime,
         "with_science": with_science,
+        "chunk_rows": chunk_rows_i,
+        "max_chunks": max_chunks_i,
+        "max_rows": max_rows_i,
+        "chunk_inspect": chunk_inspect_report,
         "micropulse_n_fibers": (mp_bundle or {}).get("n_fibers") if mp_bundle else 0,
         "micropulse_kinds": (mp_bundle or {}).get("kinds") if mp_bundle else [],
         "note": (
@@ -881,9 +945,9 @@ def run_job_coherence_loop(
             "survey_gate/regime_mode. "
             "P2: MicroPulse fiber join + structural glue. "
             "P3: survey stalk QC + optional discrete holonomy (never invent Inc/Azi). "
-            "P4: regime H0 barcode + dual-gate science info (not accept gate). "
+            "P4: regime H0 barcode + multi-scale zigzag + dual-gate science info. "
             "P5: EOW SHIP after SOLVED (or --force-ship UNSOLVED_SHIP); "
-            "PACKAGE_INDEX + PARTNER_RECIPE attach. "
+            "KB D: optional chunk_rows inspect + max_rows cap. "
             "QC pin locked. Not ROP score-chase. Never ζ→ROP."
         ),
     }

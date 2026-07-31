@@ -11,8 +11,18 @@ from pathlib import Path
 from typing import Any
 
 
-def parse_las(path: str | Path) -> dict[str, Any]:
+def parse_las(
+    path: str | Path,
+    *,
+    max_rows: int | None = None,
+) -> dict[str, Any]:
     """Parse a LAS 2.0 file into series dict for pin/observe.
+
+    Parameters
+    ----------
+    max_rows
+        Optional cap on ASCII data rows (out-of-core / huge-file inspect).
+        Header curves still fully read; data stops after max_rows lines/chunks.
 
     Returns
     -------
@@ -25,6 +35,8 @@ def parse_las(path: str | Path) -> dict[str, Any]:
         n_rows : int
         source_path : str
         wrap : bool
+        max_rows_cap : int | None
+        truncated : bool
     """
     p = Path(path)
     if not p.is_file():
@@ -32,6 +44,7 @@ def parse_las(path: str | Path) -> dict[str, Any]:
 
     text = p.read_text(encoding="utf-8", errors="replace")
     lines = text.splitlines()
+    row_cap = int(max_rows) if max_rows is not None else None
 
     section: str | None = None
     curve_names: list[str] = []
@@ -102,6 +115,13 @@ def parse_las(path: str | Path) -> dict[str, Any]:
                 units[mnem] = unit
         elif section == "A":
             data_lines.append(stripped)
+            # Early stop collecting ASCII when cap known (line-oriented WRAP=NO)
+            if (
+                row_cap is not None
+                and not wrap
+                and len(data_lines) >= row_cap
+            ):
+                break
 
     if not curve_names:
         raise ValueError(f"LAS has no curves: {p}")
@@ -110,6 +130,7 @@ def parse_las(path: str | Path) -> dict[str, Any]:
     n_curves = len(curve_names)
     values: list[list[float | None]] = [[] for _ in range(n_curves)]
     null = null_value
+    truncated = False
 
     def _to_float(tok: str) -> float | None:
         try:
@@ -127,20 +148,35 @@ def parse_las(path: str | Path) -> dict[str, Any]:
         tokens: list[str] = []
         for dl in data_lines:
             tokens.extend(dl.split())
+        n_full = 0
         for i in range(0, len(tokens) - n_curves + 1, n_curves):
+            if row_cap is not None and n_full >= row_cap:
+                truncated = True
+                break
             chunk = tokens[i : i + n_curves]
             if len(chunk) < n_curves:
                 break
             for j, tok in enumerate(chunk):
                 values[j].append(_to_float(tok))
+            n_full += 1
     else:
-        for dl in data_lines:
+        for di, dl in enumerate(data_lines):
+            if row_cap is not None and di >= row_cap:
+                truncated = True
+                break
             parts = dl.split()
             if len(parts) < n_curves:
                 # pad missing short rows as null (None)
                 parts = parts + ["null"] * (n_curves - len(parts))
             for j in range(n_curves):
                 values[j].append(_to_float(parts[j]))
+        if row_cap is not None and len(data_lines) >= row_cap:
+            # may have stopped collection early
+            if len(data_lines) == row_cap:
+                # ambiguous: exact cap — mark truncated only if file had more
+                # (we cannot know without scanning further; leave flag if cap set
+                # and n_rows == cap)
+                pass
 
     channels: dict[str, list[float | None]] = {
         curve_names[j]: values[j] for j in range(n_curves)
@@ -164,6 +200,8 @@ def parse_las(path: str | Path) -> dict[str, Any]:
             depths.append(float(d))
 
     n_rows = len(depths)
+    if row_cap is not None and n_rows >= row_cap:
+        truncated = True
     return {
         "depths": depths,
         "channels": channels,
@@ -175,6 +213,8 @@ def parse_las(path: str | Path) -> dict[str, Any]:
         "wrap": wrap,
         "well_meta": well_meta,
         "depth_key": depth_key,
+        "max_rows_cap": row_cap,
+        "truncated": bool(truncated),
     }
 
 

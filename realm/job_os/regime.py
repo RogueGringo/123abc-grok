@@ -333,6 +333,66 @@ def evaluate_regime(
     score = structure_score(ch_summaries)
     present = bool(ch_summaries)
 
+    # P4 multi-scale: zigzag window barcode + optional spectral labels (info only)
+    multi_scale: dict[str, Any] = {"enabled": False}
+    graph_labels: dict[str, Any] = {"enabled": False}
+    if present:
+        try:
+            from realm.kb_geometry.zigzag_windows import zigzag_window_barcode
+
+            # Prefer SSSI then first regime channel for multi-scale barcode
+            primary = (
+                regime_chs.get("SSSI")
+                or regime_chs.get("TOR")
+                or next(iter(regime_chs.values()))
+            )
+            n_win = max(2, min(8, 2 * ws))
+            multi_scale = zigzag_window_barcode(
+                primary, n_windows=n_win, long_frac=0.20
+            )
+            multi_scale["enabled"] = True
+            multi_scale["channel"] = (
+                "SSSI"
+                if "SSSI" in regime_chs
+                else ("TOR" if "TOR" in regime_chs else sorted(regime_chs)[0])
+            )
+            notes.append(
+                f"multi_scale_n_long:{multi_scale.get('n_long')}"
+            )
+        except Exception as exc:  # noqa: BLE001
+            multi_scale = {
+                "enabled": False,
+                "error": str(exc),
+                "not_acceptance": True,
+            }
+        try:
+            from realm.kb_geometry.graph import (
+                knn_graph,
+                series_point_cloud,
+                spectral_labels,
+            )
+
+            cloud = series_point_cloud(regime_chs, max_points=48)
+            if cloud.shape[0] >= 4:
+                g = knn_graph(cloud, k=min(5, cloud.shape[0] - 1))
+                lab = spectral_labels(g, n_clusters=2, seed=0)
+                graph_labels = {
+                    "enabled": True,
+                    "n_points": int(cloud.shape[0]),
+                    "n_clusters": lab.get("n_clusters"),
+                    "labels": lab.get("labels"),
+                    "not_acceptance": True,
+                    "informational_only": True,
+                    "note": "Spectral regime labels; never set SOLVED.",
+                }
+                notes.append("spectral_labels_info")
+        except Exception as exc:  # noqa: BLE001
+            graph_labels = {
+                "enabled": False,
+                "error": str(exc),
+                "not_acceptance": True,
+            }
+
     if not present:
         notes.append("regime_no_surface_channels")
     else:
@@ -372,13 +432,17 @@ def evaluate_regime(
         "total_persistence": float(total_persist),
         "structure_score": float(score),
         "channel_summaries": ch_summaries,
+        "multi_scale": multi_scale,
+        "graph_labels": graph_labels,
         "shock": shock,
         "shock_exceedance": int(shock.get("n_exceed") or 0),
         "notes": notes,
         "ontology": "regime_stalk_c_not_rop_score",
         "informational_only": True,
+        "not_acceptance": True,
         "disclaimers": [
             "Regime barcode is informational unless --require-regime.",
+            "Multi-scale zigzag + spectral labels never set SOLVED alone.",
             "Never retunes QC pin. Never ROP / ζ claim.",
             "Science dual-gate annex never sets SOLVED alone.",
         ],

@@ -11,6 +11,7 @@ Provenance cites ACADEMIC sources; transfer notes required.
 
 from __future__ import annotations
 
+from realm.kb_geometry.graph import knn_graph, spectral_labels, series_point_cloud
 from realm.kb_geometry.science_annex import (
     SCIENCE_ANNEX_KIND,
     attach_science_theory,
@@ -27,6 +28,9 @@ __all__ = [
     "attach_science_theory",
     "build_science_annex_base",
     "is_informational_only",
+    "knn_graph",
     "phase_summary",
+    "series_point_cloud",
+    "spectral_labels",
     "zigzag_window_barcode",
 ]
