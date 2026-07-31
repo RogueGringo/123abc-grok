@@ -1,0 +1,18 @@
+# Not in primary expand: failed cyclic band [6,40] on default chain selection
+# (often multi-chain proteins; re-candidate with explicit chain later).
+1HBK  # n_ca~89
+1N0N  # n_ca~396
+1ORK  # n_ca~197
+1S4U  # n_ca~356
+1S8C  # n_ca~855
+1SRA  # n_ca~154
+1V9C  # n_ca~404
+2KLU  # n_ca~70
+2O9R  # n_ca~445
+3Q2J  # n_ca~526
+5EO9  # n_ca~312
+5XW6  # n_ca~960
+6B3F  # n_ca~198
+6B5B  # n_ca~3073
+6P2T  # n_ca~232
+6PIX  # n_ca~198

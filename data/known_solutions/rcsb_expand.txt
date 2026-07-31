@@ -1,0 +1,10 @@
+# RCSB expand IDs for known-solutions (experimental public structures).
+# Empirically filtered: CA cyclic band [6,40] under load_ca_cyclic_band.
+# Quarantined (SKIP_LENGTH / wrong primary chain) kept in rcsb_expand_quarantine.txt.
+1CNL
+1N1U
+1V46
+2L5G
+2MGO
+2MLT
+4N7Y
