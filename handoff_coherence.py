@@ -37,8 +37,9 @@ logger = logging.getLogger("handoff_coherence")
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
         description=(
-            "Cyclic handoff coherence: negotiate decorate/physics/top_k until solved. "
-            "Dual-gate pin locked. Not ACCEPTANCE enrichment chase."
+            "Cyclic handoff coherence OS: negotiate decorate/physics/top_k until "
+            "commercial routine fixed-point. Dual-gate pin locked. "
+            "Not ACCEPTANCE enrichment chase."
         )
     )
     p.add_argument(
@@ -52,9 +53,32 @@ def main(argv: list[str] | None = None) -> int:
         "--out-dir",
         type=Path,
         default=Path("out/coherence"),
-        help="root for cycle_* dirs + COHERENCE.json",
+        help="root for cycle_* dirs + COHERENCE.json (OS: parent of run_id/)",
     )
     p.add_argument("--max-rounds", type=int, default=5)
+    p.add_argument(
+        "--os",
+        action="store_true",
+        help="OS v2: run_id/, RUN.json, ledger.jsonl, PARTNER_RECIPE, LATEST",
+    )
+    p.add_argument(
+        "--resume",
+        type=Path,
+        default=None,
+        help="resume incomplete OS run directory (contains RUN.json)",
+    )
+    p.add_argument(
+        "--stability-k",
+        type=int,
+        default=1,
+        help="fixed-point: is_solved ∧ empty board for K consecutive cycles",
+    )
+    p.add_argument(
+        "--run-id",
+        type=str,
+        default=None,
+        help="optional explicit OS run_id (default: UTC stamp)",
+    )
     p.add_argument(
         "--decorate",
         type=str,
@@ -125,48 +149,82 @@ def main(argv: list[str] | None = None) -> int:
         logger.error("dual-gate pin FAIL (locked — cannot negotiate): %s", pin)
         return 4
 
-    ids = resolve_pdb_id_list(args.pdb_ids)
-    if not ids:
-        logger.error("no PDB ids from %r", args.pdb_ids)
-        return 2
+    if args.resume is not None:
+        if not (args.resume / "RUN.json").is_file():
+            logger.error("resume path missing RUN.json: %s", args.resume)
+            return 2
+        knobs_path = args.knobs
+        if not knobs_path.is_file():
+            logger.error("knobs missing: %s", knobs_path)
+            return 2
+        knobs = load_knobs(knobs_path)
+        if isinstance(knobs, dict) and "best_knobs" in knobs:
+            knobs = knobs["best_knobs"]
+        result = run_coherence_loop(
+            pdb_ids=[],  # restored from RUN.json
+            knobs=knobs,
+            out_root=args.out_dir,
+            max_rounds=int(args.max_rounds),
+            verify=not args.no_verify,
+            n_zeros=int(args.k),
+            resume_dir=args.resume,
+            stability_k=int(args.stability_k),
+            os_mode=True,
+            with_genotype=bool(args.with_genotype),
+            genotype_epochs=int(args.genotype_epochs),
+            genotype_pop=int(args.genotype_pop),
+            science_weak_threshold=float(args.science_weak),
+        )
+    else:
+        ids = resolve_pdb_id_list(args.pdb_ids)
+        if not ids:
+            logger.error("no PDB ids from %r", args.pdb_ids)
+            return 2
 
-    if not args.knobs.is_file():
-        logger.error("knobs missing: %s", args.knobs)
-        return 2
-    knobs = load_knobs(args.knobs)
-    if isinstance(knobs, dict) and "best_knobs" in knobs:
-        knobs = knobs["best_knobs"]
+        if not args.knobs.is_file():
+            logger.error("knobs missing: %s", args.knobs)
+            return 2
+        knobs = load_knobs(args.knobs)
+        if isinstance(knobs, dict) and "best_knobs" in knobs:
+            knobs = knobs["best_knobs"]
 
-    dec0 = args.decorate
-    if dec0 == "auto":
-        dec0 = "sequence"
+        dec0 = args.decorate
+        if dec0 == "auto":
+            dec0 = "sequence"
 
-    result = run_coherence_loop(
-        pdb_ids=list(ids),
-        knobs=knobs,
-        out_root=args.out_dir,
-        initial=FreeParams(
-            decorate=dec0,
-            physics=args.physics,
-            top_k=int(args.top_k),
-        ),
-        thresholds=CoherenceThresholds(
-            min_export_ok_fraction=1.0,
-            max_physics_fail=int(args.max_physics_fail),
-            min_decorate_ok_fraction=float(args.min_decorate_frac),
-            require_verify_ok=not args.no_verify,
-            require_pin=True,
-            require_decorate=bool(args.require_decorate),
-        ),
-        max_rounds=int(args.max_rounds),
-        verify=not args.no_verify,
-        n_zeros=int(args.k),
-        with_science=bool(args.with_science),
-        with_genotype=bool(args.with_genotype),
-        genotype_epochs=int(args.genotype_epochs),
-        genotype_pop=int(args.genotype_pop),
-        science_weak_threshold=float(args.science_weak),
-    )
+        result = run_coherence_loop(
+            pdb_ids=list(ids),
+            knobs=knobs,
+            out_root=args.out_dir,
+            initial=FreeParams(
+                decorate=dec0,
+                physics=args.physics,
+                top_k=int(args.top_k),
+            ),
+            thresholds=CoherenceThresholds(
+                min_export_ok_fraction=1.0,
+                max_physics_fail=int(args.max_physics_fail),
+                min_decorate_ok_fraction=float(args.min_decorate_frac),
+                require_verify_ok=not args.no_verify,
+                require_pin=True,
+                require_decorate=bool(args.require_decorate),
+            ),
+            max_rounds=int(args.max_rounds),
+            verify=not args.no_verify,
+            n_zeros=int(args.k),
+            with_science=bool(args.with_science),
+            with_genotype=bool(args.with_genotype),
+            genotype_epochs=int(args.genotype_epochs),
+            genotype_pop=int(args.genotype_pop),
+            science_weak_threshold=float(args.science_weak),
+            stability_k=int(args.stability_k),
+            os_mode=bool(args.os),
+            run_id=args.run_id,
+        )
+
+    if result.get("stop_reason") == "pin_fail":
+        print(json.dumps({"solved": False, "stop_reason": "pin_fail"}, indent=2))
+        return 4
 
     print(
         json.dumps(
@@ -174,12 +232,16 @@ def main(argv: list[str] | None = None) -> int:
                 "solved": result.get("solved"),
                 "stop_reason": result.get("stop_reason"),
                 "n_rounds": result.get("n_rounds"),
+                "run_id": result.get("run_id"),
+                "os_mode": result.get("os_mode"),
+                "stability_k": result.get("stability_k"),
                 "final_params": result.get("final_params"),
                 "final_knobs_source": result.get("final_knobs_source"),
+                "partner_recipe": result.get("partner_recipe"),
                 "genotype_improved": (result.get("genotype") or {}).get("improved"),
                 "pin_soft_T": (result.get("pin_locked") or {}).get("soft_T_n12"),
                 "out": result.get("out_root"),
-                "note": "pin locked; free params + optional genotype knobs",
+                "note": "pin locked; free params + optional genotype; OS fixed-point K",
             },
             indent=2,
         )

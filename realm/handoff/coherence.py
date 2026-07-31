@@ -599,6 +599,145 @@ def run_genotype_phase(
     }
 
 
+def _utc_run_id() -> str:
+    from datetime import datetime, timezone
+
+    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+
+def write_partner_recipe(
+    path: Path | str,
+    *,
+    pin: dict[str, Any],
+    free_params: FreeParams,
+    run_id: str,
+    pdb_ids: list[str],
+    solved: bool,
+) -> Path:
+    """Machine-readable free-param recipe for partner re-run (not ACCEPTANCE)."""
+    dest = Path(path)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    body = {
+        "kind": "partner_recipe",
+        "ontology": "partner_recipe_not_lambda_eq_gamma",
+        "run_id": run_id,
+        "solved": solved,
+        "pin": {
+            "ok": pin.get("ok"),
+            "soft_T": pin.get("soft_T", 0.036),
+            "expected_soft_T": 0.036,
+            "seq_mix": pin.get("seq_mix", 0.0),
+            "face_weight": pin.get("face_weight", 0.08),
+            "note": "dual-gate pin locked; not negotiated by coherence OS",
+        },
+        "free_params": free_params.to_dict(),
+        "pdb_ids": list(pdb_ids),
+        "re_run_cli": (
+            f"python handoff_campaign.py --pdb-ids {','.join(pdb_ids)} "
+            f"--decorate {free_params.decorate} --physics {free_params.physics} "
+            f"--top-k {free_params.top_k}"
+        ),
+        "disclaimers": [
+            "PARTNER_RECIPE is free-param + pin stamp for re-run fidelity.",
+            "Not ACCEPTANCE / not SHIP success.",
+            "Commercial success remains openable PDBs + dual-gate pin.",
+            "Never lambda=gamma.",
+        ],
+    }
+    dest.write_text(json.dumps(body, indent=2) + "\n", encoding="utf-8")
+    return dest
+
+
+def append_ledger(path: Path, entry: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(entry, sort_keys=True) + "\n")
+
+
+def load_resume_state(run_dir: Path) -> dict[str, Any]:
+    """Load RUN.json + ledger to resume OS batch."""
+    run_path = run_dir / "RUN.json"
+    if not run_path.is_file():
+        raise FileNotFoundError(f"no RUN.json under {run_dir}")
+    run = json.loads(run_path.read_text(encoding="utf-8"))
+    ledger_path = run_dir / "ledger.jsonl"
+    entries: list[dict[str, Any]] = []
+    if ledger_path.is_file():
+        for line in ledger_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line:
+                entries.append(json.loads(line))
+    return {"run": run, "ledger": entries, "run_dir": run_dir}
+
+
+def _write_run_json(out_root: Path, doc: dict[str, Any]) -> None:
+    (out_root / "RUN.json").write_text(
+        json.dumps(doc, indent=2) + "\n", encoding="utf-8"
+    )
+
+
+def _write_latest_run_pointer(parent: Path, run_dir: Path) -> None:
+    """Pointer file at OS parent: LATEST → run_id path."""
+    parent.mkdir(parents=True, exist_ok=True)
+    body = {
+        "run_id": run_dir.name,
+        "path": str(run_dir.resolve()),
+        "ontology": "coherence_os_v2_latest_not_lambda_eq_gamma",
+    }
+    (parent / "LATEST").write_text(
+        json.dumps(body, indent=2) + "\n", encoding="utf-8"
+    )
+
+
+def _aggregate_cycle_rollups(summary: dict[str, Any], cycle_dir: Path) -> None:
+    """Fill decorate/physics rollups from child index.json if missing on batch."""
+    if not summary.get("decorate_rollup") or not (
+        summary.get("decorate_rollup") or {}
+    ).get("n_molds"):
+        n_ok = n_paths = n_molds = 0
+        by_st: dict[str, int] = {}
+        for child in cycle_dir.iterdir() if cycle_dir.is_dir() else []:
+            idx = child / "index.json"
+            if not idx.is_file():
+                continue
+            try:
+                data = json.loads(idx.read_text(encoding="utf-8"))
+            except Exception:  # noqa: BLE001
+                continue
+            dr = data.get("decorate_rollup") or {}
+            n_ok += int(dr.get("n_ok") or 0)
+            n_paths += int(dr.get("n_with_path") or 0)
+            n_molds += int(dr.get("n_molds") or 0)
+            for st, c in (dr.get("by_status") or {}).items():
+                by_st[st] = by_st.get(st, 0) + int(c)
+        if n_molds:
+            summary["decorate_rollup"] = {
+                "n_ok": n_ok,
+                "n_with_path": n_paths,
+                "n_molds": n_molds,
+                "by_status": by_st,
+            }
+        p_ok = p_w = p_f = 0
+        for child in cycle_dir.iterdir() if cycle_dir.is_dir() else []:
+            idx = child / "index.json"
+            if not idx.is_file():
+                continue
+            try:
+                data = json.loads(idx.read_text(encoding="utf-8"))
+            except Exception:  # noqa: BLE001
+                continue
+            pr = data.get("physics_rollup") or {}
+            p_ok += int(pr.get("n_ok") or 0)
+            p_w += int(pr.get("n_warn") or 0)
+            p_f += int(pr.get("n_fail") or 0)
+        if p_ok + p_w + p_f:
+            summary["physics_rollup"] = {
+                "n_ok": p_ok,
+                "n_warn": p_w,
+                "n_fail": p_f,
+            }
+
+
 def run_coherence_loop(
     *,
     pdb_ids: list[str],
@@ -614,200 +753,348 @@ def run_coherence_loop(
     genotype_epochs: int = 2,
     genotype_pop: int = 4,
     science_weak_threshold: float = 0.55,
+    stability_k: int = 1,
+    os_mode: bool = False,
+    resume_dir: Path | str | None = None,
+    run_id: str | None = None,
 ) -> dict[str, Any]:
     """Execute cyclic observe→multi-section propose→merge→export until coherent.
 
     Dual-gate pin is re-checked every round and never written/adapted.
     Optional genotype phase runs after free-param loop if with_genotype and
     (not solved OR science soft enrichment below threshold).
+
+    OS mode (os_mode=True): RUN.json, ledger.jsonl, stability-K fixed-point,
+    PARTNER_RECIPE on SOLVED, optional resume.
+
+    Fixed-point (commercial routine): is_solved ∧ empty free-param board for
+    K consecutive cycles (stability_k). Default K=1 matches legacy one-shot halt.
     """
     from realm.handoff.pipeline import export_structure_batch
 
     thr = thresholds or CoherenceThresholds()
     params = (initial or FreeParams()).clamp()
     out_root = Path(out_root)
-    out_root.mkdir(parents=True, exist_ok=True)
     active_knobs = dict(knobs)
+    stability_k = max(1, int(stability_k))
+    parent_for_latest: Path | None = None
+
+    # --- run directory (OS) ---
+    resume_ledger: list[dict[str, Any]] = []
+    start_round = 1
+    tried: set[str] = set()
+    stability_streak = 0
+    run_doc: dict[str, Any] | None = None
+
+    if resume_dir is not None:
+        state = load_resume_state(Path(resume_dir))
+        run_meta = state["run"]
+        resume_ledger = list(state["ledger"])
+        run_dir = Path(state["run_dir"])
+        run_id = str(run_meta.get("run_id") or run_dir.name)
+        # Prefer last next_params, else last params, else RUN.final_params
+        params = FreeParams(
+            **(run_meta.get("final_params") or params.to_dict())
+        ).clamp()
+        for e in reversed(resume_ledger):
+            if e.get("next_params"):
+                params = FreeParams(**e["next_params"]).clamp()
+                break
+            if e.get("params"):
+                params = FreeParams(**e["params"]).clamp()
+                break
+        for e in resume_ledger:
+            if e.get("params"):
+                tried.add(json.dumps(e["params"], sort_keys=True))
+            if e.get("next_params"):
+                tried.add(json.dumps(e["next_params"], sort_keys=True))
+            if e.get("stability_streak") is not None:
+                stability_streak = int(e["stability_streak"])
+        cycle_entries = [
+            e for e in resume_ledger if isinstance(e.get("round"), int)
+        ]
+        start_round = len(cycle_entries) + 1
+        max_rounds = int(run_meta.get("max_rounds") or max_rounds)
+        os_mode = True
+        out_root = run_dir
+        parent_for_latest = out_root.parent
+        thr = CoherenceThresholds(**(run_meta.get("thresholds") or thr.to_dict()))
+        stability_k = max(1, int(run_meta.get("stability_k") or stability_k))
+        with_science = bool(run_meta.get("with_science", with_science))
+        with_genotype = bool(run_meta.get("with_genotype", with_genotype))
+        if run_meta.get("pdb_ids"):
+            pdb_ids = list(run_meta["pdb_ids"])
+        run_doc = dict(run_meta)
+        run_doc["status"] = "resuming"
+        if run_meta.get("status") == "solved":
+            logger.info(
+                "resume already solved run_id=%s — re-emitting artifacts", run_id
+            )
+        logger.info(
+            "resume run_id=%s start_round=%s budget=%s streak=%s",
+            run_id,
+            start_round,
+            max_rounds,
+            stability_streak,
+        )
+    else:
+        if os_mode:
+            rid = run_id or _utc_run_id()
+            parent_for_latest = Path(out_root)
+            out_root = Path(out_root) / rid
+            run_id = rid
+        else:
+            run_id = run_id or "legacy"
+        out_root.mkdir(parents=True, exist_ok=True)
 
     pin0 = verify_dual_gate_pin()
-    ledger: list[dict[str, Any]] = []
-    tried: set[str] = set()
+    ledger: list[dict[str, Any]] = list(resume_ledger)
     solved = False
     stop_reason = "max_rounds"
     last_science_enr: float | None = None
+    partner_recipe_path: str | None = None
 
-    for rnd in range(1, max(1, int(max_rounds)) + 1):
-        cycle_dir = out_root / f"cycle_{rnd:02d}"
-        pin = verify_dual_gate_pin()
-        logger.info(
-            "coherence cycle %s/%s decorate=%s physics=%s top_k=%s pin_ok=%s soft_T=%s",
-            rnd,
-            max_rounds,
-            params.decorate,
-            params.physics,
-            params.top_k,
-            pin.get("ok"),
-            pin.get("soft_T"),
-        )
-        if thr.require_pin and not pin.get("ok"):
-            stop_reason = "pin_fail"
-            ledger.append(
-                {
-                    "round": rnd,
-                    "params": params.to_dict(),
-                    "pin": pin,
-                    "solved": False,
-                    "action": "abort",
-                    "reason": "dual_gate_pin_failed_locked",
-                }
-            )
-            break
+    # Early exit if resume of already-solved run
+    if resume_dir is not None and any(
+        e.get("action") == "halt" and e.get("solved") for e in resume_ledger
+    ):
+        solved = True
+        stop_reason = "coherent"
+        for e in reversed(resume_ledger):
+            if e.get("params"):
+                params = FreeParams(**e["params"]).clamp()
+                break
 
-        summary = export_structure_batch(
-            list(pdb_ids),
-            active_knobs,
-            out_root=cycle_dir,
-            top_k=int(params.top_k),
-            n_zeros=int(n_zeros),
-            include_coutsias=False,
-            decorate=params.decorate,
-            physics=params.physics,
-            with_enrichment=False,
-            with_biopython_check=True,
-            resume=False,
-        )
-        vreport = None
-        if verify:
-            vreport = verify_handoff_tree(
-                cycle_dir,
-                require_sha256=False,
-                check_biopython=False,
-            )
-            (cycle_dir / "verify_report.json").write_text(
-                json.dumps(vreport, indent=2) + "\n", encoding="utf-8"
-            )
-
-        # Prefer campaign rollups on cycle root; fall back to first OK child index
-        if not summary.get("decorate_rollup") or not (
-            summary.get("decorate_rollup") or {}
-        ).get("n_molds"):
-            # aggregate from child index.json
-            n_ok = n_paths = n_molds = 0
-            by_st: dict[str, int] = {}
-            for child in cycle_dir.iterdir() if cycle_dir.is_dir() else []:
-                idx = child / "index.json"
-                if not idx.is_file():
-                    continue
-                try:
-                    data = json.loads(idx.read_text(encoding="utf-8"))
-                except Exception:  # noqa: BLE001
-                    continue
-                dr = data.get("decorate_rollup") or {}
-                n_ok += int(dr.get("n_ok") or 0)
-                n_paths += int(dr.get("n_with_path") or 0)
-                n_molds += int(dr.get("n_molds") or 0)
-                for st, c in (dr.get("by_status") or {}).items():
-                    by_st[st] = by_st.get(st, 0) + int(c)
-            if n_molds:
-                summary["decorate_rollup"] = {
-                    "n_ok": n_ok,
-                    "n_with_path": n_paths,
-                    "n_molds": n_molds,
-                    "by_status": by_st,
-                }
-            # physics from children
-            p_ok = p_w = p_f = 0
-            for child in cycle_dir.iterdir() if cycle_dir.is_dir() else []:
-                idx = child / "index.json"
-                if not idx.is_file():
-                    continue
-                try:
-                    data = json.loads(idx.read_text(encoding="utf-8"))
-                except Exception:  # noqa: BLE001
-                    continue
-                pr = data.get("physics_rollup") or {}
-                p_ok += int(pr.get("n_ok") or 0)
-                p_w += int(pr.get("n_warn") or 0)
-                p_f += int(pr.get("n_fail") or 0)
-            if p_ok + p_w + p_f:
-                summary["physics_rollup"] = {
-                    "n_ok": p_ok,
-                    "n_warn": p_w,
-                    "n_fail": p_f,
-                }
-
-        obs = observe(
-            pin=pin,
-            export_summary=summary,
-            verify_report=vreport,
-            out_dir=cycle_dir,
-        )
-        science_pack = None
-        if with_science:
-            try:
-                science_pack = _science_soft_probe(
-                    list(pdb_ids), active_knobs, n_zeros=n_zeros
-                )
-                obs.science_soft_enrichment = science_pack.get("mean_enrichment")
-                obs.science_n_ok = int(science_pack.get("n_ok") or 0)
-                obs.science_n_attempted = int(science_pack.get("n_attempted") or 0)
-                last_science_enr = obs.science_soft_enrichment
-                (cycle_dir / "science_probe.json").write_text(
-                    json.dumps(science_pack, indent=2) + "\n", encoding="utf-8"
-                )
-            except Exception as exc:  # noqa: BLE001
-                logger.warning("science probe skipped: %s", exc)
-
-        score = coherence_score(obs, thr, params)
-        solved = is_solved(obs, thr, params)
-        entry = {
-            "round": rnd,
-            "params": params.to_dict(),
-            "observations": obs.to_dict(),
-            "coherence_score": score,
-            "solved": solved,
-            "pin": {
-                "ok": pin.get("ok"),
-                "soft_T": pin.get("soft_T"),
-                "seq_mix": pin.get("seq_mix"),
-                "face_weight": pin.get("face_weight"),
+    if os_mode and resume_dir is None:
+        run_doc = {
+            "run_id": run_id,
+            "ontology": "coherence_os_v2_not_lambda_eq_gamma",
+            "pdb_ids": list(pdb_ids),
+            "thresholds": thr.to_dict(),
+            "stability_k": stability_k,
+            "max_rounds": int(max_rounds),
+            "initial_params": params.to_dict(),
+            "final_params": params.to_dict(),
+            "with_science": bool(with_science),
+            "with_genotype": bool(with_genotype),
+            "pin_locked": {
+                "soft_T_n12": 0.036,
+                "seq_mix": 0.0,
+                "face_weight": 0.08,
+                "verified": pin0.get("ok"),
             },
-            "export_n_ok": summary.get("n_ok"),
-            "export_n_ids": summary.get("n_ids"),
-            "cycle_dir": str(cycle_dir.resolve()),
-            "science_probe": science_pack,
+            "n_rounds": 0,
+            "status": "running",
+            "stability_streak": 0,
         }
+        _write_run_json(out_root, run_doc)
+        (out_root / "ledger.jsonl").write_text("", encoding="utf-8")
+        if parent_for_latest is not None:
+            _write_latest_run_pointer(parent_for_latest, out_root)
 
-        if solved:
-            entry["action"] = "halt"
-            entry["reason"] = "coherent"
-            entry["proposals"] = []
-            ledger.append(entry)
-            stop_reason = "coherent"
-            logger.info("coherence SOLVED at round %s score=%.3f", rnd, score)
-            break
+    ledger_path = out_root / "ledger.jsonl"
 
-        nxt, reason, board = negotiate(obs, params, thr, tried=tried)
-        entry["action"] = "negotiate" if nxt is not None else "stuck"
-        entry["reason"] = reason
-        entry["proposals"] = board
-        entry["next_params"] = nxt.to_dict() if nxt is not None else None
+    def _commit_entry(entry: dict[str, Any], cycle_dir: Path | None = None) -> None:
         ledger.append(entry)
-        (cycle_dir / "coherence_round.json").write_text(
-            json.dumps(entry, indent=2) + "\n", encoding="utf-8"
-        )
+        if os_mode:
+            append_ledger(ledger_path, entry)
+            if run_doc is not None:
+                run_doc["n_rounds"] = len(
+                    [e for e in ledger if isinstance(e.get("round"), int)]
+                )
+                run_doc["final_params"] = (
+                    entry.get("next_params") or entry.get("params") or params.to_dict()
+                )
+                run_doc["stability_streak"] = int(entry.get("stability_streak") or 0)
+                run_doc["status"] = (
+                    "solved"
+                    if entry.get("solved") and entry.get("action") == "halt"
+                    else "running"
+                )
+                run_doc["last_round"] = entry.get("round")
+                _write_run_json(out_root, run_doc)
+        if cycle_dir is not None:
+            cycle_dir.mkdir(parents=True, exist_ok=True)
+            (cycle_dir / "coherence_round.json").write_text(
+                json.dumps(entry, indent=2) + "\n", encoding="utf-8"
+            )
 
-        if nxt is None:
-            stop_reason = reason
-            logger.info("coherence stuck: %s", reason)
-            break
-        logger.info(
-            "negotiate → %s (%s) board=%s",
-            nxt.to_dict(),
-            reason,
-            [b.get("section") for b in board],
-        )
-        params = nxt
+    if not solved:
+        for rnd in range(start_round, max(1, int(max_rounds)) + 1):
+            cycle_dir = out_root / f"cycle_{rnd:02d}"
+            pin = verify_dual_gate_pin()
+            logger.info(
+                "coherence cycle %s/%s decorate=%s physics=%s top_k=%s "
+                "pin_ok=%s soft_T=%s streak=%s/%s os=%s",
+                rnd,
+                max_rounds,
+                params.decorate,
+                params.physics,
+                params.top_k,
+                pin.get("ok"),
+                pin.get("soft_T"),
+                stability_streak,
+                stability_k,
+                os_mode,
+            )
+            if thr.require_pin and not pin.get("ok"):
+                stop_reason = "pin_fail"
+                _commit_entry(
+                    {
+                        "round": rnd,
+                        "params": params.to_dict(),
+                        "pin": pin,
+                        "solved": False,
+                        "is_solved_slice": False,
+                        "stability_streak": 0,
+                        "action": "abort",
+                        "reason": "dual_gate_pin_failed_locked",
+                        "proposals": [],
+                    },
+                    cycle_dir,
+                )
+                break
+
+            summary = export_structure_batch(
+                list(pdb_ids),
+                active_knobs,
+                out_root=cycle_dir,
+                top_k=int(params.top_k),
+                n_zeros=int(n_zeros),
+                include_coutsias=False,
+                decorate=params.decorate,
+                physics=params.physics,
+                with_enrichment=False,
+                with_biopython_check=True,
+                resume=False,
+            )
+            vreport = None
+            if verify:
+                vreport = verify_handoff_tree(
+                    cycle_dir,
+                    require_sha256=False,
+                    check_biopython=False,
+                )
+                (cycle_dir / "verify_report.json").write_text(
+                    json.dumps(vreport, indent=2) + "\n", encoding="utf-8"
+                )
+
+            _aggregate_cycle_rollups(summary, cycle_dir)
+
+            obs = observe(
+                pin=pin,
+                export_summary=summary,
+                verify_report=vreport,
+                out_dir=cycle_dir,
+            )
+            science_pack = None
+            if with_science:
+                try:
+                    science_pack = _science_soft_probe(
+                        list(pdb_ids), active_knobs, n_zeros=n_zeros
+                    )
+                    obs.science_soft_enrichment = science_pack.get("mean_enrichment")
+                    obs.science_n_ok = int(science_pack.get("n_ok") or 0)
+                    obs.science_n_attempted = int(
+                        science_pack.get("n_attempted") or 0
+                    )
+                    last_science_enr = obs.science_soft_enrichment
+                    (cycle_dir / "science_probe.json").write_text(
+                        json.dumps(science_pack, indent=2) + "\n", encoding="utf-8"
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("science probe skipped: %s", exc)
+
+            score = coherence_score(obs, thr, params)
+            solved_slice = is_solved(obs, thr, params)
+            # Mark current params tried; board for fixed-point uses untried moves
+            tried.add(json.dumps(params.to_dict(), sort_keys=True))
+            board_props = collect_section_proposals(
+                obs, params, thr, tried=tried
+            )
+            # When already solved, free-param board is empty by negotiate contract
+            if solved_slice:
+                board_props = []
+            empty_board = len(board_props) == 0
+
+            if solved_slice and empty_board:
+                stability_streak += 1
+            else:
+                stability_streak = 0
+
+            entry: dict[str, Any] = {
+                "round": rnd,
+                "params": params.to_dict(),
+                "observations": obs.to_dict(),
+                "coherence_score": score,
+                "is_solved_slice": solved_slice,
+                "solved": False,
+                "stability_streak": stability_streak,
+                "stability_k": stability_k,
+                "pin": {
+                    "ok": pin.get("ok"),
+                    "soft_T": pin.get("soft_T"),
+                    "seq_mix": pin.get("seq_mix"),
+                    "face_weight": pin.get("face_weight"),
+                },
+                "export_n_ok": summary.get("n_ok"),
+                "export_n_ids": summary.get("n_ids"),
+                "cycle_dir": str(cycle_dir.resolve()),
+                "science_probe": science_pack,
+                "proposals": [p.to_dict() for p in board_props],
+            }
+
+            # Fixed-point: is_solved ∧ empty board × K consecutive cycles
+            if solved_slice and empty_board and stability_streak >= stability_k:
+                entry["action"] = "halt"
+                entry["reason"] = (
+                    "fixed_point" if stability_k > 1 or os_mode else "coherent"
+                )
+                entry["solved"] = True
+                entry["proposals"] = []
+                _commit_entry(entry, cycle_dir)
+                solved = True
+                stop_reason = "coherent"
+                logger.info(
+                    "coherence SOLVED at round %s score=%.3f streak=%s/%s",
+                    rnd,
+                    score,
+                    stability_streak,
+                    stability_k,
+                )
+                break
+
+            if solved_slice and empty_board and stability_streak < stability_k:
+                entry["action"] = "stability_hold"
+                entry["reason"] = f"streak_{stability_streak}_of_{stability_k}"
+                entry["next_params"] = params.to_dict()
+                _commit_entry(entry, cycle_dir)
+                logger.info(
+                    "stability hold round %s streak=%s/%s",
+                    rnd,
+                    stability_streak,
+                    stability_k,
+                )
+                continue
+
+            nxt, reason, board = negotiate(obs, params, thr, tried=tried)
+            entry["action"] = "negotiate" if nxt is not None else "stuck"
+            entry["reason"] = reason
+            entry["proposals"] = board
+            entry["next_params"] = nxt.to_dict() if nxt is not None else None
+            _commit_entry(entry, cycle_dir)
+
+            if nxt is None:
+                stop_reason = reason
+                logger.info("coherence stuck: %s", reason)
+                break
+            logger.info(
+                "negotiate → %s (%s) board=%s",
+                nxt.to_dict(),
+                reason,
+                [b.get("section") for b in board],
+            )
+            params = nxt
 
     # --- optional genotype phase (spectral knobs; never LengthPolicy pin) ---
     genotype_report: dict[str, Any] | None = None
@@ -841,7 +1128,6 @@ def run_coherence_loop(
                 "champion_knobs"
             ):
                 active_knobs = dict(genotype_report["champion_knobs"])
-                # Re-export one validation cycle with free params + new genotype
                 val_dir = out_root / "cycle_genotype_validate"
                 summary = export_structure_batch(
                     list(pdb_ids),
@@ -871,44 +1157,41 @@ def run_coherence_loop(
                     out_dir=val_dir,
                 )
                 solved_g = is_solved(obs, thr, params)
-                ledger.append(
-                    {
-                        "round": "genotype",
-                        "params": params.to_dict(),
-                        "observations": obs.to_dict(),
-                        "coherence_score": coherence_score(obs, thr, params),
-                        "solved": solved_g,
-                        "action": "genotype_validate",
-                        "reason": (
-                            "champion_knobs_applied"
-                            if genotype_report.get("improved")
-                            else "no_improvement"
+                g_entry = {
+                    "round": "genotype",
+                    "params": params.to_dict(),
+                    "observations": obs.to_dict(),
+                    "coherence_score": coherence_score(obs, thr, params),
+                    "solved": solved_g,
+                    "action": "genotype_validate",
+                    "reason": (
+                        "champion_knobs_applied"
+                        if genotype_report.get("improved")
+                        else "no_improvement"
+                    ),
+                    "genotype": {
+                        "baseline": genotype_report.get(
+                            "baseline_probe_enrichment"
                         ),
-                        "genotype": {
-                            "baseline": genotype_report.get(
-                                "baseline_probe_enrichment"
-                            ),
-                            "champion": genotype_report.get(
-                                "champion_probe_enrichment"
-                            ),
-                            "improved": genotype_report.get("improved"),
-                        },
-                        "pin": {
-                            "ok": pin.get("ok"),
-                            "soft_T": pin.get("soft_T"),
-                        },
-                        "cycle_dir": str(val_dir.resolve()),
-                    }
-                )
+                        "champion": genotype_report.get(
+                            "champion_probe_enrichment"
+                        ),
+                        "improved": genotype_report.get("improved"),
+                    },
+                    "pin": {
+                        "ok": pin.get("ok"),
+                        "soft_T": pin.get("soft_T"),
+                    },
+                    "cycle_dir": str(val_dir.resolve()),
+                }
+                _commit_entry(g_entry, val_dir)
                 if solved_g:
                     solved = True
                     stop_reason = "coherent_after_genotype"
-                elif solved:
-                    stop_reason = stop_reason  # keep prior
-                else:
+                elif not solved:
                     stop_reason = "genotype_did_not_solve"
             else:
-                ledger.append(
+                _commit_entry(
                     {
                         "round": "genotype",
                         "action": "genotype_no_improvement",
@@ -920,7 +1203,7 @@ def run_coherence_loop(
         except Exception as exc:  # noqa: BLE001
             logger.exception("genotype phase failed")
             genotype_report = {"ran": True, "error": str(exc), "improved": False}
-            ledger.append(
+            _commit_entry(
                 {
                     "round": "genotype",
                     "action": "genotype_error",
@@ -929,11 +1212,46 @@ def run_coherence_loop(
                 }
             )
 
+    # PARTNER_RECIPE on commercial fixed-point (OS mode or any solved)
+    if solved:
+        pin_final = verify_dual_gate_pin()
+        recipe_path = out_root / "PARTNER_RECIPE.json"
+        write_partner_recipe(
+            recipe_path,
+            pin=pin_final,
+            free_params=params,
+            run_id=str(run_id),
+            pdb_ids=list(pdb_ids),
+            solved=True,
+        )
+        partner_recipe_path = str(recipe_path.resolve())
+
+    if os_mode and run_doc is not None:
+        run_doc["status"] = "solved" if solved else stop_reason
+        run_doc["stop_reason"] = stop_reason
+        run_doc["final_params"] = params.to_dict()
+        run_doc["n_rounds"] = len(
+            [e for e in ledger if isinstance(e.get("round"), int)]
+        )
+        run_doc["stability_streak"] = stability_streak
+        run_doc["partner_recipe"] = partner_recipe_path
+        _write_run_json(out_root, run_doc)
+        if parent_for_latest is not None:
+            _write_latest_run_pointer(parent_for_latest, out_root)
+
     result = {
-        "ontology": "handoff_coherence_protocol_not_lambda_eq_gamma",
+        "ontology": (
+            "coherence_os_v2_not_lambda_eq_gamma"
+            if os_mode
+            else "handoff_coherence_protocol_not_lambda_eq_gamma"
+        ),
+        "run_id": run_id,
+        "os_mode": bool(os_mode),
+        "stability_k": stability_k,
+        "stability_streak": stability_streak,
         "solved": solved,
         "stop_reason": stop_reason,
-        "n_rounds": len(ledger),
+        "n_rounds": len([e for e in ledger if isinstance(e.get("round"), int)]),
         "max_rounds": int(max_rounds),
         "with_science": bool(with_science),
         "with_genotype": bool(with_genotype),
@@ -945,6 +1263,7 @@ def run_coherence_loop(
             if genotype_report and genotype_report.get("improved")
             else "founder"
         ),
+        "partner_recipe": partner_recipe_path,
         "pin_locked": {
             "soft_T_n12": 0.036,
             "seq_mix": 0.0,
@@ -958,6 +1277,7 @@ def run_coherence_loop(
         "note": (
             "Cyclic observe→multi-section propose→merge→export "
             "(+ optional genotype NS micro-search). "
+            "Fixed-point: is_solved ∧ empty board × K. "
             "Free params: decorate/physics/top_k. "
             "Genotype: spectral knobs only. "
             "Dual-gate pin locked. Science informational. "
@@ -977,14 +1297,20 @@ def _write_coherence_md(result: dict[str, Any], path: Path) -> Path:
         "",
         f"- **solved:** {result.get('solved')}",
         f"- **stop:** `{result.get('stop_reason')}`",
+        f"- **run_id:** `{result.get('run_id')}`",
+        f"- **os_mode:** `{result.get('os_mode')}`",
+        f"- **stability-K:** `{result.get('stability_k')}` "
+        f"(streak={result.get('stability_streak')})",
         f"- **rounds:** {result.get('n_rounds')} / {result.get('max_rounds')}",
         f"- **final free params:** `{result.get('final_params')}`",
         f"- **knobs source:** `{result.get('final_knobs_source')}`",
+        f"- **partner_recipe:** `{result.get('partner_recipe')}`",
         f"- **pin locked:** soft_T(n=12)=**0.036** (never adapted)",
         f"- **genotype:** `{bool(result.get('with_genotype'))}` "
         f"improved=`{(result.get('genotype') or {}).get('improved')}`",
         "",
         "Commercial accept remains openable PDBs + dual-gate pin — not this loop's score.",
+        "Fixed-point = is_solved ∧ empty free-param board × K consecutive cycles.",
         "Never lambda=gamma.",
         "",
         "| round | decorate | physics | top_k | score | solved | action | reason |",
