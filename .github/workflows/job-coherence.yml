@@ -1,0 +1,80 @@
+# Job Coherence OS unit + fixture smoke (oilfield dual-gate transfer).
+# QC pin locked. Never ROP score-chase. Never lambda=gamma.
+name: job-coherence
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "job_coherence.py"
+      - "realm/job_os/**"
+      - "realm/kb_geometry/**"
+      - "tests/test_job_coherence*.py"
+      - "tests/test_kb_geometry*.py"
+      - "tests/test_trend_rollup.py"
+      - "tests/fixtures/mini_*.las"
+      - "tests/fixtures/mini_micropulse*"
+      - "tests/fixtures/mini_survey.csv"
+      - ".github/workflows/job-coherence.yml"
+
+jobs:
+  job-os:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy pytest
+          if [ -f requirements-handoff.txt ]; then pip install -r requirements-handoff.txt || true; fi
+      - name: Unit tests (job OS + kb_geometry)
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          pytest tests/test_job_coherence_core.py \
+                 tests/test_job_coherence_micropulse.py \
+                 tests/test_job_coherence_survey.py \
+                 tests/test_job_coherence_regime.py \
+                 tests/test_job_coherence_eow.py \
+                 tests/test_kb_geometry.py \
+                 tests/test_kb_geometry_p3p6.py \
+                 tests/test_kb_geometry_h1.py \
+                 tests/test_trend_rollup.py \
+                 -q --tb=line
+      - name: Fixture OS smoke + catalog
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python job_coherence.py --os \
+            --las tests/fixtures/mini_edr.las \
+            --channel-pack surface_min \
+            --regime-mode persist_h0 --with-regime --with-science \
+            --chunk-rows 8 --max-chunks 4 \
+            --stability-k 1 --max-rounds 3 \
+            --out-dir /tmp/job_os_ci --run-id ci_smoke
+          python job_coherence.py --catalog --out-dir /tmp/job_os_ci
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path("/tmp/job_os_ci/ci_smoke")
+          coh = json.loads((root / "COHERENCE.json").read_text())
+          assert coh.get("solved") is True, coh.get("stop_reason")
+          assert (root / "PARTNER_RECIPE.json").is_file()
+          assert (root / "TREND_ROLLUP.json").is_file()
+          cat = json.loads(Path("/tmp/job_os_ci/INDEX.json").read_text())
+          assert cat.get("n_runs", 0) >= 1
+          assert cat.get("not_acceptance") is True
+          print("job-coherence CI OK", coh.get("final_params"), "runs", cat.get("n_runs"))
+          PY
+      - name: Upload job OS CI artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: job-os-ci
+          path: /tmp/job_os_ci/
+          if-no-files-found: ignore
+          retention-days: 14

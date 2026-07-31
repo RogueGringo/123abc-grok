@@ -37,6 +37,7 @@ ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from realm.job_os.catalog import write_job_os_catalog
 from realm.job_os.loop import run_job_coherence_loop
 from realm.job_os.types import FreeParams, JobThresholds
 
@@ -51,6 +52,11 @@ def main(argv: list[str] | None = None) -> int:
             "Optional MicroPulse + survey + regime science + EOW ship. "
             "Not ROP score-chase."
         )
+    )
+    p.add_argument(
+        "--catalog",
+        action="store_true",
+        help="scan --out-dir for Job OS runs; write INDEX.json + INDEX.md (no negotiate)",
     )
     p.add_argument(
         "--las",
@@ -223,6 +229,23 @@ def main(argv: list[str] | None = None) -> int:
         level=logging.DEBUG if args.v else logging.INFO,
         format="%(asctime)s - %(levelname)s - %(message)s",
     )
+
+    if args.catalog:
+        cat = write_job_os_catalog(args.out_dir)
+        print(
+            json.dumps(
+                {
+                    "catalog": True,
+                    "n_runs": cat.get("n_runs"),
+                    "n_solved": cat.get("n_solved"),
+                    "root": cat.get("root"),
+                    "index_md": str(Path(args.out_dir) / "INDEX.md"),
+                    "note": "catalog not ACCEPTANCE",
+                },
+                indent=2,
+            )
+        )
+        return 0
 
     if args.eow_package is not None and not args.eow_package.exists():
         logger.error("--eow-package path not found: %s", args.eow_package)
