@@ -658,12 +658,28 @@ def write_ship_md(ship: dict[str, Any], path: Path | str) -> Path:
         "Ontology: Crit projection molds only -- **not** lambda=gamma.",
         "Success metric: openable PDBs + dual-gate pin (not enrichment).",
         "",
-        "```bash",
-        "python handoff_deliver.py --verify out/releases/LATEST_DELIVERY.json",
-        "python handoff_accept.py --from-matrix out/matrix/matrix_report.json",
-        "```",
-        "",
     ]
+    ks = ship.get("known_solutions_attach") or {}
+    if ks:
+        lines.extend(
+            [
+                "## Optional science annex (not acceptance)",
+                "",
+                f"- attached: **{ks.get('ok')}** pin_ok={ks.get('pin_ok')}",
+                f"- source: `{ks.get('source')}`",
+                "- see `PARTNER_SCIENCE_ANNEX.md` — enrichment is informational only",
+                "",
+            ]
+        )
+    lines.extend(
+        [
+            "```bash",
+            "python handoff_deliver.py --verify out/releases/LATEST_DELIVERY.json",
+            "python handoff_accept.py --from-matrix out/matrix/matrix_report.json",
+            "```",
+            "",
+        ]
+    )
     dest.write_text("\n".join(lines), encoding="utf-8")
     return dest
 
@@ -716,10 +732,32 @@ def build_partner_receipt_bundle(
             "DELIVERY.md",
             "SHIP.json",
             "SHIP.md",
+            "PARTNER_SCIENCE_ANNEX.json",
+            "PARTNER_SCIENCE_ANNEX.md",
+            "KNOWN_SOLUTIONS_ATTACH.json",
         ):
             p = mdir / name
             if p.is_file() and p not in files:
                 files.append(p)
+        # nested known_solutions/ thin annex if present
+        for name in (
+            "PARTNER_SCIENCE_ANNEX.json",
+            "PARTNER_SCIENCE_ANNEX.md",
+            "pin.json",
+        ):
+            p = mdir / "known_solutions" / name
+            if p.is_file() and p not in files:
+                files.append(p)
+
+    # releases-root science annex (optional attach)
+    for name in (
+        "PARTNER_SCIENCE_ANNEX.json",
+        "PARTNER_SCIENCE_ANNEX.md",
+        "KNOWN_SOLUTIONS_ATTACH.json",
+    ):
+        p = root / name
+        if p.is_file() and p not in files:
+            files.append(p)
 
     if not files:
         raise FileNotFoundError(f"no receipt artifacts under {root}")
@@ -736,6 +774,7 @@ def build_partner_receipt_bundle(
             "- `SHIP.json` / `.md` — ops ship summary",
             "- `INDEX.json` / `.md` — catalog of full drops (PDB zips live in archive dirs)",
             "- `matrix_acceptance.json` — probe/holdout partner-accept rollup",
+            "- `PARTNER_SCIENCE_ANNEX.*` — optional known-solutions evidence (not accept)",
             "",
             "## Acceptance criteria",
             "",
@@ -746,6 +785,7 @@ def build_partner_receipt_bundle(
             "## Not acceptance criteria",
             "",
             "- mean_enrichment, top20, lambda=gamma, RH claims",
+            "- PARTNER_SCIENCE_ANNEX / known-solutions ranking",
             "",
             "## Verify",
             "",

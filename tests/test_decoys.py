@@ -3,6 +3,9 @@ import numpy as np
 from realm.validate.decoys import (
     closure_residual,
     make_ca_decoys,
+    make_ca_decoy_reverse,
+    make_ca_decoy_roll,
+    make_decoy_bank,
     score_geometry_vs_crit,
     theta_proxy_from_ca,
 )
@@ -16,6 +19,25 @@ def test_decoys_shape():
     decoys = make_ca_decoys(xyz, n=5, rng=np.random.default_rng(0), noise=0.1)
     assert len(decoys) == 5
     assert decoys[0].shape == xyz.shape
+
+
+def test_decoy_bank_modes():
+    xyz = np.array(
+        [[1.0, 0, 0], [0, 1, 0], [-1, 0, 0], [0, -1, 0], [0.5, 0.5, 0.2], [-0.5, 0.5, -0.1]],
+        dtype=float,
+    )
+    rng = np.random.default_rng(1)
+    for mode in ("soft", "mixed", "hard"):
+        bank = make_decoy_bank(xyz, 8, rng, mode=mode, noise=0.3)
+        assert len(bank) == 8
+        assert all(d.shape == xyz.shape for d in bank)
+    rev = make_ca_decoy_reverse(xyz)
+    assert rev.shape == xyz.shape
+    rolled = make_ca_decoy_roll(xyz, 2)
+    assert rolled.shape == xyz.shape
+    # soft mode remains default production shape
+    soft = make_decoy_bank(xyz, 4, np.random.default_rng(0), mode="soft")
+    assert len(soft) == 4
 
 
 def test_theta_proxy_range():

@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from realm.validate.decoys import make_ca_decoys
+from realm.validate.decoys import make_decoy_bank
 from realm.prime_fold import (
     blend_crit_coutsias_dist,
     forge_coutsias_mold_bank,
@@ -84,6 +84,7 @@ def rank_one(
     holonomy_polish: bool = False,
     coutsias_alpha: float = 0.0,
     coutsias_starts: int = 12,
+    decoy_mode: str = "soft",
 ) -> dict:
     """Native-vs-decoy rank. Projection-primary; defect_beta blends sheaf energy.
 
@@ -91,6 +92,7 @@ def rank_one(
     default — dual-gate preferred dense-superset molds without polish).
     coutsias_alpha: blend Crit Kabsch with Coutsias spectral-action molds
     (0=off; 0.08–0.15 typical probe). Bank cached per N.
+    decoy_mode: soft (production jitter) | mixed | hard (structured closed-ring).
     """
     path = fetch_pdb(pdb_id)
     xyz, chain_used = load_ca_cyclic_band(path, lo=6, hi=40)
@@ -298,10 +300,13 @@ def rank_one(
     last_ranked = []
     for si in range(n_seeds):
         sub = np.random.default_rng(int(rng.integers(0, 2**31 - 1)))
-        n_soft = max(n_decoys // 2, 1)
-        n_hard = n_decoys - n_soft
-        decoys = make_ca_decoys(xyz, n_soft, sub, noise=noise)
-        decoys += make_ca_decoys(xyz, n_hard, sub, noise=noise * 1.8)
+        decoys = make_decoy_bank(
+            xyz,
+            int(n_decoys),
+            sub,
+            mode=str(decoy_mode or "soft"),
+            noise=float(noise),
+        )
         rows = [{"label": "native", "mean_dist": native_dist}]
         for i, d in enumerate(decoys):
             sc = _score_xyz(d)
@@ -365,6 +370,7 @@ def rank_one(
         "coutsias_alpha": c_alpha,
         "coutsias_dist": native.get("coutsias_dist"),
         "coutsias_n_bank": None if c_bank is None else c_bank.get("n_bank"),
+        "decoy_mode": str(decoy_mode or "soft"),
         "maxop_dual": dual_diag,
         "operator": pack["operator"].to_dict() if a < 1.0 else op_diag,
     }

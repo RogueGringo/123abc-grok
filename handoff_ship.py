@@ -92,6 +92,15 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="skip partner receipt zip (proof-only, no mold PDBs)",
     )
+    p.add_argument(
+        "--attach-known-solutions",
+        type=Path,
+        default=None,
+        help=(
+            "optional: copy known-solutions science annex into releases + matrix "
+            "out-root (report-only; never gates ship/accept)"
+        ),
+    )
     p.add_argument("-v", action="store_true")
     args = p.parse_args(argv)
 
@@ -215,6 +224,24 @@ def main(argv: list[str] | None = None) -> int:
         ]
     )
 
+    ks_meta = None
+    if args.attach_known_solutions is not None:
+        from realm.validate.known_solutions import attach_report_to_dir
+
+        logger.info(
+            "=== ship: attach known-solutions annex %s ===",
+            args.attach_known_solutions,
+        )
+        ks_meta = attach_report_to_dir(args.attach_known_solutions, args.releases)
+        # also beside matrix for partner matrix drop
+        if matrix_report.parent.is_dir():
+            attach_report_to_dir(args.attach_known_solutions, matrix_report.parent)
+        logger.info(
+            "known-solutions attach ok=%s pin_ok=%s",
+            ks_meta.get("ok"),
+            ks_meta.get("pin_ok"),
+        )
+
     ship = {
         "ok": bool(vreport.get("ok")),
         "shippable": vreport.get("shippable"),
@@ -226,8 +253,12 @@ def main(argv: list[str] | None = None) -> int:
         if delivery.with_suffix(".md").is_file()
         else None,
         "matrix_report": str(matrix_report.resolve()),
+        "known_solutions_attach": ks_meta,
         "ontology": "handoff_ship_not_lambda_eq_gamma",
-        "note": "Commercial ship complete; openable PDBs + pin; not enrichment.",
+        "note": (
+            "Commercial ship complete; openable PDBs + pin; not enrichment. "
+            "Optional PARTNER_SCIENCE_ANNEX is informational only."
+        ),
     }
     ship_path = Path(args.releases) / "SHIP.json"
     ship_path.parent.mkdir(parents=True, exist_ok=True)

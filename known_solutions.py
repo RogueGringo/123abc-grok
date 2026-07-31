@@ -83,6 +83,13 @@ def main(argv=None) -> int:
     )
     p.add_argument("--kabsch-max", type=int, default=12)
     p.add_argument(
+        "--decoy-mode",
+        type=str,
+        default="soft",
+        choices=("soft", "mixed", "hard"),
+        help="decoy difficulty: soft=production jitter; mixed/hard=structured closed-ring",
+    )
+    p.add_argument(
         "--dry-run",
         action="store_true",
         help="resolve universe + pin only; no ranking",
@@ -120,6 +127,7 @@ def main(argv=None) -> int:
         full_seeds=args.full_seeds,
         kabsch_set=args.kabsch_set,
         kabsch_max=args.kabsch_max,
+        decoy_mode=args.decoy_mode,
         dry_run=args.dry_run,
         seed=args.seed,
     )

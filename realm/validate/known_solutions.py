@@ -43,6 +43,7 @@ _SLIM_RANK_KEYS = (
     "sectors_mode",
     "multimode_mode",
     "n_seeds",
+    "decoy_mode",
 )
 
 
@@ -72,6 +73,7 @@ def run_rank_one(
     n_zeros: int = 14,
     seed: int = 0,
     noise: float = 0.45,
+    decoy_mode: str = "soft",
 ) -> dict[str, Any]:
     """Production dual-gate rank_one (no pin retune)."""
     from pdb_batch import rank_one
@@ -95,6 +97,7 @@ def run_rank_one(
             defect_beta=float(pr["defect_beta"]),
             holonomy_polish=bool(pr["holonomy_polish"]),
             coutsias_alpha=float(pr["coutsias_alpha"]),
+            decoy_mode=str(decoy_mode or "soft"),
         )
     except Exception as exc:  # noqa: BLE001
         logger.exception("rank_one failed for %s", pdb_id)
@@ -541,6 +544,7 @@ def run_known_solutions(
     full_seeds: bool = False,
     kabsch_set: str = "curated",
     kabsch_max: int = 12,
+    decoy_mode: str = "soft",
     dry_run: bool = False,
     seed: int = 0,
     stamp: str | None = None,
@@ -575,6 +579,7 @@ def run_known_solutions(
             "full_seeds": bool(full_seeds),
             "kabsch_set": kabsch_set,
             "kabsch_max": int(kabsch_max),
+            "decoy_mode": str(decoy_mode or "soft"),
             "skip_expand": bool(skip_expand),
             "allow_hf": bool(allow_hf),
             "only_ids": bool(only_ids),
@@ -637,6 +642,7 @@ def run_known_solutions(
             n_zeros=n_zeros,
             seed=int(seed) + i * 17,
             noise=noise,
+            decoy_mode=decoy_mode,
         )
         rows.append(_slim_rank_row(raw, tag=tag, source=ent.get("source", "")))
 
