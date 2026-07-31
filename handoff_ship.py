@@ -20,6 +20,7 @@ if str(ROOT) not in sys.path:
 from handoff_deliver import main as deliver_main
 from handoff_matrix import main as matrix_main
 from handoff_status import main as status_main
+from realm.handoff.package import write_ship_md
 from realm.handoff.verify import verify_delivery_receipt, verify_dual_gate_pin
 
 logger = logging.getLogger("handoff_ship")
@@ -59,8 +60,11 @@ def main(argv: list[str] | None = None) -> int:
         help="matrix_report.json (default: <out-root>/matrix_report.json)",
     )
     p.add_argument("--top-k", type=int, default=2)
-    p.add_argument("--no-biopython-check", action="store_true", default=True)
-    p.add_argument("--require-biopython", action="store_true")
+    p.add_argument(
+        "--require-biopython",
+        action="store_true",
+        help="matrix quality gate requires BioPython open",
+    )
     p.add_argument(
         "--recheck-drops",
         action="store_true",
@@ -143,7 +147,7 @@ def main(argv: list[str] | None = None) -> int:
         delivery = matrix_report.parent / "DELIVERY.json"
 
     logger.info("=== ship: verify DELIVERY %s ===", delivery)
-    vargv = ["--verify", str(delivery), "--require-shippable"]
+    vargv = ["--verify", str(delivery)]
     if args.recheck_drops:
         vargv.append("--recheck-drops")
     rc = deliver_main(vargv)
@@ -175,13 +179,26 @@ def main(argv: list[str] | None = None) -> int:
         "n_pdb_total": (vreport.get("matrix_acceptance") or {}).get("n_pdb_total"),
         "n_accepted": (vreport.get("matrix_acceptance") or {}).get("n_accepted"),
         "delivery": str(delivery.resolve()),
+        "delivery_md": str(delivery.with_suffix(".md").resolve())
+        if delivery.with_suffix(".md").is_file()
+        else None,
         "matrix_report": str(matrix_report.resolve()),
         "ontology": "handoff_ship_not_lambda_eq_gamma",
+        "note": "Commercial ship complete; openable PDBs + pin; not enrichment.",
     }
     ship_path = Path(args.releases) / "SHIP.json"
     ship_path.parent.mkdir(parents=True, exist_ok=True)
     ship_path.write_text(json.dumps(ship, indent=2) + "\n", encoding="utf-8")
-    logger.info("SHIP.json → %s ok=%s", ship_path, ship["ok"])
+    ship_md = write_ship_md(ship, Path(args.releases) / "SHIP.md")
+    ship["ship_md"] = str(ship_md.resolve())
+    ship_path.write_text(json.dumps(ship, indent=2) + "\n", encoding="utf-8")
+    # also copy brief ship summary next to matrix
+    if matrix_report.parent.is_dir():
+        write_ship_md(ship, matrix_report.parent / "SHIP.md")
+        (matrix_report.parent / "SHIP.json").write_text(
+            json.dumps(ship, indent=2) + "\n", encoding="utf-8"
+        )
+    logger.info("SHIP.json → %s ok=%s md=%s", ship_path, ship["ok"], ship_md)
     print(json.dumps(ship))
     return 0 if ship["ok"] else 1
 

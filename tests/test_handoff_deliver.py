@@ -57,6 +57,11 @@ def test_write_delivery_receipt(tmp_path: Path):
     assert "mean_enrichment" in data["not_acceptance_criteria"]
     assert data.get("payload_sha256")
     assert "not_lambda_eq_gamma" in data["ontology"]
+    md = path.with_suffix(".md")
+    assert md.is_file()
+    md_text = md.read_text(encoding="utf-8")
+    assert "0.036" in md_text
+    assert "Shippable" in md_text
     v = verify_delivery_receipt(path, require_shippable=True)
     assert v["ok"] is True
     assert v["payload_sha256_ok"] is True

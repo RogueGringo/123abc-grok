@@ -73,10 +73,23 @@ def test_handoff_ship_from_existing_matrix(tmp_path: Path):
     )
     assert rc == 0
     assert (releases / "SHIP.json").is_file()
+    assert (releases / "SHIP.md").is_file()
     ship = json.loads((releases / "SHIP.json").read_text(encoding="utf-8"))
     assert ship["ok"] is True
     assert ship["shippable"] is True
     assert abs(ship["soft_T"] - 0.036) < 1e-12
+    assert "0.036" in (releases / "SHIP.md").read_text(encoding="utf-8")
     assert (releases / "LATEST_DELIVERY.json").is_file() or (
         matrix_dir / "DELIVERY.json"
     ).is_file()
+    # DELIVERY.md companion
+    for cand in (
+        releases / "LATEST_DELIVERY.md",
+        releases / "DELIVERY.md",
+        matrix_dir / "DELIVERY.md",
+    ):
+        if cand.is_file():
+            assert "not" in cand.read_text(encoding="utf-8").lower()
+            break
+    else:
+        raise AssertionError("expected DELIVERY.md companion")

@@ -160,6 +160,7 @@ def _load_delivery(
         if p.is_file():
             try:
                 d = json.loads(p.read_text(encoding="utf-8"))
+                md = p.with_suffix(".md")
                 return {
                     "shippable": d.get("shippable"),
                     "n_pdb_total": (d.get("matrix_acceptance") or {}).get(
@@ -168,6 +169,7 @@ def _load_delivery(
                     "n_accepted": (d.get("matrix_acceptance") or {}).get("n_accepted"),
                     "payload_sha256": d.get("payload_sha256"),
                     "path": str(p.resolve()),
+                    "delivery_md": str(md.resolve()) if md.is_file() else None,
                 }
             except Exception as exc:  # noqa: BLE001
                 return {"error": str(exc), "path": str(p)}

@@ -552,12 +552,119 @@ def write_delivery_receipt(
     )
     body["payload_sha256"] = hashlib.sha256(payload.encode("utf-8")).hexdigest()
     dest.write_text(json.dumps(body, indent=2) + "\n", encoding="utf-8")
+    md_path = write_delivery_md(body, dest.with_suffix(".md"))
+    body["delivery_md"] = str(md_path.resolve())
+    # re-stamp JSON with md path (does not affect payload_sha256)
+    dest.write_text(json.dumps(body, indent=2) + "\n", encoding="utf-8")
     logger.info(
-        "DELIVERY receipt shippable=%s payload=%s → %s",
+        "DELIVERY receipt shippable=%s payload=%s → %s (+ %s)",
         shippable,
         body["payload_sha256"][:16],
         dest,
+        md_path.name,
     )
+    return dest
+
+
+def write_delivery_md(receipt: dict[str, Any], path: Path | str) -> Path:
+    """Human-readable partner companion for DELIVERY.json."""
+    dest = Path(path)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    pin = receipt.get("pin") or {}
+    ma = receipt.get("matrix_acceptance") or {}
+    latest = receipt.get("latest") or {}
+    lines = [
+        f"# DELIVERY - {receipt.get('label') or 'dual-gate commercial'}",
+        "",
+        f"Generated: {receipt.get('created_utc')}",
+        f"Shippable: **{receipt.get('shippable')}**",
+        "",
+        "## Dual-gate pin (locked)",
+        "",
+        f"- soft_T(n=12): **{pin.get('soft_T')}** (expect 0.036)",
+        f"- seq_mix: **{pin.get('seq_mix')}**",
+        f"- face_weight: **{pin.get('face_weight')}**",
+        f"- pin ok: **{pin.get('ok')}**",
+        "",
+        "## Matrix acceptance",
+        "",
+        f"- ok: **{ma.get('ok')}**",
+        f"- tokens accepted: **{ma.get('n_accepted')}** / {ma.get('n_tokens')}",
+        f"- openable PDBs total: **{ma.get('n_pdb_total')}**",
+        "",
+        "## Drops",
+        "",
+        "| token | accepted | n_pdb | label |",
+        "|-------|----------|-------|-------|",
+    ]
+    for d in receipt.get("drops") or []:
+        lines.append(
+            f"| {d.get('token')} | {d.get('accepted')} | {d.get('n_pdb')} | "
+            f"{d.get('label') or ''} |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Latest pointer",
+            "",
+            f"- label: `{latest.get('label')}`",
+            f"- accepted: **{latest.get('accepted')}** n_pdb={latest.get('n_pdb')}",
+            f"- archive: `{latest.get('archive_dir')}`",
+            f"- zip_sha256: `{latest.get('zip_sha256')}`",
+            "",
+            f"payload_sha256: `{receipt.get('payload_sha256')}`",
+            "",
+            "## Acceptance criteria",
+            "",
+        ]
+    )
+    for c in receipt.get("acceptance_criteria") or []:
+        lines.append(f"- {c}")
+    lines.extend(["", "## Not acceptance criteria", ""])
+    for c in receipt.get("not_acceptance_criteria") or []:
+        lines.append(f"- {c}")
+    lines.extend(
+        [
+            "",
+            "Ontology: Crit projection molds only -- **not** lambda=gamma.",
+            "",
+            "Verify:",
+            "",
+            "```bash",
+            "python handoff_deliver.py --verify DELIVERY.json",
+            "python handoff_ship.py --out-root out/matrix",
+            "```",
+            "",
+        ]
+    )
+    dest.write_text("\n".join(lines), encoding="utf-8")
+    return dest
+
+
+def write_ship_md(ship: dict[str, Any], path: Path | str) -> Path:
+    """One-page ops summary for a successful commercial ship."""
+    dest = Path(path)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    lines = [
+        "# SHIP - dual-gate commercial handoff",
+        "",
+        f"- ok / shippable: **{ship.get('ok')}** / **{ship.get('shippable')}**",
+        f"- soft_T(n=12): **{ship.get('soft_T')}** (locked 0.036)",
+        f"- matrix tokens accepted: **{ship.get('n_accepted')}**",
+        f"- openable PDBs total: **{ship.get('n_pdb_total')}**",
+        f"- DELIVERY: `{ship.get('delivery')}`",
+        f"- matrix_report: `{ship.get('matrix_report')}`",
+        "",
+        "Ontology: Crit projection molds only -- **not** lambda=gamma.",
+        "Success metric: openable PDBs + dual-gate pin (not enrichment).",
+        "",
+        "```bash",
+        "python handoff_deliver.py --verify out/releases/LATEST_DELIVERY.json",
+        "python handoff_accept.py --from-matrix out/matrix/matrix_report.json",
+        "```",
+        "",
+    ]
+    dest.write_text("\n".join(lines), encoding="utf-8")
     return dest
 
 
@@ -607,6 +714,7 @@ def write_latest_pointer(
         "ontology": "handoff_latest_pointer_not_lambda_eq_gamma",
         "verify_cli": "python handoff_verify.py --archive <archive_dir>",
         "accept_cli": "python handoff_accept.py --latest",
+        "ship_cli": "python handoff_ship.py --out-root out/matrix",
     }
     dest = root / "LATEST.json"
     dest.write_text(json.dumps(pointer, indent=2) + "\n", encoding="utf-8")
