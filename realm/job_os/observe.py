@@ -1,8 +1,9 @@
-"""Observe job cycle: pin + export completeness + align/glue + survey + physics.
+"""Observe job cycle: pin + export + align/glue + survey + regime + physics.
 
 Builds Observations from ingest series + pin report + free params.
 P2: multi-source glue_score (surface LAS + MicroPulse fibers) feeds align_score.
 P3: survey stalk QC / holonomy via survey_gate free param.
+P4: regime stalk (windowed H0) + science dual-gate (info only).
 """
 
 from __future__ import annotations
@@ -12,6 +13,8 @@ from typing import Any
 
 from realm.job_os.glue import compute_glue
 from realm.job_os.pin import verify_job_pin
+from realm.job_os.regime import evaluate_regime
+from realm.job_os.science import evaluate_science
 from realm.job_os.survey import evaluate_survey
 from realm.job_os.types import FreeParams, JobThresholds, Observations, PACK_REQUIRED
 
@@ -117,8 +120,12 @@ def observe_job(
     glue: dict[str, Any] | None = None,
     survey: dict[str, Any] | None = None,
     survey_report: dict[str, Any] | None = None,
+    regime_report: dict[str, Any] | None = None,
+    science_report: dict[str, Any] | None = None,
+    with_regime: bool = False,
+    with_science: bool = False,
 ) -> Observations:
-    """Extract observations from one execute (ingest + pin + align/glue + survey)."""
+    """Extract observations from one execute (ingest + pin + align/glue + stalks)."""
     thr = thr or JobThresholds()
     p = params.clamp()
     if pin is None:
@@ -173,6 +180,26 @@ def observe_job(
             dinc_jump_deg=float(thr.survey_dinc_jump_deg),
         )
 
+    # P4 regime + science (info)
+    if regime_report is None:
+        regime_report = evaluate_regime(
+            series,
+            regime_mode=p.regime_mode,
+            window_scale=p.window_scale,
+            enabled=bool(with_regime) or bool(getattr(thr, "require_regime", False)),
+            require_regime=bool(getattr(thr, "require_regime", False)),
+            shock_k=float(getattr(thr, "regime_shock_k", 1.5)),
+        )
+    if science_report is None:
+        science_report = evaluate_science(
+            series,
+            regime_mode=p.regime_mode,
+            window_scale=p.window_scale,
+            with_science=bool(with_science),
+            pin_ok=bool(pin.get("ok")),
+            seed=int(getattr(thr, "science_seed", 42)),
+        )
+
     required = PACK_REQUIRED.get(p.channel_pack, PACK_REQUIRED["surface_min"])
     present = pin.get("present_channels") or []
     missing = pin.get("missing_channels") or []
@@ -214,6 +241,12 @@ def observe_job(
     )
     if survey_engaged:
         notes.extend(survey_notes)
+    regime_notes = list(regime_report.get("notes") or [])
+    if regime_report.get("enabled"):
+        notes.extend(regime_notes)
+    science_notes = list(science_report.get("notes") or [])
+    if science_report.get("enabled"):
+        notes.extend(science_notes)
     notes.extend(phys_notes)
 
     verify_ok = bool(pin.get("ok")) and export_ok_fraction + 1e-12 >= thr.min_export_ok_fraction
@@ -222,6 +255,10 @@ def observe_job(
 
     mp_info = series.get("micropulse") or {}
     has_mp = bool(series.get("has_micropulse") or glue.get("has_micropulse"))
+
+    sci_native = science_report.get("native_score")
+    sci_decoy = science_report.get("decoy_score")
+    sci_beats = science_report.get("native_beats_decoy")
 
     return Observations(
         pin_ok=bool(pin.get("ok")),
@@ -248,6 +285,32 @@ def observe_job(
         survey_stalk_ok=bool(survey_report.get("stalk_ok", True)),
         survey_max_abs_g_minus_1=survey_report.get("max_abs_g_minus_1"),
         survey_notes=survey_notes,
+        regime_note=(
+            f"mode={p.regime_mode};bars={regime_report.get('barcode_n_bars')}"
+            if regime_report.get("enabled")
+            else None
+        ),
+        regime_enabled=bool(regime_report.get("enabled")),
+        regime_present=bool(regime_report.get("present")),
+        regime_stalk_ok=bool(regime_report.get("stalk_ok", True)),
+        regime_channels=list(regime_report.get("channels_used") or []),
+        regime_barcode_n_bars=int(regime_report.get("barcode_n_bars") or 0),
+        regime_shock_exceedance=int(
+            regime_report.get("shock_exceedance")
+            or (regime_report.get("shock") or {}).get("n_exceed")
+            or 0
+        ),
+        regime_structure_score=float(regime_report.get("structure_score") or 0.0),
+        regime_notes=regime_notes,
+        science_enabled=bool(science_report.get("enabled")),
+        science_native_score=(
+            float(sci_native) if sci_native is not None else None
+        ),
+        science_decoy_score=(float(sci_decoy) if sci_decoy is not None else None),
+        science_native_beats_decoy=(
+            bool(sci_beats) if sci_beats is not None else None
+        ),
+        science_notes=science_notes,
         has_micropulse=has_mp,
         glue_score=float(glue.get("score") or 0.0),
         glue_method=str(glue.get("method") or "") or None,
@@ -260,7 +323,11 @@ def observe_job(
 
 
 def is_solved(obs: Observations, thr: JobThresholds, params: FreeParams) -> bool:
-    """Job routine coherence gate: pin + export + physics + align/glue + survey (not ROP)."""
+    """Job routine coherence gate: pin + export + physics + align/glue + survey (+ optional regime).
+
+    Science dual-gate scores never gate SOLVED unless --require-regime (regime stalk).
+    Science score alone never sets SOLVED.
+    """
     p = params.clamp()
     if thr.require_pin and not obs.pin_ok:
         return False
@@ -290,6 +357,13 @@ def is_solved(obs: Observations, thr: JobThresholds, params: FreeParams) -> bool
         # gate engaged without --require-survey still must pass stalk
         if not obs.survey_stalk_ok:
             return False
+    # P4 regime: only when --require-regime (science score never gates alone)
+    if getattr(thr, "require_regime", False):
+        if p.regime_mode == "off":
+            return False
+        if not getattr(obs, "regime_stalk_ok", True):
+            return False
+    # Explicit: science_native_beats_decoy / structure_score do NOT appear here
     return True
 
 

@@ -1,15 +1,15 @@
 """Multi-section free-param propose + merge for Job Coherence OS.
 
-Sections: export | verify | align | survey (P3) | physics
+Sections: export | verify | align | survey (P3) | physics | regime (P4) | science
 Merge ranks by priority; never proposes pin retune.
 
-Priority (lower wins): export=1, verify=2, align=3, survey=4, physics=5
+Priority (lower wins): export=1, verify=2, align=3, survey=4, physics=5,
+regime=6, science=7
 
 Hard pin (depth mono / unit sanity) is never negotiable.
 Pack-completeness pin fails may negotiate channel_pack / null_policy only.
-window_scale is a free-param field (recipe stability / later stalks) but is
-not proposed until a stalk consumes it (honest free board).
 P3 survey: survey_gate upgrades + survey_anchor when survey present/glue weak.
+P4 regime: regime_mode + window_scale (windowed H0 / dual-gate free knobs).
 """
 
 from __future__ import annotations
@@ -22,8 +22,10 @@ from realm.job_os.types import (
     CHANNEL_PACKS,
     NULL_POLICIES,
     PIN_FORBIDDEN_KEYS,
+    REGIME_MODES,
     SECTION_PRIORITY,
     SURVEY_GATES,
+    WINDOW_SCALE_BOUNDS,
     FreeParams,
     JobThresholds,
     Observations,
@@ -53,14 +55,16 @@ def _with_pack(
     null_policy: str | None = None,
     align_mode: str | None = None,
     survey_gate: str | None = None,
+    regime_mode: str | None = None,
+    window_scale: int | None = None,
 ) -> FreeParams:
     return FreeParams(
         align_mode=align_mode if align_mode is not None else p.align_mode,
-        window_scale=p.window_scale,
+        window_scale=int(window_scale) if window_scale is not None else p.window_scale,
         channel_pack=pack,
         null_policy=null_policy if null_policy is not None else p.null_policy,
         survey_gate=survey_gate if survey_gate is not None else p.survey_gate,
-        regime_mode=p.regime_mode,
+        regime_mode=regime_mode if regime_mode is not None else p.regime_mode,
     )
 
 
@@ -384,8 +388,87 @@ def collect_section_proposals(
         # no free-param can invent Inc/Azi; leave board empty → honest stuck.
         _ = survey_stalk_ok  # used by is_solved; proposals never retune QC bands
 
-    # --- physics: hard fails → null_policy only (never pin eps; no window_scale in P1) ---
-    # window_scale is not consumed by P1 observe/execute; do not propose no-op moves.
+    # --- regime (P4): free knobs window_scale / regime_mode only ---
+    require_regime = bool(getattr(thr, "require_regime", False))
+    regime_enabled = bool(getattr(obs, "regime_enabled", False))
+    regime_present = bool(getattr(obs, "regime_present", False))
+    regime_stalk_ok = bool(getattr(obs, "regime_stalk_ok", True))
+    regime_bars = int(getattr(obs, "regime_barcode_n_bars", 0) or 0)
+    if require_regime or regime_enabled or p.regime_mode != "off":
+        # Enable mode when required
+        if require_regime and p.regime_mode == "off":
+            cand = _fresh(
+                _with_pack(p, p.channel_pack, regime_mode="persist_h0"),
+                tried,
+            )
+            if cand:
+                props.append(
+                    SectionProposal(
+                        "regime",
+                        cand,
+                        "enable_regime_mode_persist_h0_require_regime",
+                        SECTION_PRIORITY["regime"],
+                    )
+                )
+        # Vacuous barcode under engaged mode → try larger window_scale once
+        if (
+            p.regime_mode != "off"
+            and regime_present
+            and regime_bars == 0
+            and p.window_scale < WINDOW_SCALE_BOUNDS[1]
+        ):
+            nxt_ws = min(WINDOW_SCALE_BOUNDS[1], p.window_scale * 2)
+            if nxt_ws != p.window_scale:
+                cand = _fresh(
+                    _with_pack(p, p.channel_pack, window_scale=nxt_ws),
+                    tried,
+                )
+                if cand:
+                    props.append(
+                        SectionProposal(
+                            "regime",
+                            cand,
+                            "increase_window_scale_vacuous_barcode",
+                            SECTION_PRIORITY["regime"] + 1,
+                        )
+                    )
+        # require_regime + missing surface channels: no free-param invents channels
+        _ = regime_stalk_ok
+
+    # --- science (P4 info): may propose dual_gate_windows free mode only ---
+    # Never proposes pin retune; never required for SOLVED unless require_regime.
+    science_enabled = bool(getattr(obs, "science_enabled", False))
+    if science_enabled and p.regime_mode == "persist_h0":
+        # Optional deepen to dual_gate when science annex is on
+        cand = _fresh(
+            _with_pack(p, p.channel_pack, regime_mode="dual_gate_windows"),
+            tried,
+        )
+        if cand:
+            props.append(
+                SectionProposal(
+                    "science",
+                    cand,
+                    "regime_mode_dual_gate_windows_science_info",
+                    SECTION_PRIORITY["science"],
+                )
+            )
+    elif science_enabled and p.regime_mode == "off":
+        cand = _fresh(
+            _with_pack(p, p.channel_pack, regime_mode="dual_gate_windows"),
+            tried,
+        )
+        if cand:
+            props.append(
+                SectionProposal(
+                    "science",
+                    cand,
+                    "enable_dual_gate_windows_science_info",
+                    SECTION_PRIORITY["science"],
+                )
+            )
+
+    # --- physics: hard fails → null_policy only (never pin eps) ---
     if obs.physics_n_fail > thr.max_physics_fail:
         if p.null_policy != "drop":
             cand = _fresh(_with_pack(p, p.channel_pack, null_policy="drop"), tried)
@@ -426,6 +509,8 @@ def collect_section_proposals(
         if d["null_policy"] not in NULL_POLICIES:
             continue
         if d.get("survey_gate", "off") not in SURVEY_GATES:
+            continue
+        if d.get("regime_mode", "off") not in REGIME_MODES:
             continue
         clean.append(pr)
     return clean

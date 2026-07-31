@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Oilfield Job Coherence OS CLI (P3: survey stalk QC + holonomy).
+"""Oilfield Job Coherence OS CLI (P4: regime stalk + dual-gate science).
 
 observe → negotiate free parameters → re-ingest → until coherent or budget.
 
 LOCKED: QC pin (depth mono, required channels for pack, unit sanity).
-FREE: align_mode, window_scale, channel_pack, null_policy, survey_gate.
+FREE: align_mode, window_scale, channel_pack, null_policy, survey_gate, regime_mode.
 
 P2: --micropulse joins GAMMA/SHOCK/VIBE/PULSE/TELEM/TEMP/FLOW fibers;
 structural depth/time glue (not score-chase).
@@ -12,6 +12,10 @@ structural depth/time glue (not score-chase).
 P3: survey stalk (B) — parse MicroPulse SURVEY or --survey CSV;
 QC total G / MagF; optional discrete holonomy; --require-survey gates is_solved.
 Never invent Inc/Azi.
+
+P4: regime stalk (C) — windowed H0 on SSSI/TOR/RPM; shock exceedance;
+--with-regime / --with-science dual-gate (native vs time-scramble) info only;
+--require-regime optional commercial gate. Science score never sets SOLVED alone.
 
 Never ROP score-chase. Never retune SOP pin mid-run. Never ζ→ROP.
 Mirror of handoff_coherence OS v2 without protein adapters.
@@ -38,9 +42,9 @@ logger = logging.getLogger("job_coherence")
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
         description=(
-            "Oilfield Job Coherence OS: negotiate align/window/pack/null/survey_gate "
-            "until job routine fixed-point. QC pin locked. Optional MicroPulse + survey. "
-            "Not ROP score-chase."
+            "Oilfield Job Coherence OS: negotiate align/window/pack/null/survey_gate/"
+            "regime_mode until job routine fixed-point. QC pin locked. "
+            "Optional MicroPulse + survey + regime science. Not ROP score-chase."
         )
     )
     p.add_argument(
@@ -123,6 +127,29 @@ def main(argv: list[str] | None = None) -> int:
         help="P3: is_solved requires present survey stations + survey_gate stalk_ok",
     )
     p.add_argument(
+        "--regime-mode",
+        type=str,
+        default="off",
+        choices=("off", "persist_h0", "dual_gate_windows"),
+        help="P4 free param: regime stalk mode",
+    )
+    p.add_argument(
+        "--with-regime",
+        action="store_true",
+        help="P4: enable regime stalk report (windowed H0 / shock) each cycle",
+    )
+    p.add_argument(
+        "--with-science",
+        action="store_true",
+        help="P4: write dual-gate science annex (native vs time-scramble; info only)",
+    )
+    p.add_argument(
+        "--require-regime",
+        action="store_true",
+        help="P4: is_solved requires regime_mode != off + regime stalk_ok "
+        "(science score alone never gates)",
+    )
+    p.add_argument(
         "--min-align-score",
         type=float,
         default=0.5,
@@ -162,6 +189,8 @@ def main(argv: list[str] | None = None) -> int:
                 resume_dir=args.resume,
                 stability_k=int(args.stability_k),
                 os_mode=True,
+                with_regime=bool(args.with_regime),
+                with_science=bool(args.with_science),
             )
         except FileNotFoundError as exc:
             logger.error("%s", exc)
@@ -191,6 +220,7 @@ def main(argv: list[str] | None = None) -> int:
                     channel_pack=args.channel_pack,
                     null_policy=args.null_policy,
                     survey_gate=args.survey_gate,
+                    regime_mode=args.regime_mode,
                 ),
                 thresholds=JobThresholds(
                     min_export_ok_fraction=1.0,
@@ -200,11 +230,14 @@ def main(argv: list[str] | None = None) -> int:
                     require_pin=True,
                     depth_mono_eps=float(args.depth_mono_eps),
                     require_survey=bool(args.require_survey),
+                    require_regime=bool(args.require_regime),
                 ),
                 max_rounds=int(args.max_rounds),
                 stability_k=int(args.stability_k),
                 os_mode=bool(args.os),
                 run_id=args.run_id,
+                with_regime=bool(args.with_regime),
+                with_science=bool(args.with_science),
             )
         except FileNotFoundError as exc:
             logger.error("%s", exc)
@@ -241,10 +274,14 @@ def main(argv: list[str] | None = None) -> int:
                 "micropulse_kinds": result.get("micropulse_kinds"),
                 "survey_n_stations": result.get("survey_n_stations"),
                 "require_survey": result.get("require_survey"),
+                "require_regime": result.get("require_regime"),
+                "with_regime": result.get("with_regime"),
+                "with_science": result.get("with_science"),
                 "out": result.get("out_root"),
                 "note": (
                     "pin locked; free params only; OS fixed-point K; "
-                    "glue structural; survey never invents Inc/Azi; not ROP"
+                    "glue structural; survey never invents Inc/Azi; "
+                    "science info only; not ROP"
                 ),
             },
             indent=2,

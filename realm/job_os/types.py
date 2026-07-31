@@ -114,6 +114,12 @@ class JobThresholds:
     survey_magf_hi: float = 1.20
     survey_dogleg_jump_deg: float = 45.0
     survey_dinc_jump_deg: float = 30.0
+    # P4 regime stalk: when True, is_solved needs regime_mode != off + stalk_ok
+    require_regime: bool = False
+    # Locked shock exceedance k (not free param)
+    regime_shock_k: float = 1.5
+    # Dual-gate scramble seed (info channel config, not free)
+    science_seed: int = 42
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -148,7 +154,21 @@ class Observations:
     survey_stalk_ok: bool = True  # True when gate=off or stalk passes
     survey_max_abs_g_minus_1: float | None = None
     survey_notes: list[str] = field(default_factory=list)
+    # P4 regime stalk (C) + science-info dual-gate (never accept alone)
     regime_note: str | None = None
+    regime_enabled: bool = False
+    regime_present: bool = False
+    regime_stalk_ok: bool = True
+    regime_channels: list[str] = field(default_factory=list)
+    regime_barcode_n_bars: int = 0
+    regime_shock_exceedance: int = 0
+    regime_structure_score: float = 0.0
+    regime_notes: list[str] = field(default_factory=list)
+    science_enabled: bool = False
+    science_native_score: float | None = None
+    science_decoy_score: float | None = None
+    science_native_beats_decoy: bool | None = None
+    science_notes: list[str] = field(default_factory=list)
     # P2 MicroPulse / multi-source glue (structural — not ROP score)
     has_micropulse: bool = False
     glue_score: float = 0.0

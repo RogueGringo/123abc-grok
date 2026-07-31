@@ -1,13 +1,14 @@
-"""Oilfield Job Coherence OS (P3: survey stalk QC + holonomy).
+"""Oilfield Job Coherence OS (P4: regime stalk + dual-gate science).
 
 Ontology:
   - Substrate: raw multi-channel time/depth series (LAS/SQL/MicroPulse/survey)
   - Operational geometry: job manifold (depth/time skeleton + channel fibers)
   - Pin: QC/SOP invariants — read-only every cycle; never retuned for score
-  - Free params: align/window/pack/null/survey_gate
+  - Free params: align/window/pack/null/survey_gate/regime_mode
   - Solved: is_solved ∧ empty free-param board × K
   - Glue: structural depth/time proximity (not score-chase)
   - Survey: QC total G/MagF + optional discrete holonomy; never invent Inc/Azi
+  - Regime: windowed H0 barcode + dual-gate science info (not accept alone)
   - NEVER claim ζ/Crit predicts ROP; NEVER retune pin mid-run
 
 Mirror of realm.handoff.coherence OS v2 patterns without protein adapters.

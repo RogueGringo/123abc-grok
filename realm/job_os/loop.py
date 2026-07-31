@@ -20,6 +20,8 @@ from realm.job_os.ingest_micropulse import join_surface_micropulse, load_micropu
 from realm.job_os.observe import coherence_score, is_solved, observe_job
 from realm.job_os.pin import verify_job_pin
 from realm.job_os.propose import collect_section_proposals, negotiate
+from realm.job_os.regime import evaluate_regime
+from realm.job_os.science import evaluate_science
 from realm.job_os.survey import evaluate_survey, load_survey
 from realm.job_os.types import FreeParams, JobThresholds
 
@@ -43,6 +45,9 @@ def write_partner_recipe(
     micropulse_path: str | None = None,
     survey_path: str | None = None,
     require_survey: bool = False,
+    require_regime: bool = False,
+    with_regime: bool = False,
+    with_science: bool = False,
 ) -> Path:
     """Machine-readable free-param recipe for partner re-run (not ACCEPTANCE)."""
     dest = Path(path)
@@ -50,6 +55,9 @@ def write_partner_recipe(
     mp_cli = f" --micropulse {micropulse_path}" if micropulse_path else ""
     sv_cli = f" --survey {survey_path}" if survey_path else ""
     req_cli = " --require-survey" if require_survey else ""
+    reg_cli = " --require-regime" if require_regime else ""
+    wr_cli = " --with-regime" if with_regime else ""
+    ws_cli = " --with-science" if with_science else ""
     body = {
         "kind": "partner_recipe",
         "ontology": "job_partner_recipe_not_rop_score",
@@ -69,14 +77,18 @@ def write_partner_recipe(
         "micropulse_path": micropulse_path,
         "survey_path": survey_path,
         "require_survey": require_survey,
+        "require_regime": require_regime,
+        "with_regime": with_regime,
+        "with_science": with_science,
         "re_run_cli": (
             f"python job_coherence.py --os --las {las_path or '<LAS>'}"
-            f"{mp_cli}{sv_cli}{req_cli} "
+            f"{mp_cli}{sv_cli}{req_cli}{reg_cli}{wr_cli}{ws_cli} "
             f"--align-mode {free_params.align_mode} "
             f"--window-scale {free_params.window_scale} "
             f"--channel-pack {free_params.channel_pack} "
             f"--null-policy {free_params.null_policy} "
-            f"--survey-gate {free_params.survey_gate}"
+            f"--survey-gate {free_params.survey_gate} "
+            f"--regime-mode {free_params.regime_mode}"
         ),
         "disclaimers": [
             "PARTNER_RECIPE is free-param + pin stamp for re-run fidelity.",
@@ -85,6 +97,7 @@ def write_partner_recipe(
             "Never retune SOP pin for score. Never ζ→ROP claim.",
             "Glue is structural (depth/time proximity); not score-chase.",
             "Survey stalk never invents Inc/Azi.",
+            "Regime/science are informational unless --require-regime.",
         ],
     }
     dest.write_text(json.dumps(body, indent=2) + "\n", encoding="utf-8")
@@ -148,9 +161,11 @@ def _write_coherence_md(result: dict[str, Any], path: Path) -> Path:
         "",
         "- Substrate: raw multi-channel series",
         "- Pin: QC locked (depth mono, required channels, unit sanity)",
-        "- Free: align_mode, window_scale, channel_pack, null_policy, survey_gate",
+        "- Free: align_mode, window_scale, channel_pack, null_policy, survey_gate, regime_mode",
         "- Survey stalk (B): QC total G/MagF + optional discrete holonomy",
+        "- Regime stalk (C): windowed H0 on SSSI/TOR/RPM; dual-gate science info",
         "- Fixed-point: is_solved ∧ empty board × K",
+        "- Science score never sets SOLVED alone (unless --require-regime stalk)",
         "- Never retune pin for score. Never invent Inc/Azi. Never ζ→ROP.",
         "",
     ]
@@ -166,8 +181,10 @@ def execute_job_cycle(
     cycle_dir: Path,
     mp_bundle: dict[str, Any] | None = None,
     survey: dict[str, Any] | None = None,
+    with_regime: bool = False,
+    with_science: bool = False,
 ) -> tuple[dict[str, Any], dict[str, Any], Any]:
-    """Ingest LAS (+ optional MicroPulse/survey) → null policy → pack → pin → observe."""
+    """Ingest LAS (+ optional MicroPulse/survey/regime) → pin → observe."""
     cycle_dir.mkdir(parents=True, exist_ok=True)
     p = params.clamp()
     raw = parse_las(las_path)
@@ -211,6 +228,34 @@ def execute_job_cycle(
         json.dumps(survey_report, indent=2) + "\n", encoding="utf-8"
     )
 
+    # P4 regime stalk + science annex (when enabled by flags / free params)
+    regime_enabled = bool(with_regime) or bool(thr.require_regime) or p.regime_mode != "off"
+    regime_report = evaluate_regime(
+        series,
+        regime_mode=p.regime_mode,
+        window_scale=p.window_scale,
+        enabled=regime_enabled,
+        require_regime=bool(thr.require_regime),
+        shock_k=float(thr.regime_shock_k),
+    )
+    if regime_enabled:
+        (cycle_dir / "regime_report.json").write_text(
+            json.dumps(regime_report, indent=2) + "\n", encoding="utf-8"
+        )
+
+    science_report = evaluate_science(
+        series,
+        regime_mode=p.regime_mode,
+        window_scale=p.window_scale,
+        with_science=bool(with_science),
+        pin_ok=bool(pin.get("ok")),
+        seed=int(thr.science_seed),
+    )
+    if science_report.get("enabled"):
+        (cycle_dir / "science_annex.json").write_text(
+            json.dumps(science_report, indent=2) + "\n", encoding="utf-8"
+        )
+
     # Store lightweight series summary (not full arrays in json for large files)
     mp_summary = None
     if series.get("micropulse"):
@@ -231,6 +276,8 @@ def execute_job_cycle(
         "null_policy": p.null_policy,
         "align_mode": p.align_mode,
         "survey_gate": p.survey_gate,
+        "regime_mode": p.regime_mode,
+        "window_scale": p.window_scale,
         "source_path": series.get("source_path"),
         "units": series.get("units"),
         "n_channels": len(series.get("channels") or {}),
@@ -245,6 +292,22 @@ def execute_job_cycle(
             "defect_count": survey_report.get("defect_count"),
             "stalk_ok": survey_report.get("stalk_ok"),
             "source_path": survey_report.get("source_path"),
+        },
+        "regime": {
+            "enabled": regime_report.get("enabled"),
+            "present": regime_report.get("present"),
+            "stalk_ok": regime_report.get("stalk_ok"),
+            "channels_used": regime_report.get("channels_used"),
+            "barcode_n_bars": regime_report.get("barcode_n_bars"),
+            "structure_score": regime_report.get("structure_score"),
+            "shock_exceedance": regime_report.get("shock_exceedance"),
+        },
+        "science": {
+            "enabled": science_report.get("enabled"),
+            "native_score": science_report.get("native_score"),
+            "decoy_score": science_report.get("decoy_score"),
+            "native_beats_decoy": science_report.get("native_beats_decoy"),
+            "informational_only": True,
         },
         "glue": {
             "score": glue.get("score"),
@@ -267,6 +330,10 @@ def execute_job_cycle(
         glue=glue,
         survey=survey,
         survey_report=survey_report,
+        regime_report=regime_report,
+        science_report=science_report,
+        with_regime=bool(with_regime) or bool(thr.require_regime),
+        with_science=bool(with_science),
     )
     (cycle_dir / "observations.json").write_text(
         json.dumps(obs.to_dict(), indent=2) + "\n", encoding="utf-8"
@@ -287,6 +354,8 @@ def run_job_coherence_loop(
     os_mode: bool = False,
     resume_dir: Path | str | None = None,
     run_id: str | None = None,
+    with_regime: bool = False,
+    with_science: bool = False,
 ) -> dict[str, Any]:
     """Execute cyclic observe→multi-section propose→merge→ingest until coherent.
 
@@ -299,12 +368,15 @@ def run_job_coherence_loop(
 
     P2: optional micropulse_path (dir of CSVs or single file) joins downhole fibers.
     P3: optional survey_path and/or SURVEY fiber in MicroPulse; survey_gate free param.
+    P4: --with-regime / --with-science dual-gate info; --require-regime optional gate.
     """
     thr = thresholds or JobThresholds()
     params = (initial or FreeParams()).clamp()
     out_root = Path(out_root)
     stability_k = max(1, int(stability_k))
     parent_for_latest: Path | None = None
+    with_regime = bool(with_regime)
+    with_science = bool(with_science)
 
     resume_ledger: list[dict[str, Any]] = []
     start_round = 1
@@ -355,6 +427,10 @@ def run_job_coherence_loop(
         if run_meta.get("survey_path"):
             survey_str = str(run_meta["survey_path"])
             survey_path = survey_str
+        if "with_regime" in run_meta:
+            with_regime = bool(run_meta.get("with_regime"))
+        if "with_science" in run_meta:
+            with_science = bool(run_meta.get("with_science"))
         run_doc = dict(run_meta)
         run_doc["status"] = "resuming"
         logger.info(
@@ -434,10 +510,12 @@ def run_job_coherence_loop(
     if os_mode and resume_dir is None:
         run_doc = {
             "run_id": run_id,
-            "ontology": "job_coherence_os_p3_not_rop_score",
+            "ontology": "job_coherence_os_p4_not_rop_score",
             "las_path": las_str,
             "micropulse_path": mp_str,
             "survey_path": survey_str,
+            "with_regime": with_regime,
+            "with_science": with_science,
             "thresholds": thr.to_dict(),
             "stability_k": stability_k,
             "max_rounds": int(max_rounds),
@@ -489,13 +567,13 @@ def run_job_coherence_loop(
         for rnd in range(start_round, max(1, int(max_rounds)) + 1):
             cycle_dir = out_root / f"cycle_{rnd:02d}"
             logger.info(
-                "job cycle %s/%s align=%s pack=%s null=%s survey_gate=%s streak=%s/%s os=%s",
+                "job cycle %s/%s align=%s pack=%s regime=%s window=%s streak=%s/%s os=%s",
                 rnd,
                 max_rounds,
                 params.align_mode,
                 params.channel_pack,
-                params.null_policy,
-                params.survey_gate,
+                params.regime_mode,
+                params.window_scale,
                 stability_streak,
                 stability_k,
                 os_mode,
@@ -508,6 +586,8 @@ def run_job_coherence_loop(
                 cycle_dir=cycle_dir,
                 mp_bundle=mp_bundle,
                 survey=survey_table,
+                with_regime=with_regime,
+                with_science=with_science,
             )
             pin0 = pin
 
@@ -585,6 +665,12 @@ def run_job_coherence_loop(
                 "survey_qc_fail": obs.survey_qc_fail,
                 "survey_stalk_ok": obs.survey_stalk_ok,
                 "survey_defect_count": obs.survey_defect_count,
+                "regime_enabled": obs.regime_enabled,
+                "regime_stalk_ok": obs.regime_stalk_ok,
+                "regime_barcode_n_bars": obs.regime_barcode_n_bars,
+                "regime_shock_exceedance": obs.regime_shock_exceedance,
+                "science_enabled": obs.science_enabled,
+                "science_native_beats_decoy": obs.science_native_beats_decoy,
                 "cycle_dir": str(cycle_dir.resolve()),
                 "proposals": [pr.to_dict() for pr in board_props],
                 "sources": summary,
@@ -654,6 +740,8 @@ def run_job_coherence_loop(
             cycle_dir=out_root / "cycle_final_pin",
             mp_bundle=mp_bundle,
             survey=survey_table,
+            with_regime=with_regime,
+            with_science=with_science,
         )
         recipe_path = out_root / "PARTNER_RECIPE.json"
         write_partner_recipe(
@@ -666,6 +754,9 @@ def run_job_coherence_loop(
             micropulse_path=mp_str,
             survey_path=survey_str,
             require_survey=bool(thr.require_survey),
+            require_regime=bool(thr.require_regime),
+            with_regime=with_regime,
+            with_science=with_science,
         )
         partner_recipe_path = str(recipe_path.resolve())
 
@@ -678,13 +769,15 @@ def run_job_coherence_loop(
         )
         run_doc["stability_streak"] = stability_streak
         run_doc["partner_recipe"] = partner_recipe_path
+        run_doc["with_regime"] = with_regime
+        run_doc["with_science"] = with_science
         _write_run_json(out_root, run_doc)
         if parent_for_latest is not None:
             _write_latest_run_pointer(parent_for_latest, out_root)
 
     result = {
         "ontology": (
-            "job_coherence_os_p3_not_rop_score"
+            "job_coherence_os_p4_not_rop_score"
             if os_mode
             else "job_coherence_protocol_not_rop_score"
         ),
@@ -713,14 +806,19 @@ def run_job_coherence_loop(
         "survey_path": survey_str,
         "survey_n_stations": int((survey_table or {}).get("n_stations") or 0),
         "require_survey": bool(thr.require_survey),
+        "require_regime": bool(thr.require_regime),
+        "with_regime": with_regime,
+        "with_science": with_science,
         "micropulse_n_fibers": (mp_bundle or {}).get("n_fibers") if mp_bundle else 0,
         "micropulse_kinds": (mp_bundle or {}).get("kinds") if mp_bundle else [],
         "note": (
             "Cyclic observe→multi-section propose→merge→ingest. "
             "Fixed-point: is_solved ∧ empty board × K. "
-            "Free params: align_mode/window_scale/channel_pack/null_policy/survey_gate. "
+            "Free params: align_mode/window_scale/channel_pack/null_policy/"
+            "survey_gate/regime_mode. "
             "P2: MicroPulse fiber join + structural glue. "
             "P3: survey stalk QC + optional discrete holonomy (never invent Inc/Azi). "
+            "P4: regime H0 barcode + dual-gate science info (not accept gate). "
             "QC pin locked. Not ROP score-chase. Never ζ→ROP."
         ),
     }
