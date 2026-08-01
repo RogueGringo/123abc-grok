@@ -14,6 +14,11 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from realm.dynamical_topology.engine import run_dynamical_topology
+from realm.dynamical_topology.stages_job import (
+    build_stages_from_job_run,
+    build_stages_from_structure_scores,
+)
 from realm.job_os.chunk_inspect import run_las_chunk_inspect
 from realm.job_os.eow_ship import ship_eow_package
 from realm.job_os.glue import compute_glue
@@ -444,6 +449,7 @@ def run_job_coherence_loop(
     run_id: str | None = None,
     with_regime: bool = False,
     with_science: bool = False,
+    with_dynamical_topology: bool = False,
     eow_package: Path | str | None = None,
     force_ship: bool = False,
     chunk_rows: int | None = None,
@@ -464,6 +470,8 @@ def run_job_coherence_loop(
     P4: --with-regime / --with-science dual-gate info; --require-regime optional gate.
     P5: optional eow_package after SOLVED (or --force-ship → UNSOLVED_SHIP banner).
     KB D: chunk_rows / max_chunks → out-of-core CHUNK_INSPECT.json; max_rows caps LAS load.
+    Dynamical topology (measure): optional stage-axis barcode report at run root
+    when ``with_dynamical_topology``; never pin / never ACCEPTANCE.
     """
     thr = thresholds or JobThresholds()
     params = (initial or FreeParams()).clamp()
@@ -472,6 +480,7 @@ def run_job_coherence_loop(
     parent_for_latest: Path | None = None
     with_regime = bool(with_regime)
     with_science = bool(with_science)
+    with_dynamical_topology = bool(with_dynamical_topology)
     chunk_rows_i = int(chunk_rows) if chunk_rows is not None else None
     max_chunks_i = max(1, int(max_chunks))
     max_rows_i = int(max_rows) if max_rows is not None else None
@@ -530,6 +539,8 @@ def run_job_coherence_loop(
             with_regime = bool(run_meta.get("with_regime"))
         if "with_science" in run_meta:
             with_science = bool(run_meta.get("with_science"))
+        if "with_dynamical_topology" in run_meta:
+            with_dynamical_topology = bool(run_meta.get("with_dynamical_topology"))
         run_doc = dict(run_meta)
         run_doc["status"] = "resuming"
         logger.info(
@@ -615,6 +626,7 @@ def run_job_coherence_loop(
             "survey_path": survey_str,
             "with_regime": with_regime,
             "with_science": with_science,
+            "with_dynamical_topology": with_dynamical_topology,
             "thresholds": thr.to_dict(),
             "stability_k": stability_k,
             "max_rounds": int(max_rounds),
@@ -962,6 +974,7 @@ def run_job_coherence_loop(
         run_doc["partner_recipe"] = partner_recipe_path
         run_doc["with_regime"] = with_regime
         run_doc["with_science"] = with_science
+        run_doc["with_dynamical_topology"] = with_dynamical_topology
         run_doc["eow_package"] = eow_package_str
         run_doc["eow_ship_status"] = eow_ship_status
         run_doc["eow_ship"] = (
@@ -980,6 +993,62 @@ def run_job_coherence_loop(
         _write_run_json(out_root, run_doc)
         if parent_for_latest is not None:
             _write_latest_run_pointer(parent_for_latest, out_root)
+
+    # Dynamical topology MEASURE wire (info only; never pin / never ACCEPTANCE)
+    dynamical_topology_report: dict[str, Any] | None = None
+    dynamical_topology_path: str | None = None
+    if with_dynamical_topology:
+        try:
+            stages = build_stages_from_job_run(out_root)
+            if len(stages) < 2:
+                # Synthesize from ledger structure scores if cycle artifacts thin
+                scores: list[float] = []
+                for e in ledger:
+                    if not isinstance(e.get("round"), int):
+                        continue
+                    t = e.get("trend") or {}
+                    if t.get("regime_structure_score") is not None:
+                        scores.append(float(t["regime_structure_score"]))
+                    else:
+                        obs = e.get("observations") or {}
+                        if obs.get("regime_structure_score") is not None:
+                            scores.append(float(obs["regime_structure_score"]))
+                if len(scores) >= 1 and len(stages) < 1:
+                    stages = build_stages_from_structure_scores(scores)
+                elif len(scores) >= 2 and len(stages) < 2:
+                    stages = build_stages_from_structure_scores(scores)
+            dynamical_topology_report = run_dynamical_topology(stages)
+            dt_path = out_root / "DYNAMICAL_TOPOLOGY.json"
+            dt_path.write_text(
+                json.dumps(dynamical_topology_report, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            dynamical_topology_path = str(dt_path.resolve())
+            logger.info(
+                "dynamical topology n_stages=%s n_long=%s path=%s",
+                dynamical_topology_report.get("n_stages"),
+                dynamical_topology_report.get("n_long"),
+                dynamical_topology_path,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("dynamical topology measure skipped: %s", exc)
+            dynamical_topology_report = {
+                "kind": "dynamical_topology",
+                "not_acceptance": True,
+                "pin_writable": False,
+                "acceptance_writable": False,
+                "error": str(exc),
+                "n_stages": 0,
+            }
+            try:
+                dt_path = out_root / "DYNAMICAL_TOPOLOGY.json"
+                dt_path.write_text(
+                    json.dumps(dynamical_topology_report, indent=2) + "\n",
+                    encoding="utf-8",
+                )
+                dynamical_topology_path = str(dt_path.resolve())
+            except Exception as write_exc:  # noqa: BLE001
+                logger.warning("dynamical topology write failed: %s", write_exc)
 
     result = {
         "ontology": (
@@ -1018,6 +1087,9 @@ def run_job_coherence_loop(
         "require_regime": bool(thr.require_regime),
         "with_regime": with_regime,
         "with_science": with_science,
+        "with_dynamical_topology": with_dynamical_topology,
+        "dynamical_topology": dynamical_topology_report,
+        "dynamical_topology_path": dynamical_topology_path,
         "chunk_rows": chunk_rows_i,
         "max_chunks": max_chunks_i,
         "max_rows": max_rows_i,
@@ -1035,11 +1107,26 @@ def run_job_coherence_loop(
             "P4: regime H0 barcode + multi-scale zigzag + dual-gate science info. "
             "P5: EOW SHIP after SOLVED (or --force-ship UNSOLVED_SHIP); "
             "KB D: optional chunk_rows inspect + max_rows cap. "
+            "Dynamical topology measure optional (never pin). "
             "QC pin locked. Not ROP score-chase. Never ζ→ROP."
         ),
     }
     # Relative λ1 / multi-scale trend rollup (info only)
     trend_rollup = build_trend_rollup(ledger)
+    if dynamical_topology_report is not None:
+        # Optional fold: shallow summary only (never ACCEPTANCE)
+        trend_rollup["dynamical_topology"] = {
+            "not_acceptance": True,
+            "pin_writable": False,
+            "n_stages": dynamical_topology_report.get("n_stages"),
+            "n_long": dynamical_topology_report.get("n_long"),
+            "n_short": dynamical_topology_report.get("n_short"),
+            "dominant_phase": (dynamical_topology_report.get("phases") or {}).get(
+                "dominant"
+            ),
+            "path": dynamical_topology_path,
+            "kind": dynamical_topology_report.get("kind"),
+        }
     result["trend_rollup"] = trend_rollup
     try:
         (out_root / "TREND_ROLLUP.json").write_text(
