@@ -163,6 +163,9 @@ def run_job_rotation(
     with_science = bool(manifest.get("with_science", False))
     with_dynamical_topology = bool(manifest.get("with_dynamical_topology", False))
     topo_stability = bool(manifest.get("topo_stability", False))
+    # Optional batch-level EOW package (post-SOLVED ship per well); pin never moved
+    eow_batch = manifest.get("eow_package")
+    force_ship_batch = bool(manifest.get("force_ship", False))
 
     well_rows: list[dict[str, Any]] = []
     if dry_run:
@@ -209,6 +212,8 @@ def run_job_rotation(
             thr.depth_mono_eps,
         )
         try:
+            eow_w = w.get("eow_package") or eow_batch
+            force_ship_w = bool(w.get("force_ship", force_ship_batch))
             result = run_job_coherence_loop(
                 las_path=las,
                 out_root=well_out,
@@ -225,8 +230,12 @@ def run_job_rotation(
                 or bool(w.get("with_dynamical_topology")),
                 topo_stability=topo_stability or bool(w.get("topo_stability")),
                 max_rows=max_rows_i,
+                eow_package=Path(eow_w) if eow_w else None,
+                force_ship=force_ship_w,
                 run_id=None,
             )
+            fw_explore = (result.get("firewall") or {}).get("explore") or {}
+            fw_fields = fw_explore.get("fields") or {}
             row = {
                 "well_id": well_id,
                 "las": str(las.resolve()) if las.is_file() else str(las),
@@ -242,9 +251,10 @@ def run_job_rotation(
                 "firewall_near_miss": bool(result.get("firewall_near_miss")),
                 "firewall_path": result.get("firewall_path"),
                 "partner_recipe": result.get("partner_recipe"),
-                "explore_looks_promising": (
-                    (result.get("firewall") or {}).get("explore") or {}
-                ).get("looks_promising"),
+                "eow_ship_status": result.get("eow_ship_status"),
+                "alias_applied": fw_fields.get("alias_applied"),
+                "n_aliases_applied": fw_fields.get("n_aliases_applied"),
+                "explore_looks_promising": fw_explore.get("looks_promising"),
                 "near_miss_verdict": (
                     (result.get("firewall") or {}).get("near_miss") or {}
                 ).get("verdict"),

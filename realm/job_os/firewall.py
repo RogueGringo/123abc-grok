@@ -156,6 +156,19 @@ def extract_explore_tier(
             "dynamical_topology_n_short": dt.get("n_short"),
             "lambda_1_trend": tr.get("lambda_1_trend"),
             "chunk_inspect_present": r.get("chunk_inspect") is not None,
+            # C6: vendor→canonical maps this run (measure/transparency only)
+            "alias_applied": (
+                (last.get("sources") or {}).get("alias_applied")
+                if isinstance(last.get("sources"), dict)
+                else None
+            )
+            or r.get("alias_applied"),
+            "n_aliases_applied": len(
+                (last.get("sources") or {}).get("alias_applied")
+                if isinstance(last.get("sources"), dict)
+                and (last.get("sources") or {}).get("alias_applied") is not None
+                else (r.get("alias_applied") or [])
+            ),
         },
         "looks_promising": len(explore_pass_signals) > 0,
         "pass_signals": explore_pass_signals,

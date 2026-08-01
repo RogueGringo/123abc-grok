@@ -460,6 +460,11 @@ def execute_job_cycle(
             "shared_domain": glue.get("shared_domain"),
             "notes": glue.get("notes"),
         },
+        # C6 inherited aliases (transparency; not ACCEPTANCE / not pin write)
+        "alias_applied": list(series.get("alias_applied") or raw.get("alias_applied") or []),
+        "alias_ontology": series.get("alias_ontology")
+        or raw.get("alias_ontology")
+        or "job_channel_aliases_inherited_not_invented",
     }
     (cycle_dir / "sources_summary.json").write_text(
         json.dumps(summary, indent=2) + "\n", encoding="utf-8"

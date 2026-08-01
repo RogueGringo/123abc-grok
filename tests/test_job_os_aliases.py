@@ -90,3 +90,31 @@ def test_gamma_and_tor_aliases():
     assert out["channels"]["TOR"] == [2.0, 3.0]
     assert out["channels"]["SPP"] == [100.0, 101.0]
     assert out["channels"]["GAMMA"] == [40.0, 41.0]
+
+
+def test_firewall_surfaces_alias_applied():
+    from realm.job_os.firewall import build_job_firewall
+
+    fw = build_job_firewall(
+        result={
+            "solved": True,
+            "run_id": "alias_fw",
+            "ledger": [
+                {
+                    "round": 1,
+                    "action": "halt",
+                    "solved": True,
+                    "is_solved_slice": True,
+                    "proposals": [],
+                    "pin": {"ok": True, "hard_ok": True},
+                    "sources": {
+                        "alias_applied": [{"canonical": "WOB", "from": "WOBX"}],
+                    },
+                }
+            ],
+        },
+        solved=True,
+    )
+    fields = (fw.get("explore") or {}).get("fields") or {}
+    assert fields.get("n_aliases_applied") == 1
+    assert fields.get("alias_applied")[0]["from"] == "WOBX"

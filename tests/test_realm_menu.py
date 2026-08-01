@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from realm.menu.app import build_job_smoke_argv, menu_items
+from realm.menu.app import build_job_smoke_argv, build_rotation_argv, menu_items
 
 
 def test_menu_items_include_core():
@@ -10,6 +10,7 @@ def test_menu_items_include_core():
     assert any("Job OS" in L for L in labels)
     assert any("Catalog" in L for L in labels)
     assert any("topology" in L.lower() for L in labels)
+    assert any("rotation" in L.lower() for L in labels)
 
 
 def test_smoke_argv_contains_fixture():
@@ -19,12 +20,22 @@ def test_smoke_argv_contains_fixture():
     assert "mini_edr.las" in joined
 
 
+def test_rotation_argv():
+    argv = build_rotation_argv("docs/examples/m.json", "out/rot", dry_run=True)
+    joined = " ".join(str(a) for a in argv)
+    assert "--rotation" in argv
+    assert "docs/examples/m.json" in joined
+    assert "--rotation-dry-run" in argv
+    assert "out/rot" in joined or "out\\rot" in joined
+
+
 def test_menu_items_ids_stable():
     items = menu_items()
     by_id = {x["id"]: x["label"] for x in items}
     assert by_id["job_smoke"].startswith("Job OS")
     assert by_id["job_wizard"].startswith("Job OS")
     assert "Catalog" in by_id["catalog"]
+    assert "rotation" in by_id["rotation"].lower()
     assert "topology" in by_id["topology"].lower()
     assert "Handoff" in by_id["handoff"]
     assert "docs" in by_id["docs"].lower() or "LATEST" in by_id["docs"]
@@ -33,6 +44,7 @@ def test_menu_items_ids_stable():
         "job_smoke",
         "job_wizard",
         "catalog",
+        "rotation",
         "topology",
         "handoff",
         "docs",

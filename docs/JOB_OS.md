@@ -144,9 +144,10 @@ python realm_menu.py
 | 1 | Job OS — fixture quick smoke | In-process fixture LAS smoke (`tests/fixtures/mini_edr.las`) + optional dynamical topology wire |
 | 2 | Job OS — custom paths (wizard) | Prompt for LAS / MicroPulse / survey / out-dir; confirm CLI; run loop |
 | 3 | Catalog runs (INDEX) | Scan `--out-dir` → INDEX.json / INDEX.md |
-| 4 | Dynamical topology report | Stage-axis zigzag report on a run dir → `DYNAMICAL_TOPOLOGY.json` (measure only) |
-| 5 | Handoff coherence (protein) | Suggested handoff CLI / optional in-process dual-gate path |
-| 6 | Open docs / LATEST paths | Print `docs/JOB_OS.md`, design spec, LATEST, fixtures |
+| 4 | Multi-well rotation (manifest) | Same pin across wells; `ROTATION_*` from `firewall_certified` |
+| 5 | Dynamical topology report | Stage-axis zigzag report on a run dir → `DYNAMICAL_TOPOLOGY.json` (measure only) |
+| 6 | Handoff coherence (protein) | Suggested handoff CLI / optional in-process dual-gate path |
+| 7 | Open docs / LATEST paths | Print `docs/JOB_OS.md`, design specs, LATEST, rotation manifest, fixtures |
 | 0 | Exit | Quit |
 
 Non-interactive exit: `echo 0 | python realm_menu.py`

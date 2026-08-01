@@ -16,15 +16,22 @@ from realm.dynamical_topology.engine import run_dynamical_topology
 from realm.dynamical_topology.stages_job import build_stages_from_job_run
 from realm.job_os.catalog import write_job_os_catalog
 from realm.job_os.loop import run_job_coherence_loop
+from realm.job_os.rotation import run_job_rotation
 from realm.job_os.types import FreeParams, JobThresholds
 
 # Repo root (…/123abc-grok) — menu lives at realm/menu/app.py
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_LAS = _REPO_ROOT / "tests" / "fixtures" / "mini_edr.las"
 _DEFAULT_JOB_OS_ROOT = Path("out/job_os")
+_DEFAULT_ROTATION_MANIFEST = (
+    _REPO_ROOT / "docs" / "examples" / "job_rotation_jtod1.manifest.json"
+)
 _DOCS_JOB_OS = Path("docs/JOB_OS.md")
 _DOCS_DESIGN = Path(
     "docs/superpowers/specs/2026-07-31-dynamical-topology-dual-spine-design.md"
+)
+_DOCS_BRIDGE = Path(
+    "docs/superpowers/specs/2026-07-31-dual-stalk-ops-bridge-design.md"
 )
 
 
@@ -34,11 +41,32 @@ def menu_items() -> list[dict[str, str]]:
         {"id": "job_smoke", "label": "Job OS — fixture quick smoke"},
         {"id": "job_wizard", "label": "Job OS — custom paths (wizard)"},
         {"id": "catalog", "label": "Catalog runs (INDEX)"},
+        {"id": "rotation", "label": "Multi-well rotation (manifest)"},
         {"id": "topology", "label": "Dynamical topology report"},
         {"id": "handoff", "label": "Handoff coherence (protein)"},
         {"id": "docs", "label": "Open docs / LATEST paths"},
         {"id": "exit", "label": "Exit"},
     ]
+
+
+def build_rotation_argv(
+    manifest: str | Path,
+    out_dir: str | Path = "out/rotation",
+    *,
+    dry_run: bool = False,
+) -> list[str]:
+    """Subprocess argv for multi-well rotation (firewall-certified branch)."""
+    argv = [
+        sys.executable,
+        "job_coherence.py",
+        "--rotation",
+        str(manifest),
+        "--out-dir",
+        str(out_dir),
+    ]
+    if dry_run:
+        argv.append("--rotation-dry-run")
+    return argv
 
 
 def build_job_smoke_argv(out_dir: str) -> list[str]:
@@ -353,14 +381,15 @@ def _print_menu(stream: TextIO = sys.stdout) -> None:
     print("=== REALM navigator (Job OS + dynamical topology) ===", file=stream)
     print("Pin is read-only. Measure/control never rewrite soft_T / mono ε.", file=stream)
     print("", file=stream)
-    # Numbered display: 1..6 then 0 exit
+    # Numbered display: 1..7 then 0 exit
     display = [
         ("1", "job_smoke"),
         ("2", "job_wizard"),
         ("3", "catalog"),
-        ("4", "topology"),
-        ("5", "handoff"),
-        ("6", "docs"),
+        ("4", "rotation"),
+        ("5", "topology"),
+        ("6", "handoff"),
+        ("7", "docs"),
         ("0", "exit"),
     ]
     by_id = {x["id"]: x["label"] for x in menu_items()}
@@ -375,15 +404,17 @@ def _choice_to_id(choice: str) -> str | None:
         "1": "job_smoke",
         "2": "job_wizard",
         "3": "catalog",
-        "4": "topology",
-        "5": "handoff",
-        "6": "docs",
+        "4": "rotation",
+        "5": "topology",
+        "6": "handoff",
+        "7": "docs",
         "0": "exit",
         "q": "exit",
         "exit": "exit",
         "job_smoke": "job_smoke",
         "job_wizard": "job_wizard",
         "catalog": "catalog",
+        "rotation": "rotation",
         "topology": "topology",
         "handoff": "handoff",
         "docs": "docs",
@@ -525,6 +556,60 @@ def _action_catalog(
                 "index_md": str(Path(root) / "INDEX.md"),
                 "index_json": str(Path(root) / "INDEX.json"),
                 "note": "catalog not ACCEPTANCE",
+            },
+            indent=2,
+        ),
+        file=stream,
+    )
+
+
+def _action_rotation(
+    *,
+    inp: Callable[[str], str] | None = None,
+    stream: TextIO = sys.stdout,
+) -> None:
+    """Multi-well rotation: same pin, ROTATION_* from firewall_certified."""
+    print(
+        "Multi-well rotation — pin thresholds identical across wells; "
+        "branch from firewall_certified (not science score).",
+        file=stream,
+    )
+    default_man = (
+        str(_DEFAULT_ROTATION_MANIFEST)
+        if _DEFAULT_ROTATION_MANIFEST.is_file()
+        else "docs/examples/job_rotation_jtod1.manifest.json"
+    )
+    man_s = _prompt("Rotation manifest JSON", default_man, inp=inp)
+    man = Path(man_s)
+    if not man.is_file():
+        print(f"Manifest not found: {man}", file=stream)
+        return
+    out_root = _prompt("Out dir", "out/rotation", inp=inp)
+    dry = _prompt_yn("dry-run only", False, inp=inp)
+    print("CLI equivalent:", file=stream)
+    print(" ", " ".join(build_rotation_argv(man, out_root, dry_run=dry)), file=stream)
+    if not _prompt_yn("Run now?", True, inp=inp):
+        print("Cancelled.", file=stream)
+        return
+    try:
+        report = run_job_rotation(man, out_root=out_root, dry_run=dry)
+    except Exception as exc:  # noqa: BLE001
+        print(f"Rotation failed: {exc}", file=stream)
+        return
+    print(
+        json.dumps(
+            {
+                "rotation": True,
+                "batch_id": report.get("batch_id"),
+                "branch": report.get("branch"),
+                "n_wells": (report.get("classification") or {}).get("n_wells"),
+                "n_firewall_certified": (report.get("classification") or {}).get(
+                    "n_firewall_certified"
+                ),
+                "pin_identical": report.get("pin_identical_across_wells"),
+                "batch_dir": report.get("batch_dir"),
+                "dry_run": report.get("dry_run"),
+                "note": "ROTATION from firewall_certified; pin never retuned",
             },
             indent=2,
         ),
@@ -681,9 +766,11 @@ def _action_docs(
     design = (_REPO_ROOT / _DOCS_DESIGN).resolve()
     latest = resolve_job_os_latest(_DEFAULT_JOB_OS_ROOT)
     latest_file = Path(_DEFAULT_JOB_OS_ROOT) / "LATEST"
+    bridge = (_REPO_ROOT / _DOCS_BRIDGE).resolve()
     print("Docs / paths:", file=stream)
     print(f"  JOB_OS.md:     {job_os}  (exists={job_os.is_file()})", file=stream)
     print(f"  Design spec:   {design}  (exists={design.is_file()})", file=stream)
+    print(f"  Dual-stalk:    {bridge}  (exists={bridge.is_file()})", file=stream)
     print(
         f"  Job OS LATEST: {latest_file.resolve()}  (exists={latest_file.is_file()})",
         file=stream,
@@ -696,8 +783,23 @@ def _action_docs(
         f"  Fixture LAS:   {_DEFAULT_LAS}  (exists={_DEFAULT_LAS.is_file()})",
         file=stream,
     )
+    print(
+        f"  Rotation man:  {_DEFAULT_ROTATION_MANIFEST}  "
+        f"(exists={_DEFAULT_ROTATION_MANIFEST.is_file()})",
+        file=stream,
+    )
     print("  Entry:         python realm_menu.py", file=stream)
     print("  CLI smoke:     " + " ".join(build_job_smoke_argv("out/job_os")), file=stream)
+    print(
+        "  CLI rotation:  "
+        + " ".join(
+            build_rotation_argv(
+                "docs/examples/job_rotation_jtod1.manifest.json",
+                "out/rotation_jtod1",
+            )
+        ),
+        file=stream,
+    )
 
 
 def main(
@@ -730,6 +832,8 @@ def main(
             _action_wizard(inp=read, stream=out)
         elif mid == "catalog":
             _action_catalog(inp=read, stream=out)
+        elif mid == "rotation":
+            _action_rotation(inp=read, stream=out)
         elif mid == "topology":
             _action_topology(inp=read, stream=out)
         elif mid == "handoff":
