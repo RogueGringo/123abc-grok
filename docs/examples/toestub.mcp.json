@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "toestub": {
+      "command": "python",
+      "args": ["-m", "toestub.mcp_server"],
+      "env": {
+        "PYTHONPATH": "C:/PRIMEdEV-1/123abc-grok",
+        "TOESTUB_REPO_ROOT": "C:/PRIMEdEV-1/123abc-grok"
+      }
+    }
+  }
+}

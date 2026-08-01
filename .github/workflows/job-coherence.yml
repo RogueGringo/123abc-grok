@@ -18,10 +18,14 @@ on:
       - "tests/test_trend_rollup.py"
       - "tests/test_dynamical_topology*.py"
       - "tests/test_realm_menu.py"
+      - "tests/test_toestub_*.py"
+      - "toestub/**"
       - "tests/fixtures/mini_*.las"
       - "tests/fixtures/mini_micropulse*"
       - "tests/fixtures/mini_survey.csv"
       - "docs/examples/job_rotation*.manifest.json"
+      - "docs/examples/toestub.mcp.json"
+      - "docs/TOESTUB.md"
       - ".github/workflows/job-coherence.yml"
 
 jobs:
@@ -36,9 +40,9 @@ jobs:
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
-          pip install numpy pytest
+          pip install numpy pytest mcp
           if [ -f requirements-handoff.txt ]; then pip install -r requirements-handoff.txt || true; fi
-      - name: Unit tests (job OS + kb_geometry + dynamical topology)
+      - name: Unit tests (job OS + kb_geometry + dynamical topology + ToeStub)
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: |
@@ -62,6 +66,10 @@ jobs:
                  tests/test_dynamical_topology_control.py \
                  tests/test_dynamical_topology_crit_handoff.py \
                  tests/test_realm_menu.py \
+                 tests/test_toestub_schemas.py \
+                 tests/test_toestub_envelope.py \
+                 tests/test_toestub_tools.py \
+                 tests/test_toestub_mcp_list.py \
                  -q --tb=line
       - name: Fixture OS smoke + catalog + FIREWALL
         env:

@@ -188,9 +188,28 @@ Non-interactive exit: `echo 0 | python realm_menu.py`
 - **Control:** `--topo-stability` / menu toggle → `topology_stable(K)` joins fixed-point only with `is_solved ∧ empty free-param board`
 - Design: [2026-07-31-dynamical-topology-dual-spine-design.md](superpowers/specs/2026-07-31-dynamical-topology-dual-spine-design.md)
 
+## ToeStub (MCP governor)
+
+Local stdio MCP shell over the same Job OS kernel so agent harnesses call run / catalog / rotation / audit / firewall_read as tools. Pin sealed; explore never certifies. CLI above remains the operator twin.
+
+```bash
+pip install mcp
+set PYTHONPATH=.
+python -m toestub.mcp_server
+# or: toestub-mcp
+```
+
+Host config example: [docs/examples/toestub.mcp.json](examples/toestub.mcp.json)  
+Agent connect guide: [docs/TOESTUB.md](TOESTUB.md)  
+Design: [2026-07-31-toestub-mcp-governor-design.md](superpowers/specs/2026-07-31-toestub-mcp-governor-design.md)
+
+`TOESTUB_TIMEOUT_S` is reserved (default 300s); no SIGALRM on Windows.
+
 ## Design / KB
 
 - [docs/superpowers/specs/2026-07-31-oilfield-job-coherence-os-design.md](superpowers/specs/2026-07-31-oilfield-job-coherence-os-design.md)
 - [docs/superpowers/specs/2026-07-31-dynamical-topology-dual-spine-design.md](superpowers/specs/2026-07-31-dynamical-topology-dual-spine-design.md)
 - [docs/superpowers/specs/2026-07-31-academic-kb-knowledge-integration-design.md](superpowers/specs/2026-07-31-academic-kb-knowledge-integration-design.md)
 - [docs/superpowers/specs/2026-07-31-parent-kb-h1-audit.md](superpowers/specs/2026-07-31-parent-kb-h1-audit.md)
+- [docs/superpowers/specs/2026-07-31-toestub-mcp-governor-design.md](superpowers/specs/2026-07-31-toestub-mcp-governor-design.md)
+- [docs/TOESTUB.md](TOESTUB.md)
