@@ -245,13 +245,15 @@ Complexity stays invisible unless the agent (or user) requests diagnostics. Part
 
 ## 6. Success criteria (v0 complete)
 
-- [ ] `toestub-mcp` starts and advertises five tools  
-- [ ] Agent (or test client) runs fixture job → `certified=true`  
-- [ ] Audit of that run → ok  
-- [ ] Fixture rotation via tool → `ROTATION_PASS`  
-- [ ] Free-param pin rewrite rejected  
-- [ ] Docs: host config snippet + non-goals  
-- [ ] This design committed  
+- [x] `toestub-mcp` starts and advertises five tools  
+- [x] Agent (or test client) runs fixture job → `certified=true`  
+- [x] Audit of that run → ok  
+- [x] Fixture rotation via tool → `ROTATION_PASS`  
+- [x] Free-param pin rewrite rejected  
+- [x] Docs: host config snippet + non-goals  
+- [x] This design committed  
+
+**Shipped:** implementation commits `d5e96b3`..`887b6e5` on main (2026-07-31 SDD).
 
 ---
 
