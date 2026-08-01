@@ -4,6 +4,8 @@ Batch orchestrator for multi-source MWD/EDR job routines under a **locked QC pin
 
 Commercial success = **sources glue + pin seal + optional EOW package** — not ROP / enrichment score-chase. Never λ=γ.
 
+**External distribution (downloadable product):** [ToeStub](https://github.com/RogueGringo/ToeStub) — Windows `menu.bat` + `cfg/toestub.ini` + MCP. See [TOESTUB_DISTRIBUTION.md](TOESTUB_DISTRIBUTION.md).
+
 ## Install / run
 
 ```bash
