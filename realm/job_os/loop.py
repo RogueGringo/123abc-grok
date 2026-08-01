@@ -22,6 +22,7 @@ from realm.dynamical_topology.stages_job import (
 )
 from realm.job_os.chunk_inspect import run_las_chunk_inspect
 from realm.job_os.eow_ship import ship_eow_package
+from realm.job_os.firewall import assert_firewall_invariants, build_job_firewall
 from realm.job_os.glue import compute_glue
 from realm.job_os.ingest_las import apply_null_policy, parse_las, select_channel_pack
 from realm.job_os.ingest_micropulse import join_surface_micropulse, load_micropulse_bundle
@@ -265,6 +266,8 @@ def _write_latest_run_pointer(parent: Path, run_dir: Path) -> None:
 
 
 def _write_coherence_md(result: dict[str, Any], path: Path) -> Path:
+    fw = result.get("firewall") or {}
+    near = (fw.get("near_miss") or {}) if isinstance(fw, dict) else {}
     lines = [
         "# Job Coherence OS ledger",
         "",
@@ -277,6 +280,8 @@ def _write_coherence_md(result: dict[str, Any], path: Path) -> Path:
         f"- **final_params:** `{json.dumps(result.get('final_params') or {})}`",
         f"- **partner_recipe:** `{result.get('partner_recipe')}`",
         f"- **eow_ship:** `{result.get('eow_ship_status')}`",
+        f"- **firewall.certified:** `{fw.get('certified') if fw else None}`",
+        f"- **firewall.near_miss:** `{near.get('verdict') if near else None}`",
         "",
         "## Ontology",
         "",
@@ -289,6 +294,15 @@ def _write_coherence_md(result: dict[str, Any], path: Path) -> Path:
         "- Fixed-point: is_solved ∧ empty board × K",
         "- Science score never sets SOLVED alone (unless --require-regime stalk)",
         "- Never retune pin for score. Never invent Inc/Azi. Never ζ→ROP.",
+        "",
+        "## Job QC Firewall (explore vs certify)",
+        "",
+        "- **EXPLORE (Tier-E analog):** science / dynamical topology measure / λ1 trends — "
+        "`not_acceptance`; may look promising.",
+        "- **CERTIFY (Tier-C analog):** pin hard seal + is_solved ∧ empty free-param board × K.",
+        "- **Near-miss:** explore promising + certify fail → **REJECT** for ship "
+        "(agreement is not verification).",
+        "- Pin never writable from explore metrics. Never λ=γ.",
         "",
     ]
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -1185,6 +1199,8 @@ def run_job_coherence_loop(
             "KB D: optional chunk_rows inspect + max_rows cap. "
             "Dynamical topology measure optional (never pin). "
             "topo_stability control optional (topology_stable × K; never pin). "
+            "Job QC Firewall: explore (science/topo/λ1) vs certify (pin+fixed-point); "
+            "near-miss rejected; agreement is not verification. "
             "QC pin locked. Not ROP score-chase. Never ζ→ROP."
         ),
     }
@@ -1211,6 +1227,48 @@ def run_job_coherence_loop(
         )
     except Exception as exc:  # noqa: BLE001
         logger.warning("trend rollup write skipped: %s", exc)
+
+    # Job QC Firewall: explicit explore vs certify (PRIMON PCF restriction)
+    firewall = build_job_firewall(
+        result=result,
+        ledger=ledger,
+        pin=pin0 if isinstance(pin0, dict) else None,
+        solved=bool(solved),
+        run_id=str(run_id) if run_id is not None else None,
+    )
+    inv = assert_firewall_invariants(firewall)
+    if inv:
+        logger.warning("firewall invariant violations: %s", inv)
+        firewall["invariant_violations"] = inv
+    result["firewall"] = firewall
+    result["firewall_certified"] = bool(firewall.get("certified"))
+    result["firewall_near_miss"] = bool((firewall.get("near_miss") or {}).get("near_miss"))
+    firewall_path: str | None = None
+    try:
+        fw_path = out_root / "FIREWALL.json"
+        fw_path.write_text(
+            json.dumps(firewall, indent=2) + "\n", encoding="utf-8"
+        )
+        firewall_path = str(fw_path.resolve())
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("FIREWALL.json write skipped: %s", exc)
+    result["firewall_path"] = firewall_path
+
+    if os_mode and run_doc is not None:
+        run_doc["firewall"] = {
+            "certified": firewall.get("certified"),
+            "near_miss_verdict": (firewall.get("near_miss") or {}).get("verdict"),
+            "near_miss": (firewall.get("near_miss") or {}).get("near_miss"),
+            "explore_looks_promising": (firewall.get("explore") or {}).get(
+                "looks_promising"
+            ),
+            "path": firewall_path,
+            "ontology": firewall.get("ontology"),
+            "pin_writable": False,
+            "laws": firewall.get("laws"),
+        }
+        run_doc["firewall_certified"] = bool(firewall.get("certified"))
+        _write_run_json(out_root, run_doc)
 
     (out_root / "COHERENCE.json").write_text(
         json.dumps(result, indent=2) + "\n", encoding="utf-8"

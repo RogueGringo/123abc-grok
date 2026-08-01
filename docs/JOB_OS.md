@@ -65,9 +65,27 @@ python job_coherence.py --catalog --out-dir out/job_os_jtod1
 ```
 out/job_os/<run_id>/
   RUN.json  ledger.jsonl  COHERENCE.json  PARTNER_RECIPE.json
+  FIREWALL.json
   TREND_ROLLUP.json  CHUNK_INSPECT.json  CHUNK_SCIENCE_ANNEX.json
   cycle_NN/  eow/PACKAGE_INDEX.json  eow/SHIP.md
 ```
+
+## Job QC Firewall (explore vs certify)
+
+Dual-stalk with the sister program's Precision–Certification Firewall (Tier-E / Tier-C),
+restricted to oilfield substrate. **Agreement is not verification.**
+
+| Tier | Analog | Contents | Ship? |
+|------|--------|----------|-------|
+| **EXPLORE** | Tier-E | science annex, dynamical topology *measure*, regime structure, graph λ1 trends | Never alone |
+| **CERTIFY** | Tier-C | pin hard seal + `is_solved` ∧ empty free-param board × K (+ optional `topology_stable`) | Only this seals SOLVED |
+
+**Near-miss:** explore looks promising (e.g. native beats decoy, long topo bars) while
+certify fails (pin hard fail / unsolved) → **REJECT** for partner ship.
+
+- Written every run: `FIREWALL.json`; also embedded in `COHERENCE.json` and summarized on `RUN.json`.
+- `pin_writable: false` always — explore metrics never retune mono ε / pack / soft_T.
+- Never λ=γ (graph λ1 is algebraic connectivity only).
 
 ## Navigator menu (non-CLI)
 
