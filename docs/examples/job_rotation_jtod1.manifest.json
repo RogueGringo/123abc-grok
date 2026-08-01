@@ -1,0 +1,44 @@
+{
+  "kind": "job_rotation_manifest",
+  "prereg_id": "jtod1_live_v1",
+  "ontology": "job_rotation_not_acceptance_for_residue",
+  "note": "Live multi-well rotation over JTOD1 example corpus. Same pin thresholds every well. Paths are host-local under C:\\JTOD1.",
+  "stability_k": 1,
+  "max_rounds": 6,
+  "max_rows": 500,
+  "with_regime": false,
+  "with_science": false,
+  "with_dynamical_topology": true,
+  "free_params": {
+    "align_mode": "depth_primary",
+    "window_scale": 1,
+    "channel_pack": "surface_min",
+    "null_policy": "mark_only",
+    "survey_gate": "off",
+    "regime_mode": "off"
+  },
+  "thresholds": {
+    "depth_mono_eps": 1e-6,
+    "max_depth_mono_violations": 5,
+    "min_align_score": 0.5,
+    "require_pin": true,
+    "require_verify_ok": true
+  },
+  "wells": [
+    {
+      "well_id": "archer_56_2_5_2H_depth",
+      "las": "C:\\JTOD1\\OILFIELD_DRILLING_DATA_EXAMPLE_FILES\\EDR_DATA\\LAS_Depth\\PD566_Anadarko_SS_SurfaceData_Archer 56-2-5 2H_Depth_1760755520646.las",
+      "micropulse": "C:\\JTOD1\\OILFIELD_DRILLING_DATA_EXAMPLE_FILES\\MicroPulse_799_MemoryFiles_1760755550407",
+      "survey": "C:\\JTOD1\\OILFIELD_DRILLING_DATA_EXAMPLE_FILES\\MicroPulse_799_MemoryFiles_1760755550407\\MicroPulse_799_SURVEY_20250718103653.csv"
+    },
+    {
+      "well_id": "link_vj_ranch_5H_time",
+      "las": "C:\\JTOD1\\OILFIELD_DRILLING_DATA_EXAMPLE_FILES\\EDR_DATA\\LAS_Time\\H&P_379_EOG__SS_SurfaceData_LINK VJ RANCH 24-13 E #5H_Time_1760755504998.las"
+    },
+    {
+      "well_id": "archer_56_2_5_2H_time",
+      "las": "C:\\JTOD1\\OILFIELD_DRILLING_DATA_EXAMPLE_FILES\\EDR_DATA\\LAS_Time\\PD566_Anadarko_SS_SurfaceData_Archer 56-2-5 2H_Time_1760755520646.las",
+      "note": "Same well as depth file but time-indexed LAS — second substrate in rotation group"
+    }
+  ]
+}

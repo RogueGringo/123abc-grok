@@ -116,6 +116,7 @@ def run_job_rotation(
     out_root: Path | str,
     batch_id: str | None = None,
     max_rounds: int | None = None,
+    max_rows: int | None = None,
     dry_run: bool = False,
 ) -> dict[str, Any]:
     """Execute one Job OS OS-mode run per well; write ROTATION_REPORT.
@@ -150,6 +151,14 @@ def run_job_rotation(
     thr_stamp = thr.to_dict()  # identical for all wells
     stability_k = max(1, int(manifest.get("stability_k") or 1))
     max_r = int(max_rounds if max_rounds is not None else manifest.get("max_rounds") or 6)
+    # Live EDR often needs a row cap; pin ε remains batch-identical (not free)
+    max_rows_i: int | None
+    if max_rows is not None:
+        max_rows_i = int(max_rows)
+    elif manifest.get("max_rows") is not None:
+        max_rows_i = int(manifest["max_rows"])
+    else:
+        max_rows_i = None
     with_regime = bool(manifest.get("with_regime", False))
     with_science = bool(manifest.get("with_science", False))
     with_dynamical_topology = bool(manifest.get("with_dynamical_topology", False))
@@ -215,6 +224,7 @@ def run_job_rotation(
                 with_dynamical_topology=with_dynamical_topology
                 or bool(w.get("with_dynamical_topology")),
                 topo_stability=topo_stability or bool(w.get("topo_stability")),
+                max_rows=max_rows_i,
                 run_id=None,
             )
             row = {

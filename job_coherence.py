@@ -284,6 +284,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.rotation,
                 out_root=args.out_dir,
                 max_rounds=int(args.max_rounds),
+                max_rows=args.max_rows,
                 dry_run=bool(args.rotation_dry_run),
             )
         except FileNotFoundError as exc:

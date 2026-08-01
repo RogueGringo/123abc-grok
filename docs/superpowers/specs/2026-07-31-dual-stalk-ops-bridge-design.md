@@ -180,5 +180,5 @@ out/rotation/<batch_id>/
 - [x] Pin identical across wells in a batch (`pin_identical_across_wells`)  
 - [x] CLI `--rotation` / `--rotation-dry-run`  
 - [x] Catalog surfaces `firewall_certified` / near_miss  
-- [ ] Live multi-well JTOD1-class batch (operator paths; not fixture-only)  
+- [x] Live multi-well JTOD1-class batch (`docs/examples/job_rotation_jtod1.manifest.json` → `ROTATION_PASS`, 3/3 firewall_certified, pin_identical)  
 - [x] Tests green; no λ=γ; no pin retune  
