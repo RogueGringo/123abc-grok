@@ -21,6 +21,7 @@ from __future__ import annotations
 from realm.job_os.eow_ship import inventory_eow_package, ship_eow_package
 from realm.job_os.firewall import assert_firewall_invariants, build_job_firewall
 from realm.job_os.loop import run_job_coherence_loop
+from realm.job_os.rotation import classify_rotation, run_job_rotation
 from realm.job_os.types import FreeParams, JobThresholds, Observations, SectionProposal
 
 __all__ = [
@@ -30,7 +31,9 @@ __all__ = [
     "SectionProposal",
     "assert_firewall_invariants",
     "build_job_firewall",
+    "classify_rotation",
     "inventory_eow_package",
     "run_job_coherence_loop",
+    "run_job_rotation",
     "ship_eow_package",
 ]

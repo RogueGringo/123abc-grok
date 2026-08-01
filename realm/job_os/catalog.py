@@ -77,6 +77,23 @@ def _summarize_run(run_dir: Path) -> dict[str, Any]:
         except Exception:  # noqa: BLE001
             eow_status = "present"
 
+    fw: dict[str, Any] = {}
+    if (run_dir / "FIREWALL.json").is_file():
+        try:
+            fw = json.loads((run_dir / "FIREWALL.json").read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001
+            fw = {}
+    if not fw:
+        fw = coh.get("firewall") or run.get("firewall") or {}
+    fw_certified = coh.get("firewall_certified")
+    if fw_certified is None:
+        fw_certified = run.get("firewall_certified")
+    if fw_certified is None and fw:
+        fw_certified = fw.get("certified")
+    fw_near = coh.get("firewall_near_miss")
+    if fw_near is None and fw:
+        fw_near = (fw.get("near_miss") or {}).get("near_miss")
+
     return {
         "run_id": run.get("run_id") or coh.get("run_id") or run_dir.name,
         "path": str(run_dir.resolve()),
@@ -96,6 +113,9 @@ def _summarize_run(run_dir: Path) -> dict[str, Any]:
         "eow_ship_status": eow_status,
         "partner_recipe": bool((run_dir / "PARTNER_RECIPE.json").is_file()),
         "has_trend_rollup": bool(trend),
+        "firewall_certified": bool(fw_certified) if fw_certified is not None else None,
+        "firewall_near_miss": bool(fw_near) if fw_near is not None else None,
+        "has_firewall": bool(fw) or (run_dir / "FIREWALL.json").is_file(),
         "not_acceptance": True,
     }
 
@@ -131,15 +151,16 @@ def write_job_os_catalog(root: Path | str) -> dict[str, Any]:
         "",
         "Not ACCEPTANCE. Pin + fixed-point remain the commercial gates.",
         "",
-        "| run_id | solved | stop | rounds | λ1 trend | EOW | recipe | path |",
-        "|--------|:------:|------|-------:|----------|-----|:------:|------|",
+        "| run_id | solved | fw_cert | near_miss | stop | rounds | λ1 | EOW | recipe |",
+        "|--------|:------:|:-------:|:---------:|------|-------:|----|-----|:------:|",
     ]
     for r in runs:
         lines.append(
-            f"| `{r.get('run_id')}` | {r.get('solved')} | `{r.get('stop_reason')}` | "
-            f"{r.get('n_rounds')} | `{r.get('lambda_1_trend')}` | "
-            f"`{r.get('eow_ship_status')}` | {r.get('partner_recipe')} | "
-            f"`{r.get('path')}` |"
+            f"| `{r.get('run_id')}` | {r.get('solved')} | "
+            f"{r.get('firewall_certified')} | {r.get('firewall_near_miss')} | "
+            f"`{r.get('stop_reason')}` | {r.get('n_rounds')} | "
+            f"`{r.get('lambda_1_trend')}` | `{r.get('eow_ship_status')}` | "
+            f"{r.get('partner_recipe')} |"
         )
     lines.append("")
     (root / "INDEX.md").write_text("\n".join(lines), encoding="utf-8")

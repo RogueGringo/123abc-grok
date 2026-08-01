@@ -39,6 +39,7 @@ if str(ROOT) not in sys.path:
 
 from realm.job_os.catalog import write_job_os_catalog
 from realm.job_os.loop import run_job_coherence_loop
+from realm.job_os.rotation import run_job_rotation
 from realm.job_os.types import FreeParams, JobThresholds
 
 logger = logging.getLogger("job_coherence")
@@ -57,6 +58,20 @@ def main(argv: list[str] | None = None) -> int:
         "--catalog",
         action="store_true",
         help="scan --out-dir for Job OS runs; write INDEX.json + INDEX.md (no negotiate)",
+    )
+    p.add_argument(
+        "--rotation",
+        type=Path,
+        default=None,
+        help=(
+            "multi-well rotation manifest JSON (Mode C): same pin thresholds, "
+            "per-well Job OS OS runs, ROTATION_REPORT under --out-dir"
+        ),
+    )
+    p.add_argument(
+        "--rotation-dry-run",
+        action="store_true",
+        help="with --rotation: validate manifest and write dry-run report only",
     )
     p.add_argument(
         "--las",
@@ -262,6 +277,47 @@ def main(argv: list[str] | None = None) -> int:
             )
         )
         return 0
+
+    if args.rotation is not None:
+        try:
+            report = run_job_rotation(
+                args.rotation,
+                out_root=args.out_dir,
+                max_rounds=int(args.max_rounds),
+                dry_run=bool(args.rotation_dry_run),
+            )
+        except FileNotFoundError as exc:
+            logger.error("%s", exc)
+            return 2
+        except ValueError as exc:
+            logger.error("%s", exc)
+            return 2
+        print(
+            json.dumps(
+                {
+                    "rotation": True,
+                    "batch_id": report.get("batch_id"),
+                    "branch": report.get("branch"),
+                    "n_wells": (report.get("classification") or {}).get("n_wells"),
+                    "n_firewall_certified": (report.get("classification") or {}).get(
+                        "n_firewall_certified"
+                    ),
+                    "pin_identical": report.get("pin_identical_across_wells"),
+                    "batch_dir": report.get("batch_dir"),
+                    "dry_run": report.get("dry_run"),
+                    "note": "ROTATION branch from firewall_certified; residue not accept",
+                },
+                indent=2,
+            )
+        )
+        branch = str(report.get("branch") or "")
+        if branch == "ROTATION_PASS":
+            return 0
+        if branch == "DRY_RUN":
+            return 0
+        if branch == "ROTATION_PARTIAL":
+            return 3
+        return 4
 
     if args.eow_package is not None and not args.eow_package.exists():
         logger.error("--eow-package path not found: %s", args.eow_package)

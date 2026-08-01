@@ -87,6 +87,26 @@ certify fails (pin hard fail / unsolved) → **REJECT** for partner ship.
 - `pin_writable: false` always — explore metrics never retune mono ε / pack / soft_T.
 - Never λ=γ (graph λ1 is algebraic connectivity only).
 
+## Multi-well rotation (Mode C)
+
+Same **pin thresholds** across a rotation group; merit = fraction `firewall_certified`, not science mean.
+
+```bash
+# manifest JSON — see design dual-stalk-ops-bridge §3
+python job_coherence.py --rotation path/to/manifest.json --out-dir out/rotation
+python job_coherence.py --rotation path/to/manifest.json --rotation-dry-run --out-dir out/rotation
+```
+
+| Exit | Branch |
+|------|--------|
+| 0 | `ROTATION_PASS` or dry-run |
+| 3 | `ROTATION_PARTIAL` |
+| 4 | `ROTATION_FAIL` / errors |
+
+Artifacts: `out/rotation/<batch_id>/MANIFEST.json`, `ROTATION_REPORT.json|md`, `wells/<well_id>/…`.
+
+Design: [2026-07-31-dual-stalk-ops-bridge-design.md](superpowers/specs/2026-07-31-dual-stalk-ops-bridge-design.md)
+
 ## Navigator menu (non-CLI)
 
 Keyboard-driven wizard for the same Job OS + dynamical topology effects without memorizing flags. Pin is **read-only** (never soft_T / mono ε rewrite). Topology measure reports are **not ACCEPTANCE**.
