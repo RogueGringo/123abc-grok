@@ -1,0 +1,19 @@
+[project]
+name = "123abc-grok-toestub"
+version = "0.1.0"
+description = "ToeStub MCP governor for Job Coherence OS"
+requires-python = ">=3.11"
+dependencies = ["mcp>=1.0"]
+
+[project.optional-dependencies]
+dev = ["pytest", "numpy"]
+
+[project.scripts]
+toestub-mcp = "toestub.mcp_server:main"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["toestub*", "realm*"]
