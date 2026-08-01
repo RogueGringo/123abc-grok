@@ -757,6 +757,7 @@ def run_coherence_loop(
     os_mode: bool = False,
     resume_dir: Path | str | None = None,
     run_id: str | None = None,
+    with_dynamical_topology: bool = False,
 ) -> dict[str, Any]:
     """Execute cyclic observe→multi-section propose→merge→export until coherent.
 
@@ -766,6 +767,9 @@ def run_coherence_loop(
 
     OS mode (os_mode=True): RUN.json, ledger.jsonl, stability-K fixed-point,
     PARTNER_RECIPE on SOLVED, optional resume.
+
+    When ``with_dynamical_topology``: write out_root/DYNAMICAL_TOPOLOGY.json from
+    ledger free-param stages (measure only; never pin / never ACCEPTANCE).
 
     Fixed-point (commercial routine): is_solved ∧ empty free-param board for
     K consecutive cycles (stability_k). Default K=1 matches legacy one-shot halt.
@@ -1274,6 +1278,9 @@ def run_coherence_loop(
         "ledger": ledger,
         "out_root": str(out_root.resolve()),
         "pdb_ids": list(pdb_ids),
+        "with_dynamical_topology": bool(with_dynamical_topology),
+        "dynamical_topology": None,
+        "dynamical_topology_path": None,
         "note": (
             "Cyclic observe→multi-section propose→merge→export "
             "(+ optional genotype NS micro-search). "
@@ -1284,6 +1291,40 @@ def run_coherence_loop(
             "Not enrichment score-chase. Never lambda=gamma."
         ),
     }
+
+    # Optional dynamical topology MEASURE (ledger free-param stages only)
+    if with_dynamical_topology:
+        try:
+            from realm.dynamical_topology.stages_handoff import (
+                build_stages_from_handoff_ledger,
+            )
+            from realm.dynamical_topology.engine import run_dynamical_topology
+
+            stages = build_stages_from_handoff_ledger(ledger)
+            rep = run_dynamical_topology(stages)
+            dt_path = Path(out_root) / "DYNAMICAL_TOPOLOGY.json"
+            dt_path.write_text(
+                json.dumps(rep, indent=2) + "\n", encoding="utf-8"
+            )
+            result["dynamical_topology"] = rep
+            result["dynamical_topology_path"] = str(dt_path.resolve())
+            logger.info(
+                "handoff dynamical topology n_stages=%s n_long=%s path=%s",
+                rep.get("n_stages"),
+                rep.get("n_long"),
+                result["dynamical_topology_path"],
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("handoff dynamical topology measure skipped: %s", exc)
+            result["dynamical_topology"] = {
+                "kind": "dynamical_topology",
+                "not_acceptance": True,
+                "pin_writable": False,
+                "acceptance_writable": False,
+                "error": str(exc),
+                "n_stages": 0,
+            }
+
     (out_root / "COHERENCE.json").write_text(
         json.dumps(result, indent=2) + "\n", encoding="utf-8"
     )
