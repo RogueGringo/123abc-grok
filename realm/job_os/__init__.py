@@ -10,6 +10,7 @@ Ontology:
   - Survey: QC total G/MagF + optional discrete holonomy; never invent Inc/Azi
   - Regime: windowed H0 barcode + dual-gate science info (not accept alone)
   - Firewall: explore (science/topo/λ1) vs certify (pin+fixed-point); near-miss rejected
+  - Aliases (C6): inherited vendor→canonical mnemonics; never invent samples
   - EOW (D): package inventory + SHIP after SOLVED (or force UNSOLVED_SHIP)
   - NEVER claim ζ/Crit predicts ROP; NEVER retune pin mid-run
 

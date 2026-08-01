@@ -39,6 +39,11 @@
       "well_id": "archer_56_2_5_2H_time",
       "las": "C:\\JTOD1\\OILFIELD_DRILLING_DATA_EXAMPLE_FILES\\EDR_DATA\\LAS_Time\\PD566_Anadarko_SS_SurfaceData_Archer 56-2-5 2H_Time_1760755520646.las",
       "note": "Same well as depth file but time-indexed LAS — second substrate in rotation group"
+    },
+    {
+      "well_id": "chevron_rev_gf_drlg_mech_depth",
+      "las": "C:\\JTOD1\\OILFIELD_DRILLING_DATA_EXAMPLE_FILES\\MWD_EOW_EXAMPLES\\18MLD4216_Chevron - REV GF State T7-50-41 3H\\MWD Paperwork\\ERS\\PostRun003_18MLD4216_Chevron_REV GF State T7-50-41 3H\\Drilling Mechanics\\Drlg_Mech_Depth_Run 2&3.las",
+      "note": "Vendor mnemonics WOBX/SWOB → WOB via C6 inherited alias dictionary"
     }
   ]
 }

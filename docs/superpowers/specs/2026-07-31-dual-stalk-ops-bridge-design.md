@@ -144,7 +144,7 @@ out/rotation/<batch_id>/
 | C3 | Regime residue ops | regime + science info (prior) |
 | C4 | Topo-stable SOLVED | dual spine (prior) |
 | C5 | Cross-well rotation doctrine | **Mode C this wave** |
-| C6 | Inherited channel dictionary | channel_pack ontology (prior; deepen later) |
+| C6 | Inherited channel dictionary | **Shipped** `realm/job_os/aliases.py` (WOBX/SWOB→WOB, TQA→TOR, …) |
 
 ---
 

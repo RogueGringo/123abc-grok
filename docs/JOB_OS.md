@@ -111,7 +111,21 @@ Artifacts: `out/rotation/<batch_id>/MANIFEST.json`, `ROTATION_REPORT.json|md`, `
 python job_coherence.py --rotation docs/examples/job_rotation_jtod1.manifest.json --out-dir out/rotation_jtod1
 ```
 
-Example result (host with `C:\JTOD1` corpus): branch `ROTATION_PASS`, 3 wells firewall_certified, pin_identical across batch (Archer depth+MP/survey, LINK VJ RANCH time, Archer time).
+Example result (host with `C:\JTOD1` corpus): multi-well `firewall_certified` under identical pin (Archer depth+MP/survey, LINK VJ RANCH time, Archer time; Chevron Drlg_Mech via C6 WOBX→WOB alias).
+
+### Channel aliases (C6 inherited dictionary)
+
+Vendor curve names map onto pack canonicals **only when series already exist** — never invent samples, never retune pin.
+
+| Canonical | Accepted sources |
+|-----------|------------------|
+| WOB | WOB, WOBX, SWOB |
+| TOR | TOR, TQA, TQX |
+| SPP | SPP, SPPA |
+| GAMMA | GAMMA, GAM, GRC, GR |
+| RPM | RPM, RPM_P |
+
+Module: `realm/job_os/aliases.py` (applied every cycle after LAS parse).
 
 Design: [2026-07-31-dual-stalk-ops-bridge-design.md](superpowers/specs/2026-07-31-dual-stalk-ops-bridge-design.md)
 

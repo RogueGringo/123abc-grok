@@ -20,6 +20,7 @@ from realm.dynamical_topology.stages_job import (
     build_stages_from_job_run,
     build_stages_from_structure_scores,
 )
+from realm.job_os.aliases import apply_channel_aliases
 from realm.job_os.chunk_inspect import run_las_chunk_inspect
 from realm.job_os.eow_ship import ship_eow_package
 from realm.job_os.firewall import assert_firewall_invariants, build_job_firewall
@@ -325,6 +326,8 @@ def execute_job_cycle(
     cycle_dir.mkdir(parents=True, exist_ok=True)
     p = params.clamp()
     raw = parse_las(las_path, max_rows=max_rows)
+    # Inherited dictionary: vendor mnemonics → pack canonicals (no sample invent)
+    raw = apply_channel_aliases(raw)
     # Null-policy on surface skeleton first; then join presence-only MP fibers
     # so length-mismatched channels never drive surface row drops.
     series = apply_null_policy(raw, p.null_policy)
