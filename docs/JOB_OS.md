@@ -31,6 +31,8 @@ python job_coherence.py --os \
 | `--stability-k K` | fixed-point: empty board × K cycles |
 | `--eow-package DIR` | post-SOLVED client package inventory |
 | `--catalog` | scan `--out-dir` → INDEX.json / INDEX.md |
+| `--rotation MANIFEST` | multi-well rotation under identical pin |
+| `--audit RUN_OR_BATCH_DIR` | partner re-check FIREWALL / pin seal (no re-ingest) |
 
 ### Free params (negotiated)
 
@@ -132,6 +134,17 @@ Vendor curve names map onto pack canonicals **only when series already exist** �
 | RPM | RPM, RPM_P |
 
 Module: `realm/job_os/aliases.py` (applied every cycle after LAS parse).
+
+## Partner audit
+
+Re-check seals on an existing run or rotation batch — **no re-ingest, no pin retune**.
+
+```bash
+python job_coherence.py --audit out/job_os/<run_id>
+python job_coherence.py --audit out/rotation_jtod1/<batch_id>
+```
+
+Exit `0` = audit ok; `5` = fail findings (near-miss certified, pin_writable, missing COHERENCE, etc.).
 
 Design: [2026-07-31-dual-stalk-ops-bridge-design.md](superpowers/specs/2026-07-31-dual-stalk-ops-bridge-design.md)
 

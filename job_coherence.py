@@ -37,6 +37,7 @@ ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from realm.job_os.audit import audit_job_run, audit_rotation_batch
 from realm.job_os.catalog import write_job_os_catalog
 from realm.job_os.loop import run_job_coherence_loop
 from realm.job_os.rotation import run_job_rotation
@@ -72,6 +73,15 @@ def main(argv: list[str] | None = None) -> int:
         "--rotation-dry-run",
         action="store_true",
         help="with --rotation: validate manifest and write dry-run report only",
+    )
+    p.add_argument(
+        "--audit",
+        type=Path,
+        default=None,
+        help=(
+            "partner audit: Job OS run_dir (COHERENCE/FIREWALL) or rotation batch_dir "
+            "(ROTATION_REPORT.json); no re-ingest, no pin retune"
+        ),
     )
     p.add_argument(
         "--las",
@@ -277,6 +287,18 @@ def main(argv: list[str] | None = None) -> int:
             )
         )
         return 0
+
+    if args.audit is not None:
+        target = Path(args.audit)
+        if not target.exists():
+            logger.error("--audit path not found: %s", target)
+            return 2
+        if (target / "ROTATION_REPORT.json").is_file():
+            body = audit_rotation_batch(target)
+        else:
+            body = audit_job_run(target)
+        print(json.dumps(body, indent=2))
+        return 0 if body.get("ok") else 5
 
     if args.rotation is not None:
         try:

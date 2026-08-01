@@ -50,6 +50,7 @@ jobs:
                  tests/test_job_os_firewall.py \
                  tests/test_job_os_rotation.py \
                  tests/test_job_os_aliases.py \
+                 tests/test_job_os_audit.py \
                  tests/test_job_os_catalog.py \
                  tests/test_kb_geometry.py \
                  tests/test_kb_geometry_p3p6.py \
@@ -118,6 +119,9 @@ jobs:
           print("rotation_ci_ok", report.get("batch_id"), report.get("branch"))
           print("job-coherence CI OK")
           PY
+          # Partner audit CLI on smoke run + rotation batch
+          python job_coherence.py --audit /tmp/job_os_ci/ci_smoke
+          python job_coherence.py --audit "$(ls -d /tmp/rotation_ci/*/ | tail -1)"
       - name: Upload job OS CI artifacts
         if: always()
         uses: actions/upload-artifact@v4

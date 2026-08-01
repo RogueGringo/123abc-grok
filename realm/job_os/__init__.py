@@ -19,6 +19,7 @@ Mirror of realm.handoff.coherence OS v2 patterns without protein adapters.
 
 from __future__ import annotations
 
+from realm.job_os.audit import audit_job_run, audit_rotation_batch
 from realm.job_os.eow_ship import inventory_eow_package, ship_eow_package
 from realm.job_os.firewall import assert_firewall_invariants, build_job_firewall
 from realm.job_os.loop import run_job_coherence_loop
@@ -31,6 +32,8 @@ __all__ = [
     "Observations",
     "SectionProposal",
     "assert_firewall_invariants",
+    "audit_job_run",
+    "audit_rotation_batch",
     "build_job_firewall",
     "classify_rotation",
     "inventory_eow_package",
