@@ -105,6 +105,12 @@ python job_coherence.py --rotation path/to/manifest.json --rotation-dry-run --ou
 
 Artifacts: `out/rotation/<batch_id>/MANIFEST.json`, `ROTATION_REPORT.json|md`, `wells/<well_id>/…`.
 
+**CI fixture manifest** (no JTOD1): [docs/examples/job_rotation_fixture.manifest.json](examples/job_rotation_fixture.manifest.json)
+
+```bash
+python job_coherence.py --rotation docs/examples/job_rotation_fixture.manifest.json --out-dir out/rotation_ci
+```
+
 **Live JTOD1 example manifest:** [docs/examples/job_rotation_jtod1.manifest.json](examples/job_rotation_jtod1.manifest.json)
 
 ```bash

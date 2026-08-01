@@ -13,6 +13,7 @@ on:
       - "realm/dynamical_topology/**"
       - "realm/menu/**"
       - "tests/test_job_coherence*.py"
+      - "tests/test_job_os_*.py"
       - "tests/test_kb_geometry*.py"
       - "tests/test_trend_rollup.py"
       - "tests/test_dynamical_topology*.py"
@@ -20,6 +21,7 @@ on:
       - "tests/fixtures/mini_*.las"
       - "tests/fixtures/mini_micropulse*"
       - "tests/fixtures/mini_survey.csv"
+      - "docs/examples/job_rotation*.manifest.json"
       - ".github/workflows/job-coherence.yml"
 
 jobs:
@@ -45,6 +47,10 @@ jobs:
                  tests/test_job_coherence_survey.py \
                  tests/test_job_coherence_regime.py \
                  tests/test_job_coherence_eow.py \
+                 tests/test_job_os_firewall.py \
+                 tests/test_job_os_rotation.py \
+                 tests/test_job_os_aliases.py \
+                 tests/test_job_os_catalog.py \
                  tests/test_kb_geometry.py \
                  tests/test_kb_geometry_p3p6.py \
                  tests/test_kb_geometry_h1.py \
@@ -56,7 +62,7 @@ jobs:
                  tests/test_dynamical_topology_crit_handoff.py \
                  tests/test_realm_menu.py \
                  -q --tb=line
-      - name: Fixture OS smoke + catalog
+      - name: Fixture OS smoke + catalog + FIREWALL
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: |
@@ -76,16 +82,49 @@ jobs:
           assert coh.get("solved") is True, coh.get("stop_reason")
           assert (root / "PARTNER_RECIPE.json").is_file()
           assert (root / "TREND_ROLLUP.json").is_file()
+          assert (root / "FIREWALL.json").is_file(), "FIREWALL.json missing"
+          fw = json.loads((root / "FIREWALL.json").read_text())
+          assert fw.get("pin_writable") is False
+          assert fw.get("certified") is True, fw.get("near_miss")
+          assert coh.get("firewall_certified") is True
           cat = json.loads(Path("/tmp/job_os_ci/INDEX.json").read_text())
           assert cat.get("n_runs", 0) >= 1
           assert cat.get("not_acceptance") is True
-          print("job-coherence CI OK", coh.get("final_params"), "runs", cat.get("n_runs"))
+          # catalog should surface firewall when present
+          rows = cat.get("runs") or []
+          assert any(r.get("has_firewall") or r.get("firewall_certified") for r in rows)
+          print("job-coherence smoke OK", coh.get("final_params"), "runs", cat.get("n_runs"))
+          PY
+      - name: Fixture multi-well rotation (ROTATION_PASS)
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python job_coherence.py \
+            --rotation docs/examples/job_rotation_fixture.manifest.json \
+            --out-dir /tmp/rotation_ci
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path("/tmp/rotation_ci")
+          batches = sorted([p for p in root.iterdir() if p.is_dir()])
+          assert batches, "no rotation batch dir"
+          report = json.loads((batches[-1] / "ROTATION_REPORT.json").read_text())
+          assert report.get("branch") == "ROTATION_PASS", report
+          assert report.get("pin_identical_across_wells") is True
+          assert report.get("pin_writable") is False
+          cls = report.get("classification") or {}
+          assert cls.get("n_firewall_certified") == 2
+          assert cls.get("n_wells") == 2
+          print("rotation_ci_ok", report.get("batch_id"), report.get("branch"))
+          print("job-coherence CI OK")
           PY
       - name: Upload job OS CI artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: job-os-ci
-          path: /tmp/job_os_ci/
+          path: |
+            /tmp/job_os_ci/
+            /tmp/rotation_ci/
           if-no-files-found: ignore
           retention-days: 14

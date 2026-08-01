@@ -1,0 +1,32 @@
+{
+  "kind": "job_rotation_manifest",
+  "prereg_id": "fixture_ci_v1",
+  "ontology": "job_rotation_not_acceptance_for_residue",
+  "note": "CI / offline rotation smoke: same mini_edr.las as two well_ids under identical pin. No JTOD1 required.",
+  "stability_k": 1,
+  "max_rounds": 4,
+  "with_dynamical_topology": true,
+  "free_params": {
+    "align_mode": "depth_primary",
+    "window_scale": 1,
+    "channel_pack": "surface_min",
+    "null_policy": "mark_only",
+    "survey_gate": "off",
+    "regime_mode": "off"
+  },
+  "thresholds": {
+    "depth_mono_eps": 1e-6,
+    "max_depth_mono_violations": 0,
+    "require_pin": true
+  },
+  "wells": [
+    {
+      "well_id": "fixture_w1",
+      "las": "tests/fixtures/mini_edr.las"
+    },
+    {
+      "well_id": "fixture_w2",
+      "las": "tests/fixtures/mini_edr.las"
+    }
+  ]
+}
