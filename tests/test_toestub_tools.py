@@ -55,3 +55,22 @@ def test_job_run_rejects_pin_in_free(tmp_path):
     )
     assert env["ok"] is False
     assert "free" in (env.get("error") or "").lower() or "valid" in (env.get("error") or "").lower()
+
+
+def test_job_rotation_fixture_manifest(tmp_path):
+    from toestub.tools_job import tool_job_rotation
+    # Prefer docs/examples/job_rotation_fixture.manifest.json with absolute las override via inline:
+    man = {
+        "prereg_id": "toestub_test",
+        "stability_k": 1,
+        "max_rounds": 4,
+        "free_params": {"channel_pack": "surface_min"},
+        "wells": [
+            {"well_id": "w1", "las": str(FIXTURE)},
+            {"well_id": "w2", "las": str(FIXTURE)},
+        ],
+    }
+    env = tool_job_rotation(manifest=man, out_root=str(tmp_path / "rot"))
+    assert env["ok"] is True
+    assert env["branch"] == "ROTATION_PASS"
+    assert env["certified"] is True
