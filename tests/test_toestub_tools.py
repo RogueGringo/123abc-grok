@@ -31,3 +31,27 @@ def test_catalog(tmp_path):
     cat = tool_job_catalog(str(tmp_path))
     assert cat["ok"] is True
     assert cat["certified"] is None
+
+
+def test_job_run_fixture_certified(tmp_path):
+    from toestub.tools_job import tool_job_run
+    env = tool_job_run(
+        las_path=str(FIXTURE),
+        out_root=str(tmp_path / "run"),
+        max_rounds=4,
+        free_params={"channel_pack": "surface_min"},
+    )
+    assert env["ok"] is True
+    assert env["certified"] is True
+    assert Path(env["paths"]["firewall"]).is_file()
+
+
+def test_job_run_rejects_pin_in_free(tmp_path):
+    from toestub.tools_job import tool_job_run
+    env = tool_job_run(
+        las_path=str(FIXTURE),
+        out_root=str(tmp_path / "bad"),
+        free_params={"depth_mono_eps": 0.1},
+    )
+    assert env["ok"] is False
+    assert "free" in (env.get("error") or "").lower() or "valid" in (env.get("error") or "").lower()

@@ -1,6 +1,6 @@
-"""ToeStub Job OS tool handlers — firewall_read, job_audit, job_catalog.
+"""ToeStub Job OS tool handlers — firewall_read, job_audit, job_catalog, job_run.
 
-job_run / job_rotation handlers land in later tasks.
+job_rotation handler lands in a later task.
 """
 
 from __future__ import annotations
@@ -12,8 +12,18 @@ from typing import Any
 from realm.job_os.audit import audit_job_run, audit_rotation_batch
 from realm.job_os.catalog import write_job_os_catalog
 from realm.job_os.firewall import build_job_firewall
+from realm.job_os.loop import run_job_coherence_loop
+from realm.job_os.types import FreeParams, JobThresholds
 from toestub.envelope import build_envelope
-from toestub.schemas import resolve_path
+from toestub.schemas import (
+    check_allow_roots,
+    get_allow_roots,
+    get_repo_root,
+    resolve_path,
+    validate_free_params,
+    validate_pin_config,
+    ToeStubValidationError,
+)
 
 
 def tool_firewall_read(run_dir: str, *, include_explore: bool = False) -> dict:
@@ -211,4 +221,179 @@ def tool_job_catalog(out_dir: str) -> dict:
             "n_solved": n_solved,
             "catalog": body,
         },
+    )
+
+
+def tool_job_run(
+    *,
+    las_path: str,
+    micropulse_path: str | None = None,
+    survey_path: str | None = None,
+    out_root: str | None = None,
+    max_rounds: int = 6,
+    stability_k: int = 1,
+    free_params: dict | None = None,
+    pin_config: dict | None = None,
+    with_regime: bool = False,
+    with_science: bool = False,
+    with_dynamical_topology: bool = False,
+    max_rows: int | None = None,
+    eow_package: str | None = None,
+    include_explore: bool = False,
+) -> dict:
+    """Run Job OS coherence loop (os_mode=True); envelope with firewall cert.
+
+    free_params never enter JobThresholds; pin only via explicit pin_config.
+    Validation errors and kernel exceptions become ok=False envelopes.
+    """
+    try:
+        free = validate_free_params(free_params)
+        pin = validate_pin_config(pin_config)
+    except ToeStubValidationError as exc:
+        return build_envelope(
+            ok=False,
+            surface="job_run: free/pin validation failed",
+            certified=None,
+            error=str(exc),
+        )
+    except Exception as exc:  # noqa: BLE001
+        return build_envelope(
+            ok=False,
+            surface="job_run: free/pin validation failed",
+            certified=None,
+            error=str(exc),
+        )
+
+    las = resolve_path(str(las_path) if las_path is not None else None)
+    mp = resolve_path(str(micropulse_path) if micropulse_path is not None else None)
+    survey = resolve_path(str(survey_path) if survey_path is not None else None)
+    eow = resolve_path(str(eow_package) if eow_package is not None else None)
+    if out_root is None or str(out_root).strip() == "":
+        out = get_repo_root() / "out" / "job_os"
+    else:
+        out = resolve_path(str(out_root))
+        if out is None:
+            out = get_repo_root() / "out" / "job_os"
+
+    allow = get_allow_roots()
+    try:
+        if las is not None:
+            check_allow_roots(las, allow)
+        if mp is not None:
+            check_allow_roots(mp, allow)
+        if survey is not None:
+            check_allow_roots(survey, allow)
+        if out is not None:
+            check_allow_roots(out, allow)
+        if eow is not None:
+            check_allow_roots(eow, allow)
+    except ToeStubValidationError as exc:
+        return build_envelope(
+            ok=False,
+            surface="job_run: path not under allow_roots",
+            certified=None,
+            error=str(exc),
+        )
+
+    if las is None or not las.is_file():
+        return build_envelope(
+            ok=False,
+            surface="job_run: LAS missing or not a file",
+            certified=None,
+            paths={"las_path": str(las) if las is not None else None},
+            error=f"las_path required and must exist as a file (got {las})",
+        )
+
+    # FreeParams from free only; JobThresholds from pin only (never free keys).
+    initial = FreeParams(**free)
+    thresholds = JobThresholds(**pin)
+
+    try:
+        result = run_job_coherence_loop(
+            las_path=las,
+            micropulse_path=mp,
+            survey_path=survey,
+            out_root=out,
+            initial=initial,
+            thresholds=thresholds,
+            max_rounds=int(max_rounds),
+            stability_k=int(stability_k),
+            os_mode=True,
+            with_regime=bool(with_regime),
+            with_science=bool(with_science),
+            with_dynamical_topology=bool(with_dynamical_topology),
+            max_rows=int(max_rows) if max_rows is not None else None,
+            eow_package=eow,
+        )
+    except Exception as exc:  # noqa: BLE001
+        return build_envelope(
+            ok=False,
+            surface="job_run: loop failed",
+            certified=None,
+            paths={
+                "las_path": str(las),
+                "out_root": str(out),
+            },
+            error=str(exc),
+        )
+
+    run_root = Path(str(result.get("out_root") or out))
+    coh_path = run_root / "COHERENCE.json"
+    fw_path = run_root / "FIREWALL.json"
+    recipe_path = run_root / "PARTNER_RECIPE.json"
+    # Prefer kernel-reported firewall_path when present
+    fw_reported = result.get("firewall_path")
+    if fw_reported:
+        fw_path = Path(str(fw_reported))
+
+    certified = result.get("firewall_certified")
+    if certified is not None:
+        certified = bool(certified)
+    near_miss = result.get("firewall_near_miss")
+    if near_miss is not None:
+        near_miss = bool(near_miss)
+
+    stop = result.get("stop_reason") or result.get("status")
+    surface = (
+        f"job_run certified={certified} near_miss={near_miss} "
+        f"solved={result.get('solved')} stop={stop} run={run_root.name}"
+    )
+
+    paths: dict[str, Any] = {
+        "out_root": str(run_root.resolve() if run_root.exists() else run_root),
+        "las_path": str(las),
+        "coherence": str(coh_path) if coh_path.is_file() else None,
+        "firewall": str(fw_path) if fw_path.is_file() else (
+            str(fw_path) if fw_path.exists() else None
+        ),
+        "partner_recipe": str(recipe_path) if recipe_path.is_file() else None,
+    }
+    rid = result.get("run_id")
+    if rid is not None:
+        paths["run_id"] = str(rid)
+
+    # Ensure firewall path string even if is_file check races
+    if paths.get("firewall") is None and result.get("firewall_path"):
+        paths["firewall"] = str(result["firewall_path"])
+
+    explore = None
+    extra: dict[str, Any] | None = None
+    if include_explore:
+        fw = result.get("firewall")
+        if isinstance(fw, dict):
+            explore = fw.get("explore")
+        extra = {
+            "firewall": fw,
+            "solved": result.get("solved"),
+            "stop_reason": result.get("stop_reason"),
+        }
+
+    return build_envelope(
+        ok=True,
+        surface=surface,
+        certified=certified if isinstance(certified, bool) else None,
+        near_miss=near_miss if isinstance(near_miss, bool) else None,
+        paths=paths,
+        explore=explore,
+        extra=extra,
     )
