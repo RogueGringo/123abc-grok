@@ -14,7 +14,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from realm.dynamical_topology.engine import run_dynamical_topology
+from realm.dynamical_topology import engine as dynamical_topology_engine
+from realm.dynamical_topology.engine import run_dynamical_topology, topology_stable
 from realm.dynamical_topology.stages_job import (
     build_stages_from_job_run,
     build_stages_from_structure_scores,
@@ -118,6 +119,39 @@ def build_trend_rollup(ledger: list[dict[str, Any]]) -> dict[str, Any]:
         ),
         "kb_source": "Parent KB threshold_guidance + Academic KB multi-scale",
     }
+
+
+def _structure_scores_from_ledger(ledger: list[dict[str, Any]]) -> list[float]:
+    scores: list[float] = []
+    for e in ledger:
+        if not isinstance(e.get("round"), int):
+            continue
+        t = e.get("trend") or {}
+        if t.get("regime_structure_score") is not None:
+            scores.append(float(t["regime_structure_score"]))
+            continue
+        obs = e.get("observations") or {}
+        if obs.get("regime_structure_score") is not None:
+            scores.append(float(obs["regime_structure_score"]))
+    return scores
+
+
+def _compute_dynamical_topology_report(
+    out_root: Path,
+    ledger: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Build stages from job run / ledger scores and run the measure engine.
+
+    Never writes pin / soft_T / ACCEPTANCE.
+    """
+    stages = build_stages_from_job_run(out_root)
+    if len(stages) < 2:
+        scores = _structure_scores_from_ledger(ledger)
+        if len(scores) >= 1 and len(stages) < 1:
+            stages = build_stages_from_structure_scores(scores)
+        elif len(scores) >= 2 and len(stages) < 2:
+            stages = build_stages_from_structure_scores(scores)
+    return run_dynamical_topology(stages)
 
 
 def write_partner_recipe(
@@ -450,6 +484,7 @@ def run_job_coherence_loop(
     with_regime: bool = False,
     with_science: bool = False,
     with_dynamical_topology: bool = False,
+    topo_stability: bool = False,
     eow_package: Path | str | None = None,
     force_ship: bool = False,
     chunk_rows: int | None = None,
@@ -464,6 +499,8 @@ def run_job_coherence_loop(
     PARTNER_RECIPE on SOLVED, optional resume.
 
     Fixed-point: is_solved ∧ empty free-param board for K consecutive cycles.
+    When ``topo_stability``: also require topology_stable for those K cycles
+    (auto-enables dynamical topology measure; never pin / never ACCEPTANCE).
 
     P2: optional micropulse_path (dir of CSVs or single file) joins downhole fibers.
     P3: optional survey_path and/or SURVEY fiber in MicroPulse; survey_gate free param.
@@ -481,6 +518,10 @@ def run_job_coherence_loop(
     with_regime = bool(with_regime)
     with_science = bool(with_science)
     with_dynamical_topology = bool(with_dynamical_topology)
+    topo_stability = bool(topo_stability)
+    # Control gate requires measure; auto-enable when topo-stability is on.
+    if topo_stability:
+        with_dynamical_topology = True
     chunk_rows_i = int(chunk_rows) if chunk_rows is not None else None
     max_chunks_i = max(1, int(max_chunks))
     max_rows_i = int(max_rows) if max_rows is not None else None
@@ -541,6 +582,10 @@ def run_job_coherence_loop(
             with_science = bool(run_meta.get("with_science"))
         if "with_dynamical_topology" in run_meta:
             with_dynamical_topology = bool(run_meta.get("with_dynamical_topology"))
+        if "topo_stability" in run_meta:
+            topo_stability = bool(run_meta.get("topo_stability"))
+        if topo_stability:
+            with_dynamical_topology = True
         run_doc = dict(run_meta)
         run_doc["status"] = "resuming"
         logger.info(
@@ -605,6 +650,8 @@ def run_job_coherence_loop(
     stop_reason = "max_rounds"
     partner_recipe_path: str | None = None
     pin0: dict[str, Any] = {"ok": None}
+    # Dual-spine control: previous dynamical topology report across cycles
+    prev_topo_report: dict[str, Any] | None = None
 
     # Early exit if resume of already-solved run
     if resume_dir is not None and any(
@@ -627,6 +674,7 @@ def run_job_coherence_loop(
             "with_regime": with_regime,
             "with_science": with_science,
             "with_dynamical_topology": with_dynamical_topology,
+            "topo_stability": topo_stability,
             "thresholds": thr.to_dict(),
             "stability_k": stability_k,
             "max_rounds": int(max_rounds),
@@ -794,7 +842,35 @@ def run_job_coherence_loop(
                 board_props = []
             empty_board = len(board_props) == 0
 
-            if solved_slice and empty_board:
+            # Dual-spine control: topology_stable gate (optional; default off)
+            topo_ok = True
+            curr_topo: dict[str, Any] | None = None
+            if topo_stability:
+                try:
+                    # provisional ledger includes this cycle for score fallback
+                    provisional = list(ledger) + [
+                        {
+                            "round": rnd,
+                            "trend": _cycle_trend_fields(summary),
+                            "observations": obs.to_dict(),
+                        }
+                    ]
+                    curr_topo = _compute_dynamical_topology_report(
+                        out_root, provisional
+                    )
+                    # Call via engine module so tests can monkeypatch topology_stable
+                    topo_ok = bool(
+                        dynamical_topology_engine.topology_stable(
+                            curr_topo, prev=prev_topo_report
+                        )
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("topology_stable control skipped: %s", exc)
+                    topo_ok = False
+                    curr_topo = None
+                prev_topo_report = curr_topo
+
+            if solved_slice and empty_board and topo_ok:
                 stability_streak += 1
             else:
                 stability_streak = 0
@@ -808,6 +884,8 @@ def run_job_coherence_loop(
                 "solved": False,
                 "stability_streak": stability_streak,
                 "stability_k": stability_k,
+                "topo_stability": topo_stability,
+                "topology_stable": topo_ok if topo_stability else None,
                 "pin": {
                     "ok": pin.get("ok"),
                     "hard_ok": pin.get("hard_ok"),
@@ -839,8 +917,13 @@ def run_job_coherence_loop(
                 "sources": summary,
             }
 
-            # Fixed-point: is_solved ∧ empty board × K consecutive cycles
-            if solved_slice and empty_board and stability_streak >= stability_k:
+            # Fixed-point: is_solved ∧ empty board [∧ topology_stable] × K
+            if (
+                solved_slice
+                and empty_board
+                and topo_ok
+                and stability_streak >= stability_k
+            ):
                 entry["action"] = "halt"
                 entry["reason"] = (
                     "fixed_point" if stability_k > 1 or os_mode else "coherent"
@@ -851,24 +934,31 @@ def run_job_coherence_loop(
                 solved = True
                 stop_reason = "coherent"
                 logger.info(
-                    "job SOLVED at round %s score=%.3f streak=%s/%s",
+                    "job SOLVED at round %s score=%.3f streak=%s/%s topo_ok=%s",
                     rnd,
                     score,
                     stability_streak,
                     stability_k,
+                    topo_ok,
                 )
                 break
 
             if solved_slice and empty_board and stability_streak < stability_k:
                 entry["action"] = "stability_hold"
-                entry["reason"] = f"streak_{stability_streak}_of_{stability_k}"
+                if topo_stability and not topo_ok:
+                    entry["reason"] = (
+                        f"topo_unstable_streak_{stability_streak}_of_{stability_k}"
+                    )
+                else:
+                    entry["reason"] = f"streak_{stability_streak}_of_{stability_k}"
                 entry["next_params"] = params.to_dict()
                 _commit_entry(entry, cycle_dir)
                 logger.info(
-                    "stability hold round %s streak=%s/%s",
+                    "stability hold round %s streak=%s/%s topo_ok=%s",
                     rnd,
                     stability_streak,
                     stability_k,
+                    topo_ok,
                 )
                 continue
 
@@ -975,6 +1065,7 @@ def run_job_coherence_loop(
         run_doc["with_regime"] = with_regime
         run_doc["with_science"] = with_science
         run_doc["with_dynamical_topology"] = with_dynamical_topology
+        run_doc["topo_stability"] = topo_stability
         run_doc["eow_package"] = eow_package_str
         run_doc["eow_ship_status"] = eow_ship_status
         run_doc["eow_ship"] = (
@@ -999,25 +1090,9 @@ def run_job_coherence_loop(
     dynamical_topology_path: str | None = None
     if with_dynamical_topology:
         try:
-            stages = build_stages_from_job_run(out_root)
-            if len(stages) < 2:
-                # Synthesize from ledger structure scores if cycle artifacts thin
-                scores: list[float] = []
-                for e in ledger:
-                    if not isinstance(e.get("round"), int):
-                        continue
-                    t = e.get("trend") or {}
-                    if t.get("regime_structure_score") is not None:
-                        scores.append(float(t["regime_structure_score"]))
-                    else:
-                        obs = e.get("observations") or {}
-                        if obs.get("regime_structure_score") is not None:
-                            scores.append(float(obs["regime_structure_score"]))
-                if len(scores) >= 1 and len(stages) < 1:
-                    stages = build_stages_from_structure_scores(scores)
-                elif len(scores) >= 2 and len(stages) < 2:
-                    stages = build_stages_from_structure_scores(scores)
-            dynamical_topology_report = run_dynamical_topology(stages)
+            dynamical_topology_report = _compute_dynamical_topology_report(
+                out_root, ledger
+            )
             dt_path = out_root / "DYNAMICAL_TOPOLOGY.json"
             dt_path.write_text(
                 json.dumps(dynamical_topology_report, indent=2) + "\n",
@@ -1088,6 +1163,7 @@ def run_job_coherence_loop(
         "with_regime": with_regime,
         "with_science": with_science,
         "with_dynamical_topology": with_dynamical_topology,
+        "topo_stability": topo_stability,
         "dynamical_topology": dynamical_topology_report,
         "dynamical_topology_path": dynamical_topology_path,
         "chunk_rows": chunk_rows_i,
@@ -1108,6 +1184,7 @@ def run_job_coherence_loop(
             "P5: EOW SHIP after SOLVED (or --force-ship UNSOLVED_SHIP); "
             "KB D: optional chunk_rows inspect + max_rows cap. "
             "Dynamical topology measure optional (never pin). "
+            "topo_stability control optional (topology_stable × K; never pin). "
             "QC pin locked. Not ROP score-chase. Never ζ→ROP."
         ),
     }

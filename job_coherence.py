@@ -163,6 +163,14 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     p.add_argument(
+        "--topo-stability",
+        action="store_true",
+        help=(
+            "CONTROL: SOLVED requires topology_stable for stability-K consecutive "
+            "cycles (auto-enables dynamical topology measure; never pin)"
+        ),
+    )
+    p.add_argument(
         "--require-regime",
         action="store_true",
         help="P4: is_solved requires regime_mode != off + regime stalk_ok "
@@ -276,6 +284,7 @@ def main(argv: list[str] | None = None) -> int:
                 with_regime=bool(args.with_regime),
                 with_science=bool(args.with_science),
                 with_dynamical_topology=bool(args.with_dynamical_topology),
+                topo_stability=bool(args.topo_stability),
                 eow_package=args.eow_package,
                 force_ship=bool(args.force_ship),
                 chunk_rows=args.chunk_rows,
@@ -330,6 +339,7 @@ def main(argv: list[str] | None = None) -> int:
                 with_regime=bool(args.with_regime),
                 with_science=bool(args.with_science),
                 with_dynamical_topology=bool(args.with_dynamical_topology),
+                topo_stability=bool(args.topo_stability),
                 eow_package=args.eow_package,
                 force_ship=bool(args.force_ship),
                 chunk_rows=args.chunk_rows,
