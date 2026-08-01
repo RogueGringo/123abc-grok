@@ -7,11 +7,16 @@ on:
   push:
     paths:
       - "job_coherence.py"
+      - "realm_menu.py"
       - "realm/job_os/**"
       - "realm/kb_geometry/**"
+      - "realm/dynamical_topology/**"
+      - "realm/menu/**"
       - "tests/test_job_coherence*.py"
       - "tests/test_kb_geometry*.py"
       - "tests/test_trend_rollup.py"
+      - "tests/test_dynamical_topology*.py"
+      - "tests/test_realm_menu.py"
       - "tests/fixtures/mini_*.las"
       - "tests/fixtures/mini_micropulse*"
       - "tests/fixtures/mini_survey.csv"
@@ -31,7 +36,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install numpy pytest
           if [ -f requirements-handoff.txt ]; then pip install -r requirements-handoff.txt || true; fi
-      - name: Unit tests (job OS + kb_geometry)
+      - name: Unit tests (job OS + kb_geometry + dynamical topology)
         env:
           PYTHONPATH: ${{ github.workspace }}
         run: |
@@ -44,6 +49,12 @@ jobs:
                  tests/test_kb_geometry_p3p6.py \
                  tests/test_kb_geometry_h1.py \
                  tests/test_trend_rollup.py \
+                 tests/test_dynamical_topology_types.py \
+                 tests/test_dynamical_topology_engine.py \
+                 tests/test_dynamical_topology_job.py \
+                 tests/test_dynamical_topology_control.py \
+                 tests/test_dynamical_topology_crit_handoff.py \
+                 tests/test_realm_menu.py \
                  -q --tb=line
       - name: Fixture OS smoke + catalog
         env:

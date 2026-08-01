@@ -1,7 +1,7 @@
 # Design: Dynamical Topology Dual Spine + Navigator Menu
 
 **Date:** 2026-07-31  
-**Status:** Approved (human gate) — implementation plan next  
+**Status:** Implemented (D1–D5 on feature branch)  
 **Approach:** Dual spine (measure + control) with guided menu for non-CLI users  
 **Primary academic source:**  
 `ACADEMIC/PERSISTENT TOPOLOGICAL FEATURES IN.pdf` (Gardinazzi et al., arXiv:2410.11042 — zigzag persistence across layers)  

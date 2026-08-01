@@ -69,8 +69,48 @@ out/job_os/<run_id>/
   cycle_NN/  eow/PACKAGE_INDEX.json  eow/SHIP.md
 ```
 
+## Navigator menu (non-CLI)
+
+Keyboard-driven wizard for the same Job OS + dynamical topology effects without memorizing flags. Pin is **read-only** (never soft_T / mono ε rewrite). Topology measure reports are **not ACCEPTANCE**.
+
+```bash
+# from repo root
+set PYTHONPATH=.
+python realm_menu.py
+```
+
+| Choice | Item | Effect |
+|--------|------|--------|
+| 1 | Job OS — fixture quick smoke | In-process fixture LAS smoke (`tests/fixtures/mini_edr.las`) + optional dynamical topology wire |
+| 2 | Job OS — custom paths (wizard) | Prompt for LAS / MicroPulse / survey / out-dir; confirm CLI; run loop |
+| 3 | Catalog runs (INDEX) | Scan `--out-dir` → INDEX.json / INDEX.md |
+| 4 | Dynamical topology report | Stage-axis zigzag report on a run dir → `DYNAMICAL_TOPOLOGY.json` (measure only) |
+| 5 | Handoff coherence (protein) | Suggested handoff CLI / optional in-process dual-gate path |
+| 6 | Open docs / LATEST paths | Print `docs/JOB_OS.md`, design spec, LATEST, fixtures |
+| 0 | Exit | Quit |
+
+Non-interactive exit: `echo 0 | python realm_menu.py`
+
+### Time zigzag vs space sheaf (dual spine)
+
+```text
+ stage_0 → stage_1 → … → stage_T     ← TIME dual: DynamicalTopology zigzag / stage-axis barcode
+      │         │              │
+   complex   complex        complex
+      └──── measure report + topology_stable(K) control ────┘
+                     │
+              SPACE dual: sheaf MaxOp L / AQFT local fingerprint (unchanged)
+                     │
+              pin read-only every cycle — never λ=γ
+```
+
+- **Measure:** `run_dynamical_topology` → TREND / science annex / `DYNAMICAL_TOPOLOGY.json` (`not_acceptance: true`)
+- **Control:** `--topo-stability` / menu toggle → `topology_stable(K)` joins fixed-point only with `is_solved ∧ empty free-param board`
+- Design: [2026-07-31-dynamical-topology-dual-spine-design.md](superpowers/specs/2026-07-31-dynamical-topology-dual-spine-design.md)
+
 ## Design / KB
 
 - [docs/superpowers/specs/2026-07-31-oilfield-job-coherence-os-design.md](superpowers/specs/2026-07-31-oilfield-job-coherence-os-design.md)
+- [docs/superpowers/specs/2026-07-31-dynamical-topology-dual-spine-design.md](superpowers/specs/2026-07-31-dynamical-topology-dual-spine-design.md)
 - [docs/superpowers/specs/2026-07-31-academic-kb-knowledge-integration-design.md](superpowers/specs/2026-07-31-academic-kb-knowledge-integration-design.md)
 - [docs/superpowers/specs/2026-07-31-parent-kb-h1-audit.md](superpowers/specs/2026-07-31-parent-kb-h1-audit.md)
